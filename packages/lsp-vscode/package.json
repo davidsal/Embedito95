@@ -2,9 +2,19 @@
 	"name": "embedito95-lsp",
 	"displayName": "Embedito95 Language Support",
 	"description": "Language support for .e95 files",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"publisher": "embedito95",
 	"private": true,
+	"license": "AGPL-3.0-only",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/davidsal/Embedito95.git",
+		"directory": "packages/lsp-vscode"
+	},
+	"homepage": "https://github.com/davidsal/Embedito95#readme",
+	"bugs": {
+		"url": "https://github.com/davidsal/Embedito95/issues"
+	},
 	"icon": "./src/icon.png",
 	"engines": {
 		"vscode": "^1.85.0"

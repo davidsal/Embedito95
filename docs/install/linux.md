@@ -78,6 +78,15 @@ requirement and offers to fix what it can.
 
 The first `npx` command downloads the CLI, so it may take a minute.
 
+To get syntax highlighting, diagnostics, hover and completions in VS Code,
+Cursor or VSCodium, install the editor extension:
+
+```sh
+npx embedito95-cli install-vs-code
+```
+
+The language server is bundled inside the extension.
+
 ## 4. Create and upload a project
 
 ```bash

@@ -170,6 +170,15 @@ Once everything is installed, check the setup:
 npx embedito95-cli doctor
 ```
 
+Install the editor extension (VS Code, Cursor or VSCodium):
+
+```sh
+npx embedito95-cli install-vs-code
+```
+
+It downloads the extension from GitHub and installs it with your editor. The
+language server is bundled inside, so there is nothing else to install.
+
 Then create and flash a project:
 
 ```sh

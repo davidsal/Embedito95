@@ -20,6 +20,7 @@ const COMMANDS = [
 	"flash",
 	"monitor",
 	"doctor",
+	"install-vs-code",
 ];
 
 const USAGE = `Usage: embedito95 <command> [options]
@@ -58,7 +59,10 @@ const checkNodeVersion = () => {
 const main = async () => {
 	checkNodeVersion();
 
-	const command = process.argv[2];
+	const command =
+		process.argv[2] === "--install-vs-code"
+			? "install-vs-code"
+			: process.argv[2];
 
 	if (command === "-h" || command === "--help") {
 		writeLine(USAGE);

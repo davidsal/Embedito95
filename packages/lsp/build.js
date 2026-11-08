@@ -13,7 +13,7 @@ const PLATFORMS_NAMESPACE = "e95-platforms";
 const platformEntriesPlugin = {
 	name: "bundle-registry-platforms",
 	setup(build) {
-		build.onResolve({ filter: /^@embedito95\/registry\/platforms$/ }, () => {
+		build.onResolve({ filter: /^embedito95-registry\/platforms$/ }, () => {
 			return { path: PLATFORMS_IMPORT, namespace: PLATFORMS_NAMESPACE };
 		});
 
