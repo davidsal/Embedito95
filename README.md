@@ -29,7 +29,11 @@ Embedito95 programs are written in **e95**, a small TypeScript-like language
 that compiles to C++. Sources use the `.e95` extension and start at `main.e95`.
 The language keeps only `type` declarations and closures, `T | null` unions and
 a single set of fixed-width types. See [e95](docs/e95-language.md) for the
-design, supported types, binary operations and value behavior.
+design and the TypeScript differences, then follow the topic links:
+[declarations](docs/language/declarations.md), [types](docs/language/types.md),
+[expressions](docs/language/expressions.md),
+[control flow](docs/language/control-flow.md) and
+[async](docs/language/async.md).
 
 ## Engine
 
@@ -205,6 +209,25 @@ Generated files live under `build/<project>/`:
   `build/<project>/artifacts/<project>.elf` and `<project>.bin` (plus object
   files). On AVR, `arduino-cli` keeps the `.hex` in its own build folder and the
   command prints the Flash/RAM usage.
+
+## Command line
+
+The full reference is [docs/cli.md](docs/cli.md). The commands that are easy to
+miss:
+
+```sh
+npx embedito95-cli install dht22    # add a built-in library
+npx embedito95-cli init --library   # create a library inside this project
+npx embedito95-cli install          # reinstall what config.json declares
+```
+
+To remove a library, see
+[Remove a library](docs/cli.md#remove-a-library). Do not delete the folder by
+hand.
+
+A new project also contains `AGENTS.md` and a copy of these docs under `docs/`,
+pinned to the toolchain version in `config.json`, so AI agents and editors read
+the e95 rules instead of guessing TypeScript.
 
 ## Development
 

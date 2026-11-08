@@ -2,8 +2,9 @@
 
 This document covers the runtime mechanisms behind e95 values: handles and
 reference counting, heap fragmentation and cooperative multitasking. See
-[e95](e95-language.md) for the language design, supported types, binary
-operations and value behavior.
+[e95](e95-language.md) for the language design, [types](language/types.md) for
+supported types and value behavior, and
+[expressions](language/expressions.md) for binary operations.
 
 ## 1. Handles and reference counting
 

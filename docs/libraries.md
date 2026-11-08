@@ -9,6 +9,13 @@ import { getSerial, Serial } from '@embedito95/serial'
 import { getSensor } from '@embedito95/dht22'
 ```
 
+Core libraries ship with every project. Built-in libraries are added on demand:
+
+```sh
+npx embedito95-cli libraries        # list what is available
+npx embedito95-cli install dht22
+```
+
 ## Core libraries
 
 | Library | Package | Provides |

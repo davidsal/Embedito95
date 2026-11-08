@@ -1,0 +1,73 @@
+# Types
+
+| Type | Storage | Notes |
+| --- | --- | --- |
+| `i8`–`i128`, `u8`–`u128` | value | fixed-width signed/unsigned; 128-bit is software |
+| `f32` | value | single precision |
+| `f64` | value | double precision; STM32 only, not AVR |
+| `boolean` | value | `true` or `false` |
+| `char` | value | one byte, single quotes (`'a'`) |
+| `string` | heap handle | dynamic text, double quotes (`"hi"`), copy-on-write |
+| `T[]` | heap handle | dynamic array; `[1, 2, 3]` is an array literal |
+| `T[N]` | heap handle | capacity annotation; `N` is not reserved yet |
+| object (`type`) | heap handle | fields stored inline in one block |
+| `T \| null` | same as `T` | the only union |
+| `void` | — | no return value |
+
+- `f64` is only available on 32-bit targets such as the STM32 Blue Pill.
+- `i128` and `u128` use a portable software implementation, since the MCUs do
+  not have native 128-bit registers.
+- `T[]` grows dynamically. `T[N]` parses, but `N` does not reserve storage yet;
+  see [Engine](../engine.md#2-heap-fragmentation).
+- `enum` values are integer-backed.
+- Template literals with interpolation are also supported: `` `value: ${x}` ``.
+
+## Null and nullable
+
+`null` is the absent value. The only union the language supports is `T | null`:
+
+```e95
+let reading: f32 | null = null
+const name: string | null = null
+```
+
+- A union never combines different value types: `u8 | string` is invalid.
+  `T | null` only adds the possibility of `null` to one type.
+- A nullable value must be checked before arithmetic or member access. Using it
+  directly reports `nullableOperation`.
+- `!= null` and `== null` narrow the type inside `&&` and `||`, and
+  `if (value)` treats `null` as false.
+- `??` supplies a default, and `as T` asserts a non-null value.
+- Assigning a nullable value to a non-nullable target is an error; assigning a
+  plain `T` or `null` to `T | null` is allowed.
+
+## Floating point
+
+- A float is used as the result only when it is requested: with a float literal
+  (`1.5`), a float operand or an explicit `f32`/`f64` target.
+- Pure integer arithmetic stays integer, including division: `5 / 2` is `2`.
+- Storing an integer result in a float variable converts it with a warning, not
+  an error.
+- `%` is only defined for integers.
+
+## Value behavior
+
+| Type | `a = b` | `func(a)` | Caller sees writes via parameter? | `return a` | TS-like |
+| --- | --- | --- | --- | --- | --- |
+| `i8`–`i128`, `u8`–`u128` | independent copy | independent copy | no, the parameter is a copy | independent copy | yes |
+| `f32`, `f64` | independent copy | independent copy | no, the parameter is a copy | independent copy | yes |
+| `string` | shares text (CoW) | shares text (CoW) | no, the first write detaches | shares text (CoW) | yes |
+| `T[]` | shares storage | shares storage | **yes, same storage** | shares storage | yes |
+
+- **Copy:** independent values; changing one never changes the other.
+- **Shares text (CoW):** same block until the first write. That write detaches a
+  private block, so the other handle keeps the old text.
+- **Shares storage:** same array storage. `push`, `pop` and element writes are
+  visible through every handle.
+
+Reassigning a parameter (`a = other`) is always local. Returning a local handle
+transfers it; returning a shared one aliases it. Objects and `T[N]` arrays
+follow the `T[]` rules.
+
+In short: integers, floats and strings behave as values; arrays and objects
+behave as references.
