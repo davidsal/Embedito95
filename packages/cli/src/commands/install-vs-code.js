@@ -104,15 +104,30 @@ const downloadVsix = async (destination) => {
 	writeFileSync(destination, Buffer.from(await response.arrayBuffer()));
 };
 
+const NOISE_PATTERN = /DeprecationWarning|DEP\d{4}|trace-deprecation/;
+
+const filterNoise = (text) => {
+	return text
+		.split("\n")
+		.filter((line) => line.trim() && !NOISE_PATTERN.test(line))
+		.join("\n");
+};
+
 const installExtension = (editor, vsixPath) => {
 	const result = spawnSync(
 		editor,
 		["--install-extension", vsixPath, "--force"],
 		{
-			stdio: "inherit",
+			encoding: "utf8",
 			shell: process.platform === "win32",
 		},
 	);
+
+	const output = filterNoise(`${result.stdout ?? ""}\n${result.stderr ?? ""}`);
+
+	if (output) {
+		writeLine(output);
+	}
 
 	return result.status === 0;
 };
