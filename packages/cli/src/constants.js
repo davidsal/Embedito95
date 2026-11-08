@@ -4,8 +4,15 @@ export const TEMPLATE_LIBRARY_FILE = "template-lib.e95";
 export const GITIGNORE_CONTENT = "build\ncore\n";
 export const PACKAGE_PREFIX = "embedito95-";
 export const INITIAL_VERSION = "0.1.0";
+export const PACKAGE_FILE = "package.json";
 export const HEADER_BOX_WIDTH = 34;
 export const HEADER_BORDER_PADDING = 2;
+
+// Documentation
+export const DOCS_DIRECTORY_NAME = "docs";
+export const DOCS_VERSION_FILE = "VERSION";
+export const EXCLUDED_DOC_FILES = new Set(["development.md"]);
+export const AGENTS_FILE_NAME = "AGENTS.md";
 
 // Build
 export const LIB_PREFIX = "lib_";

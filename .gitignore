@@ -5,3 +5,4 @@ sandbox
 packages/lsp-vscode/server/
 packages/test/testers/
 .e95state.json
+packages/cli/docs/

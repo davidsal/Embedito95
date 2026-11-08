@@ -27,12 +27,15 @@
 		"embedito95-cli": "./src/cli.js"
 	},
 	"files": [
-		"src"
+		"src",
+		"docs"
 	],
 	"engines": {
 		"node": ">=22"
 	},
-	"scripts": {},
+	"scripts": {
+		"prepack": "node scripts/sync-docs.js"
+	},
 	"publishConfig": {
 		"access": "public"
 	},

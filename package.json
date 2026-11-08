@@ -13,6 +13,8 @@
     "test:compile:checks": "pnpm run --filter @embedito95/test test:compile:checks",
     "test:runtime": "pnpm run --filter @embedito95/test test:runtime",
     "test:run": "pnpm run --filter @embedito95/test test:run",
+    "docs:sync": "node packages/cli/scripts/sync-docs.js",
+    "prepare": "node packages/cli/scripts/sync-docs.js",
     "embedito95-cli": "node packages/cli/src/cli.js",
     "lsp:install": "pnpm run --filter @embedito95/lsp build && node packages/lsp-vscode/build.mjs && cd packages/lsp-vscode && echo y | npx vsce package --allow-missing-repository --no-dependencies && code --install-extension embedito95-*.vsix"
   },
