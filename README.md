@@ -213,8 +213,9 @@ the [development guide](docs/development.md).
 
 ## Roadmap
 
-See [Roadmap](docs/roadmap.md) for the planned features, including the design of
-automatic `volatile` for interrupt context.
+Planned work lives in the public backlog. See the
+[project board](https://github.com/users/davidsal/projects/2) or the
+[issues](https://github.com/davidsal/Embedito95/issues).
 
 ## License
 
