@@ -231,17 +231,24 @@ licensed under the **GNU Affero General Public License v3.0 only**
 Your sketches and your own libraries are yours. The C++ generated from them and
 the firmware you build belong to you.
 
-### Commercial use
+### Who pays
 
-If you distribute firmware that includes the Embedito95 runtime, that
-distribution must comply with the AGPL (publish the corresponding source under
-the AGPL) unless you hold a commercial license.
+The rule is simple: **if the firmware leaves your hands, it is either open
+source or licensed.**
 
-- Personal, educational and non-profit use: free under the AGPL.
-- Commercial use with open-source firmware: free under the AGPL.
-- Commercial use with closed firmware: commercial license, per developer seat,
-  unlimited devices.
-- Support, SLA and sponsored features: available separately.
+| You | Cost |
+| --- | --- |
+| Student, hobby, personal use | Free. You do not distribute firmware, so the AGPL asks nothing from you. |
+| Open-source project | Free. Publish your source under the AGPL. |
+| Company using it internally | Free while you do not distribute firmware. |
+| Selling or giving away devices running your firmware | AGPL applies: publish your firmware source. |
+| Private firmware | Commercial license, per developer seat, unlimited devices. |
+| Distributing a modified Embedito95 without publishing it | Commercial license. |
+
+Shipping a product is commercial use. You do not have to pay if you publish the
+corresponding source under the AGPL. You pay when you want to keep it private.
+
+Support, SLA and sponsored features are available separately.
 
 Commercial licensing, support and sponsored development: licensing@voldrek.com
 (see [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md)).
