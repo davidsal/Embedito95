@@ -104,7 +104,9 @@ const downloadVsix = async (destination) => {
 	writeFileSync(destination, Buffer.from(await response.arrayBuffer()));
 };
 
-const NOISE_PATTERN = /DeprecationWarning|DEP\d{4}|trace-deprecation/;
+const NOISE_PATTERN = /\[DEP0169\]|trace-deprecation/;
+const VERBOSE =
+	process.argv.includes("--verbose") || process.env.EMBEDITO95_VERBOSE === "1";
 
 const filterNoise = (text) => {
 	return text
@@ -123,7 +125,9 @@ const installExtension = (editor, vsixPath) => {
 		},
 	);
 
-	const output = filterNoise(`${result.stdout ?? ""}\n${result.stderr ?? ""}`);
+	const rawOutput = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+	const output =
+		VERBOSE || result.status !== 0 ? rawOutput.trim() : filterNoise(rawOutput);
 
 	if (output) {
 		writeLine(output);

@@ -177,7 +177,8 @@ npx embedito95-cli install-vs-code
 ```
 
 It downloads the extension from GitHub and installs it with your editor. The
-language server is bundled inside, so there is nothing else to install.
+language server is bundled inside, so there is nothing else to install. Add
+`--verbose` to see the raw editor output if something fails.
 
 Then create and flash a project:
 

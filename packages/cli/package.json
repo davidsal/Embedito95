@@ -1,6 +1,6 @@
 {
 	"name": "embedito95-cli",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Embedito95 command-line toolchain: init, build, compile, upload and monitor e95 projects",
 	"type": "module",
 	"license": "AGPL-3.0-only",
