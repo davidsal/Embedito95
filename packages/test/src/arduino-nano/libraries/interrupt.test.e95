@@ -1,0 +1,34 @@
+import { Pin } from '@embedito95/gpio'
+import {
+    InterruptMode,
+    attachPinInterrupt,
+    detachPinInterrupt,
+    getInterruptNumber,
+    enableInterrupts,
+    disableInterrupts
+} from '@embedito95/interrupt'
+
+const FALLING_CHANNEL: u8 = 0
+const RISING_CHANNEL: u8 = 1
+
+const onEdge = () => {}
+
+const setup = () => {
+    attachPinInterrupt(Pin.2, onEdge, InterruptMode.FALLING)
+    attachPinInterrupt(Pin.3, onEdge, InterruptMode.RISING)
+    enableInterrupts()
+}
+
+const main = () => {
+    setup()
+    const fallingChannel: u8 = getInterruptNumber(Pin.2)
+    const risingChannel: u8 = getInterruptNumber(Pin.3)
+    if (fallingChannel != FALLING_CHANNEL || risingChannel != RISING_CHANNEL) {
+        disableInterrupts()
+    }
+    detachPinInterrupt(Pin.2)
+    detachPinInterrupt(Pin.3)
+    disableInterrupts()
+}
+
+main()

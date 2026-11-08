@@ -1,0 +1,37 @@
+const testInt128 = () => {
+    let big: i128 = 1000000
+    let small: i128 = 7
+
+    big = big + small
+    big = big * small
+    big = big / small
+    big = big % small
+    big = big - small
+
+    let unsignedValue: u128 = 5000
+    unsignedValue = unsignedValue + 100
+    unsignedValue = unsignedValue * 2
+    unsignedValue = unsignedValue / 3
+    unsignedValue = unsignedValue % 4
+
+    let negative: i128 = -100
+    negative = negative + 5
+    negative = negative / 2
+
+    if (big >= small) {
+        big = big - 1
+    }
+    if (negative < 0) {
+        negative = negative * -1
+    }
+}
+
+const setup = () => {
+}
+
+const main = () => {
+    setup()
+    testInt128()
+}
+
+main()

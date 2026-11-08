@@ -1,0 +1,11 @@
+// The `object` runtime sub-library backs the shared-mutable object handle used
+// by the codegen for object `{...}` / `type` values. It has no callable API:
+// programs use object types as native language values without importing it.
+//
+// Under the hood it generates `core_object.h`, which provides
+// `core_object::Object<Fields>` — a refcounted, shared-mutable handle over the
+// `core_mem::Ref` motor (from `core_memory.h`). The codegen emits, per object
+// shape, a plain fields struct and aliases the handle (`using Point =
+// core_object::Object<Point_Fields>`); field access is emitted as
+// `obj.get().field`. It is a bundle member of `type`, generated into the same
+// build directory and pulled in from `core_type.h`.

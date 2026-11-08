@@ -1,0 +1,46 @@
+import { Timer, HardwareTimer, getTimer, startTone, stopTone, measurePulseWidth } from '@embedito95/timer'
+import { Pin, HIGH } from '@embedito95/gpio'
+
+// STM32 exposes TIM1..TIM4 (all 16-bit). None of them backs the millisecond
+// clock, which runs on the cycle counter, so every timer is selectable.
+const FIRST_PERIOD_MICROS: u32 = 1000
+const SECOND_PERIOD_MICROS: u32 = 2000
+const TONE_FREQUENCY_HERTZ: u16 = 440
+const PULSE_TIMEOUT_MICROS: u32 = 1000
+
+const onPeriod = () => {}
+
+const firstTimer: HardwareTimer = getTimer(Timer.1)
+const secondTimer: HardwareTimer = getTimer(Timer.4)
+
+const configure = () => {
+    firstTimer.initialize(FIRST_PERIOD_MICROS, onPeriod)
+    secondTimer.initialize(FIRST_PERIOD_MICROS, onPeriod)
+}
+
+const playTone = () => {
+    startTone(Timer.2, Pin.B9, TONE_FREQUENCY_HERTZ)
+    stopTone(Pin.B9)
+}
+
+const measurePulse = (): u32 => {
+    return measurePulseWidth(Pin.B10, HIGH, PULSE_TIMEOUT_MICROS)
+}
+
+const setup = () => {
+    configure()
+    firstTimer.start()
+    secondTimer.start()
+}
+
+const main = () => {
+    setup()
+    firstTimer.setPeriod(SECOND_PERIOD_MICROS)
+    secondTimer.setPeriod(SECOND_PERIOD_MICROS)
+    firstTimer.stop()
+    secondTimer.stop()
+    playTone()
+    const pulseWidthMicros: u32 = measurePulse()
+}
+
+main()

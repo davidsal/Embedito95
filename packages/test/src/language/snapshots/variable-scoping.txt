@@ -1,0 +1,32 @@
+// Variable type resolution by scope (collectVariableTypes.resolve)
+// Each probe lists the resolved type at that identifier's location.
+// Before the scope-aware fix the flat name map let the last declaration
+// win, so a local in one function leaked its type into same-named locals
+// of other functions. These cases pin the per-scope resolution.
+// same local name in two functions keeps its own type
+value @ 2:9 => u8
+value @ 3:12 => u8
+value @ 6:9 => i32
+value @ 7:12 => i32
+
+// same parameter name in two functions keeps its own type
+value @ 1:16 => u8
+result @ 2:11 => i32
+value @ 2:25 => u8
+result @ 3:12 => i32
+value @ 5:17 => i32
+result @ 6:11 => u8
+value @ 6:24 => i32
+result @ 7:12 => u8
+
+// same name in sibling blocks resolves per block
+value @ 3:13 => u8
+value @ 4:16 => u8
+value @ 7:13 => i32
+value @ 8:16 => i32
+
+// parameter and local of the same name in different functions
+value @ 1:24 => u8
+value @ 2:12 => u8
+value @ 5:9 => i32
+value @ 6:12 => i32

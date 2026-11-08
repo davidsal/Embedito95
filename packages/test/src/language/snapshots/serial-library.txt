@@ -1,0 +1,169 @@
+// LSP view of the `serial` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/serial/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// readLine infers string and readInteger infers i32
+diagnostics:
+- none
+types:
+- text => string
+- parsed => i32
+
+// readTextUntil infers string from a char terminator
+diagnostics:
+- none
+types:
+- untilSemicolon => string
+- untilPipe => string
+
+// readTextUntil inside nested conditionals produces no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// send accepts every numeric width and char without diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// nested reads inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// stream helpers infer their return types
+diagnostics:
+- none
+types:
+- nextByte => u8 | null
+- writeSpace => u16
+- block => u8[]
+- until => u8[]
+
+// text search and float helpers infer their return types
+diagnostics:
+- none
+types:
+- text => string
+- found => boolean
+- foundUntil => boolean
+- real => f32
+
+// read timeout helpers accept and report a duration
+diagnostics:
+- none
+types:
+- previousTimeout => u32
+
+// text search helpers inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// findText arity reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:25: 'serial.findText' expects 1 argument(s) but got 0
+types:
+- badCount => boolean
+
+// findTextUntil rejects a string terminator
+diagnostics:
+- error error.argumentTypeMismatch @ 4:36: Argument 'terminator' expects type 'char' but 'newline' is 'string'
+types:
+- none
+
+// readTextUntil arity reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:25: 'serial.readTextUntil' expects 1 argument(s) but got 0
+types:
+- badCount => string
+
+// readTextUntil rejects a string terminator
+diagnostics:
+- error error.argumentTypeMismatch @ 4:26: Argument 'terminator' expects type 'char' but 'newline' is 'string'
+types:
+- none
+
+// setReadTimeout rejects a non-numeric duration
+diagnostics:
+- error error.argumentTypeMismatch @ 4:27: Argument 'milliseconds' expects type 'u32' but 'fast' is 'string'
+types:
+- none
+
+// sendBuffer accepts a byte array without diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// stream helpers inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// stream helper arity reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:25: 'serial.readBlock' expects 1 argument(s) but got 2
+types:
+- badCount => u8[]
+
+// stream helper argument type reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:27: Argument 'terminator' expects type 'u8' but 'newline' is 'string'
+types:
+- none
+
+// sendBuffer rejects a non-array argument
+diagnostics:
+- error error.argumentTypeMismatch @ 5:23: Argument 'data' expects type 'u8[]' but 'payload' is 'u16'
+types:
+- none
+
+// sendBuffer rejects a numeric literal
+diagnostics:
+- error error.argumentTypeMismatch @ 4:23: Argument 'data' expects type 'u8[]' but '255' is 'u8'
+types:
+- none
+
+// sendBuffer rejects a string literal
+diagnostics:
+- error error.argumentTypeMismatch @ 4:23: Argument 'data' expects type 'u8[]' but 'abc' is 'string'
+types:
+- none
+
+// readBlockUntil rejects an array literal terminator
+diagnostics:
+- error error.argumentTypeMismatch @ 4:27: Argument 'terminator' expects type 'u8' but '[1]' is 'i32[]'
+types:
+- none
+
+// readBlock rejects a float literal maximum
+diagnostics:
+- error error.argumentTypeMismatch @ 3:44: Argument 'maximum' expects type 'u16' but literal 1.5 is 'f32'
+types:
+- none
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:25: 'serial.readInteger' expects 0 argument(s) but got 1
+types:
+- badCount => i32
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 3:31: 'serial.receive' is not a method of type 'SerialPort'
+types:
+- missing => unresolved
+
+// non-numeric argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 5:17: Argument 'data' expects type 'string | char | u8 | i8 | u16 | i16 | u32 | i32 | u64 | i64 | f32 | f64' but 'enabled' is 'boolean'
+types:
+- none

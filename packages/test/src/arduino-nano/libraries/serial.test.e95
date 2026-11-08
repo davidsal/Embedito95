@@ -1,0 +1,127 @@
+import { Serial, getSerial } from '@embedito95/serial'
+
+// Wiring (Arduino Nano):
+//  - SERIAL_1: hardware UART on D0 (RX) / D1 (TX), USB serial bridge
+
+const serial = getSerial(Serial.1)
+
+const SMALL_UNSIGNED: u8 = 200
+const SMALL_SIGNED: i8 = -100
+const MEDIUM_UNSIGNED: u16 = 40000
+const MEDIUM_SIGNED: i16 = -30000
+const WIDE_UNSIGNED: u32 = 4000000000
+const WIDE_SIGNED: i32 = -2000000000
+const HUGE_UNSIGNED: u64 = 5000000000
+const HUGE_SIGNED: i64 = -5000000000
+const REAL: f32 = 1.5
+const LETTER: char = 'A'
+
+const testSend = () => {
+    serial.send("Counter: ")
+    serial.send(65)
+    serial.sendLine(0)
+}
+
+const testRead = () => {
+    const data = serial.read()
+    if (data != null) {
+        serial.send(data)
+    }
+}
+
+const testHasData = () => {
+    if (serial.hasData()) {
+        const data = serial.read()
+        if (data != null) {
+            serial.send(data)
+        }
+    }
+}
+
+const testNumericSend = () => {
+    serial.send(SMALL_UNSIGNED)
+    serial.send(SMALL_SIGNED)
+    serial.send(MEDIUM_UNSIGNED)
+    serial.send(MEDIUM_SIGNED)
+    serial.send(WIDE_UNSIGNED)
+    serial.send(WIDE_SIGNED)
+    serial.send(HUGE_UNSIGNED)
+    serial.send(HUGE_SIGNED)
+    serial.send(REAL)
+    serial.send(LETTER)
+    serial.sendLine(SMALL_UNSIGNED)
+    serial.sendLine(SMALL_SIGNED)
+    serial.sendLine(MEDIUM_UNSIGNED)
+    serial.sendLine(MEDIUM_SIGNED)
+    serial.sendLine(WIDE_UNSIGNED)
+    serial.sendLine(WIDE_SIGNED)
+    serial.sendLine(HUGE_UNSIGNED)
+    serial.sendLine(HUGE_SIGNED)
+    serial.sendLine(REAL)
+    serial.sendLine(LETTER)
+}
+
+const testReadText = () => {
+    const line = serial.readLine()
+    serial.send(line)
+    const parsed = serial.readInteger()
+    serial.sendLine(parsed)
+}
+
+const testReadTextUntil = () => {
+    const untilSemicolon = serial.readTextUntil(';')
+    serial.send(untilSemicolon)
+    const untilPipe = serial.readTextUntil('|')
+    serial.sendLine(untilPipe)
+}
+
+const testLifecycle = () => {
+    serial.flushOutput()
+    serial.close()
+}
+
+const testStreamReads = () => {
+    const next = serial.peekByte()
+    if (next != null) {
+        serial.send(next)
+    }
+    const writeSpace = serial.getWriteSpace()
+    serial.send(writeSpace)
+    const block = serial.readBlock(4)
+    serial.sendBuffer(block)
+    const until = serial.readBlockUntil(10, 8)
+    serial.sendBuffer(until)
+}
+
+const testTextSearch = () => {
+    const text = serial.readText()
+    serial.send(text)
+    const found = serial.findText("needle")
+    serial.send(found ? 1 : 0)
+    const foundUntil = serial.findTextUntil("stop", ';')
+    serial.send(foundUntil ? 1 : 0)
+    const real = serial.readFloat()
+    serial.send(real)
+    serial.setReadTimeout(0)
+    const timeout = serial.getReadTimeout()
+    serial.send(timeout)
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    testSend()
+    testRead()
+    testHasData()
+    testNumericSend()
+    testReadText()
+    testReadTextUntil()
+    testLifecycle()
+    testStreamReads()
+    testTextSearch()
+}
+
+main()

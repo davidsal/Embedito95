@@ -1,0 +1,27 @@
+// Toggles the onboard LED on and off every second.
+// Example created by David Melara.
+
+import { setDigital, setMode, LED_BUILTIN, HIGH, LOW, OUTPUT } from '@embedito95/gpio'
+import { delay } from '@embedito95/time'
+
+const BLINK_INTERVAL = 1000
+
+const blink = () => {
+    while (true) {
+        setDigital(LED_BUILTIN, HIGH)
+        delay(BLINK_INTERVAL)
+        setDigital(LED_BUILTIN, LOW)
+        delay(BLINK_INTERVAL)
+    }
+}
+
+const setup = () => {
+    setMode(LED_BUILTIN, OUTPUT)
+}
+
+const main = () => {
+    setup()
+    blink()
+}
+
+main()

@@ -1,0 +1,32 @@
+import { Pin, setDigital, HIGH, LOW } from '@embedito95/gpio'
+
+// The `else` reassigns the nullable local inside a nested `if`. The narrowed
+// region must end there: the codegen has to return the option (null) instead of
+// reading the option payload (0) on the branch that assigns null.
+const compute = (flag: boolean): u8 | null => {
+    let value: u8 | null = 7 as u8
+    if (value == null) {
+        return null
+    } else {
+        if (flag) {
+            value = null
+        }
+    }
+    return value
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const missing = compute(true)
+    if (missing == null) {
+        setDigital(Pin.10, HIGH)
+    }
+    const present = compute(false)
+    if (present != null) {
+        setDigital(Pin.10, LOW)
+    }
+}
+
+main()

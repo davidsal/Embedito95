@@ -1,0 +1,33 @@
+import { Pin } from '@embedito95/gpio'
+
+/**
+ * Number of pulse outputs the target can drive at the same time.
+ * @returns The number of available channels
+ */
+export const getChannelCount = (): u8 => {}
+
+/**
+ * Returns the pulse output wired to `pin`.
+ * Only the pins listed for the target have a pulse output; every other pin
+ * returns `0`.
+ * @param pin - Pin to query
+ * @returns The channel number, or `0` when the pin has no pulse output
+ */
+export const getChannel = (pin: Pin): u8 => {}
+
+/**
+ * Sets the high time of one pulse within the fixed 50 Hz frame.
+ * Values above the frame period saturate at the frame length. The channel
+ * starts driving its pin on the first call.
+ * @param channel - Channel returned by `getChannel`
+ * @param pulseMicros - High time, in microseconds
+ */
+export const setChannelPulse = (channel: u8, pulseMicros: u16) => {}
+
+/**
+ * Stops the pulse output on `channel` and leaves its pin at LOW.
+ * Releasing the last active channel stops the frame counter as well, so the
+ * peripheral becomes available to other consumers.
+ * @param channel - Channel returned by `getChannel`
+ */
+export const releaseChannel = (channel: u8) => {}

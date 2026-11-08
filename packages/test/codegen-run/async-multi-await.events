@@ -1,0 +1,2 @@
+# Both awaited children are read before either is consumed: 1 + 2 = 3.
+analog 3 3

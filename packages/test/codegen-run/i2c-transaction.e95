@@ -1,0 +1,40 @@
+import { I2C, I2CBus, I2CStatus, getI2C } from '@embedito95/i2c'
+
+// Exercises the step-by-step I2C write transaction end to end: beginWrite,
+// queued sendByte calls, the returned status with nested checks, and the
+// convenience write that runs on the same transaction.
+const DEVICE_ADDRESS: u8 = 60
+const REGISTER_ADDRESS: u8 = 0
+
+const bus: I2CBus = getI2C(I2C.1)
+
+const setup = () => {
+    bus.initialize()
+}
+
+const sendRegister = (value: u8): I2CStatus => {
+    bus.beginWrite(DEVICE_ADDRESS)
+    bus.sendByte(REGISTER_ADDRESS)
+    bus.sendByte(value)
+    const status: I2CStatus = bus.endWrite()
+    if (status != I2CStatus.OK) {
+        if (status == I2CStatus.ADDRESS_NACK) {
+            return status
+        }
+        bus.beginWrite(DEVICE_ADDRESS)
+        bus.sendByte(value)
+        return bus.endWrite()
+    }
+    return status
+}
+
+const main = () => {
+    setup()
+    const status: I2CStatus = sendRegister(1)
+    if (status == I2CStatus.OK) {
+        bus.write(DEVICE_ADDRESS, [REGISTER_ADDRESS])
+    }
+    bus.close()
+}
+
+main()

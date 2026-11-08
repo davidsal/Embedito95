@@ -1,0 +1,46 @@
+// String mutation API (character writes, append, replace, range removal,
+// trimming and ASCII case folding). Types come from the shared
+// STRING_METHODS table; diagnostics come from the same check() the language
+// server runs, including nested blocks so arity/type reporting is verified
+// where it is easy to miss.
+// string mutators infer their declared return types
+diagnostics:
+- none
+types:
+- result => boolean
+
+// string mutators inside nested if blocks produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => boolean
+
+// wrong argument count on a string mutator reports the arity
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'text.setCharacter' expects 2 argument(s) but got 1
+types:
+- badCount => void
+
+// wrong argument count on a nested string mutator reports the arity
+diagnostics:
+- error error.wrongArgumentCount @ 4:20: 'text.replaceText' expects 2 argument(s) but got 1
+types:
+- nested => boolean
+
+// non-character value reports a type mismatch on setCharacter
+diagnostics:
+- error error.argumentTypeMismatch @ 2:45: Argument 'value' expects type 'char' but literal 1 is 'u8'
+types:
+- badType => void
+
+// non-string search argument reports a type mismatch on replaceText
+diagnostics:
+- error error.argumentTypeMismatch @ 2:53: Argument 'replacement' expects type 'string' but literal 1 is 'u8'
+types:
+- badReplacement => boolean
+
+// chained mutator return type flows into the next call
+diagnostics:
+- none
+types:
+- text.replaceText("l", "L") => boolean

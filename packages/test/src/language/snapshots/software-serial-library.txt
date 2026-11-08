@@ -1,0 +1,249 @@
+// LSP view of the `software-serial` library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real libraries/software-serial/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// The installed AVR view is injected at the postinstall marker, so the
+// cases use timer-free pins with a pin-change channel (D2, D3 and D8).
+// Completions follow the same convention as the servo and eeprom
+// generators: the handle's members are a plain `SoftwareSerialPort`
+// object type, so member completions come from the generic type-method
+// completion path and are not duplicated in this snapshot.
+// getSoftwareSerial infers the software serial handle type
+diagnostics:
+- none
+types:
+- port => SoftwareSerialPort
+
+// getSoftwareSerialReceiveCapacity infers u8
+diagnostics:
+- none
+types:
+- capacity => u8
+
+// initialize accepts a u32 baud rate and listening is boolean
+diagnostics:
+- none
+types:
+- listening => boolean
+
+// read infers a nullable u8 and hasData infers boolean
+diagnostics:
+- none
+types:
+- incoming => u8 | null
+- waiting => boolean
+
+// readLine infers string and readInteger infers i32
+diagnostics:
+- none
+types:
+- line => string
+- number => i32
+
+// getNextByte infers nullable u8 and overflow is boolean
+diagnostics:
+- none
+types:
+- next => u8 | null
+- overflowed => boolean
+
+// nested listening and reads narrow the nullable read without diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// a null check that does not exit the branch does not narrow the return
+diagnostics:
+- error error.returnTypeMismatch @ 9:5: Function 'readByte' returns 'u8 | null', but its declared return type is 'u8'.
+types:
+- none
+
+// reassigning a nullable value after the guard is no longer narrowed
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:7: Function 'readValue' has incompatible return types.
+types:
+- none
+
+// reassigning inside a narrowed nested branch no longer narrows the return
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:7: Function 'readValue' has incompatible return types.
+types:
+- none
+
+// assignment in the else of a guard that exits no longer narrows the return
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:7: Function 'readValue' has incompatible return types.
+types:
+- none
+
+// a homonym reassigned inside a nested function keeps the outer narrowing
+diagnostics:
+- none
+types:
+- none
+
+// a guard that exits through an exhaustive switch narrows the return
+diagnostics:
+- none
+types:
+- none
+
+// send, sendLine, close and flushOutput accept their documented arguments
+diagnostics:
+- none
+types:
+- none
+
+// send reports a numeric payload because the port is text-only
+diagnostics:
+- error error.argumentTypeMismatch @ 5:15: Argument 'data' expects type 'string' but literal 5 is 'u8'
+types:
+- none
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 5:5: 'port.initialize' expects 1 argument(s) but got 0
+types:
+- none
+
+// non-pin receive argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 2:41: Argument 'transmitPin' expects type 'Pin' but literal 3 is 'u8'
+- error error.argumentTypeMismatch @ 2:44: Argument 'receivePin' expects type 'Pin' but literal 2 is 'u8'
+types:
+- badPin => SoftwareSerialPort
+
+// non-numeric baud rate reported
+diagnostics:
+- error error.argumentTypeMismatch @ 5:21: Argument 'baudRate' expects type 'u32' but 'fast' is 'string'
+types:
+- none
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 4:29: 'port.listen' is not a method of type 'SoftwareSerialPort'
+types:
+- missing => unresolved
+
+// updating a narrowed read inside the branch keeps its operand narrowed
+diagnostics:
+- none
+types:
+- none
+
+// reading a narrowed value in its own assignment inside the branch keeps it narrowed
+diagnostics:
+- none
+types:
+- none
+
+// reading a narrowed value in its own assignment after the guard keeps it narrowed
+diagnostics:
+- none
+types:
+- none
+
+// a conditional reassignment in the else branch that always exits keeps the narrowing
+diagnostics:
+- none
+types:
+- none
+
+// a nested conditional reassignment in the else branch invalidates the later narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'nestedElse' has incompatible return types.
+types:
+- none
+
+// a nested switch reassignment in the else branch invalidates the later narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'switchedElse' has incompatible return types.
+types:
+- none
+
+// an else-if that returns without reassigning keeps the narrowing
+diagnostics:
+- none
+types:
+- none
+
+// a nested if that returns without reassigning keeps the narrowing
+diagnostics:
+- none
+types:
+- none
+
+// a while loop in the else that assigns and breaks invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'whileElse' has incompatible return types.
+types:
+- none
+
+// a for loop in the else that assigns invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'forElse' has incompatible return types.
+types:
+- none
+
+// a do-while loop in the else that assigns invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'doWhileElse' has incompatible return types.
+types:
+- none
+
+// a while-true loop that only returns keeps the subsequent narrowing
+diagnostics:
+- warning error.preferConst @ 5:9: 'value' is declared with 'let' but is never reassigned. Prefer 'const'.
+types:
+- none
+
+// a while loop in the else that never assigns keeps the subsequent narrowing
+diagnostics:
+- warning error.preferConst @ 5:9: 'value' is declared with 'let' but is never reassigned. Prefer 'const'.
+types:
+- none
+
+// a for update assignment in the else invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'forUpdateElse' has incompatible return types.
+types:
+- none
+
+// a for init assignment in the else invalidates even when the test is true and the body breaks
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'forInitElse' has incompatible return types.
+types:
+- none
+
+// a while test assignment in the else invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'whileTestElse' has incompatible return types.
+types:
+- none
+
+// a for test assignment in the else invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'forTestElse' has incompatible return types.
+types:
+- none
+
+// a do-while test assignment in the else invalidates the subsequent narrowing
+diagnostics:
+- error error.incompatibleReturnTypes @ 4:14: Function 'doWhileTestElse' has incompatible return types.
+types:
+- none
+
+// initialize at 115200 with nested listening and overflow checks has no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// a for update assignment whose body always returns keeps the subsequent narrowing
+diagnostics:
+- none
+types:
+- none

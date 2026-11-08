@@ -1,0 +1,399 @@
+import { I2C, I2CBus, getI2C } from '@embedito95/i2c'
+import { SPI, SpiBitOrder, SpiBus, SpiClockMode, getSPI } from '@embedito95/spi'
+import { Pin, OUTPUT, HIGH, LOW, setMode, setDigital } from '@embedito95/gpio'
+import { getGlyphColumn } from '@embedito95/canvas'
+import { delay } from '@embedito95/time'
+
+const DISPLAY_I2C_ADDRESS: u8 = 60
+const CONTROL_COMMAND: u8 = 0
+const CONTROL_DATA: u8 = 64
+const INVALID_CHANNEL: u8 = 255
+const DISPLAY_WIDTH: u16 = 128
+const PAGE_HEIGHT: u8 = 8
+const PAGE_COUNT: u8 = 8
+const COLUMNS_PER_PAGE: u16 = 16
+const PAGE_BASE: u8 = 176
+const COLUMN_HIGH_BASE: u8 = 16
+const GLYPH_WIDTH: u8 = 5
+const CHAR_ADVANCE: u8 = 6
+const FONT_ROWS: u8 = 7
+const CLEAR_CHUNK: u16 = 30
+const WRITE_CHUNK: u16 = 30
+const POWER_ON_DELAY_MILLIS: u8 = 10
+const SPI_CLOCK_DIVIDER: u16 = 8
+const COMMAND_LEVEL: boolean = false
+const DATA_LEVEL: boolean = true
+const DISPLAY_OFF: u8 = 174
+const SET_DISPLAY_CLOCK_DIVIDE: u8 = 213
+const CLOCK_DIVIDE_VALUE: u8 = 128
+const SET_MULTIPLEX: u8 = 168
+const MULTIPLEX_VALUE: u8 = 63
+const SET_DISPLAY_OFFSET: u8 = 211
+const DISPLAY_OFFSET_VALUE: u8 = 0
+const SET_START_LINE: u8 = 64
+const SET_CHARGE_PUMP: u8 = 141
+const CHARGE_PUMP_VALUE: u8 = 20
+const SET_MEMORY_MODE: u8 = 32
+const MEMORY_MODE_VALUE: u8 = 0
+const SEGMENT_REMAP: u8 = 161
+const COM_SCAN_DEC: u8 = 200
+const SET_COM_PINS: u8 = 218
+const COM_PINS_VALUE: u8 = 18
+const SET_CONTRAST: u8 = 129
+const CONTRAST_VALUE: u8 = 207
+const SET_PRECHARGE: u8 = 217
+const PRECHARGE_VALUE: u8 = 241
+const SET_VCOM_DETECT: u8 = 219
+const VCOM_DETECT_VALUE: u8 = 64
+const RESUME_TO_RAM: u8 = 164
+const NORMAL_DISPLAY: u8 = 166
+const DISPLAY_ON: u8 = 175
+
+/**
+ * Describes the bus and pins that frame panel bytes for one transport.
+ *
+ * It is plain data and the framing helpers receive it as an argument: the
+ * display stores the handle in a field, and a method call on that field is not
+ * emitted as a free function call.
+ */
+type DisplayTransport = {
+    i2cChannel: u8
+    spiChannel: u8
+    chipSelectChannel: u8
+    dataCommandChannel: u8
+    usesSpi: boolean
+}
+
+/**
+ * A SSD1306 OLED display driven over I2C or 4-wire SPI.
+ */
+export type Ssd1306Display = {
+    /**
+     * Starts the transport and the display with its default configuration.
+     */
+    initialize: () => void
+    /**
+     * Clears the whole screen.
+     */
+    clearDisplay: () => void
+    /**
+     * Moves the drawing cursor to the given pixel position.
+     * @param x - Horizontal pixel position
+     * @param y - Vertical pixel position
+     */
+    setCursor: (x: u16, y: u16) => void
+    /**
+     * Sets the scale factor for subsequent writes.
+     * Each font pixel is drawn as a `scale` x `scale` block.
+     * @param scale - Scale factor (1 for the 5x7 font, 2 for double size)
+     */
+    setTextScale: (scale: u8) => void
+    /**
+     * Writes a text at the current cursor position.
+     * @param text - Text to write
+     */
+    write: (text: string) => void
+}
+
+/**
+ * Creates the transport used by both display factories. The channel that the
+ * selected transport does not use is `INVALID_CHANNEL`; the panel driver always
+ * calls a transport that matches its `usesSpi` flag.
+ * @param i2cChannel - I2C bus number
+ * @param spiChannel - SPI bus number
+ * @param chipSelectChannel - SPI chip-select pin number
+ * @param dataCommandChannel - SPI data/command pin number
+ * @param usesSpi - True for a 4-wire SPI transport, false for I2C
+ * @returns The configured transport
+ */
+const createDisplayTransport = (
+    i2cChannel: u8,
+    spiChannel: u8,
+    chipSelectChannel: u8,
+    dataCommandChannel: u8,
+    usesSpi: boolean
+): DisplayTransport => {
+    return {
+        i2cChannel: i2cChannel,
+        spiChannel: spiChannel,
+        chipSelectChannel: chipSelectChannel,
+        dataCommandChannel: dataCommandChannel,
+        usesSpi: usesSpi
+    }
+}
+
+/**
+ * Starts the bus and configures the pins the given transport needs.
+ * @param transport - Transport to start
+ */
+const initializeDisplayTransport = (transport: DisplayTransport) => {
+    if (transport.usesSpi) {
+        const chipSelect: Pin = transport.chipSelectChannel as Pin
+        const dataCommand: Pin = transport.dataCommandChannel as Pin
+        const bus: SpiBus = getSPI(transport.spiChannel as SPI)
+        setMode(chipSelect, OUTPUT)
+        setMode(dataCommand, OUTPUT)
+        setDigital(chipSelect, HIGH)
+        bus.initialize()
+        bus.setClockMode(SpiClockMode.MODE_0)
+        bus.setBitOrder(SpiBitOrder.MSB_FIRST)
+        bus.setClockDivider(SPI_CLOCK_DIVIDER)
+    } else {
+        const bus: I2CBus = getI2C(transport.i2cChannel as I2C)
+        bus.initialize()
+    }
+}
+
+/**
+ * Sends one block through the I2C framing: a control byte before the payload.
+ * @param transport - I2C transport that carries the bytes
+ * @param controlByte - Panel control byte (`CONTROL_COMMAND` or `CONTROL_DATA`)
+ * @param bytes - Bytes to send, without any transport framing
+ */
+const writeI2cDisplayBlock = (transport: DisplayTransport, controlByte: u8, bytes: u8[]) => {
+    const payload: u8[] = []
+    payload.push(controlByte)
+    for (let index: u16 = 0; index < bytes.length(); index += 1) {
+        payload.push(bytes[index])
+    }
+    const bus: I2CBus = getI2C(transport.i2cChannel as I2C)
+    bus.write(DISPLAY_I2C_ADDRESS, payload)
+}
+
+/**
+ * Sends one block through the 4-wire SPI framing: chip select low for the whole
+ * block and the data/command pin driven before the bytes.
+ * @param transport - SPI transport that carries the bytes
+ * @param isData - True to drive the data/command pin high, false for commands
+ * @param bytes - Bytes to send, without any transport framing
+ */
+const writeSpiDisplayBlock = (transport: DisplayTransport, isData: boolean, bytes: u8[]) => {
+    const chipSelect: Pin = transport.chipSelectChannel as Pin
+    const dataCommand: Pin = transport.dataCommandChannel as Pin
+    const bus: SpiBus = getSPI(transport.spiChannel as SPI)
+    setDigital(chipSelect, LOW)
+    if (isData) {
+        setDigital(dataCommand, HIGH)
+    } else {
+        setDigital(dataCommand, LOW)
+    }
+    bus.write(bytes)
+    setDigital(chipSelect, HIGH)
+}
+
+/**
+ * Sends one block through the transport selected by the display.
+ * @param transport - Transport that carries the bytes
+ * @param controlByte - Panel control byte used by the I2C framing
+ * @param isData - True for data bytes, false for commands
+ * @param bytes - Bytes to send, without any transport framing
+ */
+const writeDisplayTransportBlock = (
+    transport: DisplayTransport,
+    controlByte: u8,
+    isData: boolean,
+    bytes: u8[]
+) => {
+    if (transport.usesSpi) {
+        writeSpiDisplayBlock(transport, isData, bytes)
+    } else {
+        writeI2cDisplayBlock(transport, controlByte, bytes)
+    }
+}
+
+/**
+ * Creates the shared SSD1306 driver over the given transport.
+ * @param transport - Transport that frames panel commands and data
+ * @returns A configured SSD1306 display
+ */
+const createDisplay = (transport: DisplayTransport): Ssd1306Display => {
+    let cursorX: u16 = 0
+    let cursorY: u16 = 0
+    let textScale: u8 = 1
+
+    const sendCommand = (command: u8) => {
+        const bytes: u8[] = []
+        bytes.push(command)
+        writeDisplayTransportBlock(transport, CONTROL_COMMAND, COMMAND_LEVEL, bytes)
+    }
+
+    const positionCursor = () => {
+        const page: u8 = (cursorY / PAGE_HEIGHT) as u8
+        const columnLow: u8 = (cursorX % COLUMNS_PER_PAGE) as u8
+        const columnHigh: u8 = (cursorX / COLUMNS_PER_PAGE) as u8
+        const bytes: u8[] = []
+        bytes.push(PAGE_BASE + page)
+        bytes.push(columnLow)
+        bytes.push(COLUMN_HIGH_BASE + columnHigh)
+        writeDisplayTransportBlock(transport, CONTROL_COMMAND, COMMAND_LEVEL, bytes)
+    }
+
+    const pow2 = (exponent: u8): u16 => {
+        let value: u16 = 1
+        for (let i: u8 = 0; i < exponent; i += 1) {
+            value = value * 2
+        }
+        return value
+    }
+
+    const getScaledColumnByte = (source: u8, page: u8, scale: u8): u8 => {
+        let result: u8 = 0
+        for (let row: u8 = 0; row < FONT_ROWS; row += 1) {
+            let divided: u16 = source
+            for (let i: u8 = 0; i < row; i += 1) {
+                divided = divided / 2
+            }
+            if ((divided % 2) == 1) {
+                for (let k: u8 = 0; k < scale; k += 1) {
+                    const globalRow: i16 = ((row as i16) * (scale as i16)) + (k as i16)
+                    const pageRow: i16 = globalRow - ((page as i16) * PAGE_HEIGHT)
+                    if (pageRow >= 0 && pageRow < (PAGE_HEIGHT as i16)) {
+                        result = (result + pow2(pageRow as u8)) as u8
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    return {
+        initialize: () => {
+            initializeDisplayTransport(transport)
+            delay(POWER_ON_DELAY_MILLIS)
+            sendCommand(DISPLAY_OFF)
+            sendCommand(SET_DISPLAY_CLOCK_DIVIDE)
+            sendCommand(CLOCK_DIVIDE_VALUE)
+            sendCommand(SET_MULTIPLEX)
+            sendCommand(MULTIPLEX_VALUE)
+            sendCommand(SET_DISPLAY_OFFSET)
+            sendCommand(DISPLAY_OFFSET_VALUE)
+            sendCommand(SET_START_LINE)
+            sendCommand(SET_CHARGE_PUMP)
+            sendCommand(CHARGE_PUMP_VALUE)
+            sendCommand(SET_MEMORY_MODE)
+            sendCommand(MEMORY_MODE_VALUE)
+            sendCommand(SEGMENT_REMAP)
+            sendCommand(COM_SCAN_DEC)
+            sendCommand(SET_COM_PINS)
+            sendCommand(COM_PINS_VALUE)
+            sendCommand(SET_CONTRAST)
+            sendCommand(CONTRAST_VALUE)
+            sendCommand(SET_PRECHARGE)
+            sendCommand(PRECHARGE_VALUE)
+            sendCommand(SET_VCOM_DETECT)
+            sendCommand(VCOM_DETECT_VALUE)
+            sendCommand(RESUME_TO_RAM)
+            sendCommand(NORMAL_DISPLAY)
+            sendCommand(DISPLAY_ON)
+        },
+        clearDisplay: () => {
+            for (let page: u8 = 0; page < PAGE_COUNT; page += 1) {
+                cursorY = (page as u16) * PAGE_HEIGHT
+                cursorX = 0
+                positionCursor()
+                let remaining: u16 = DISPLAY_WIDTH
+                while (remaining > 0) {
+                    const bytes: u8[] = []
+                    let count: u16 = CLEAR_CHUNK
+                    if (remaining < count) {
+                        count = remaining
+                    }
+                    for (let column: u16 = 0; column < count; column += 1) {
+                        bytes.push(0)
+                    }
+                    writeDisplayTransportBlock(transport, CONTROL_DATA, DATA_LEVEL, bytes)
+                    remaining = remaining - count
+                }
+            }
+            cursorX = 0
+            cursorY = 0
+        },
+        setCursor: (x: u16, y: u16) => {
+            cursorX = x
+            cursorY = y
+        },
+        setTextScale: (scale: u8) => {
+            textScale = scale
+        },
+        write: (text: string) => {
+            const scale = textScale
+            const pageCount: u8 = (((FONT_ROWS as u16) * (scale as u16) + PAGE_HEIGHT - 1) / PAGE_HEIGHT) as u8
+            const advance: u16 = (CHAR_ADVANCE * scale) as u16
+            const startX: u16 = cursorX
+            const baseY: u16 = cursorY
+            for (let page: u8 = 0; page < pageCount; page += 1) {
+                cursorX = startX
+                cursorY = baseY + (page as u16) * PAGE_HEIGHT
+                positionCursor()
+                let payload: u8[] = []
+                for (let index: u16 = 0; index < text.length(); index += 1) {
+                    for (let column: u8 = 0; column < CHAR_ADVANCE; column += 1) {
+                        let scaledByte: u8 = 0
+                        if (column < GLYPH_WIDTH) {
+                            scaledByte = getScaledColumnByte(getGlyphColumn(text[index], column), page, scale)
+                        }
+                        for (let rep: u8 = 0; rep < scale; rep += 1) {
+                            payload.push(scaledByte)
+                            if (payload.length() >= WRITE_CHUNK) {
+                                writeDisplayTransportBlock(transport, CONTROL_DATA, DATA_LEVEL, payload)
+                                payload = []
+                            }
+                        }
+                    }
+                }
+                if (payload.length() > 0) {
+                    writeDisplayTransportBlock(transport, CONTROL_DATA, DATA_LEVEL, payload)
+                }
+            }
+            cursorX = startX + (text.length() * advance) as u16
+            cursorY = baseY
+        }
+    }
+}
+
+/**
+ * Creates a SSD1306 display bound to the given I2C interface.
+ *
+ * Uses the panel's I2C framing: a `0x00` control byte before commands and a
+ * `0x40` control byte before data. The display address is fixed at `0x3C`.
+ * @param i2c - I2C interface the display is connected to
+ * @returns A configured SSD1306 display
+ */
+export const getDisplayI2C = (i2c: I2C): Ssd1306Display => {
+    const transport: DisplayTransport = createDisplayTransport(
+        i2c as u8,
+        INVALID_CHANNEL,
+        INVALID_CHANNEL,
+        INVALID_CHANNEL,
+        false
+    )
+    return createDisplay(transport)
+}
+
+/**
+ * Creates a SSD1306 display bound to the given 4-wire SPI interface.
+ *
+ * Chip select stays low for the whole transaction and the data/command pin is
+ * low for commands and high for data. `initialize` configures the bus as SPI
+ * mode 0, most-significant-bit first and with a clock divider of 8, so it
+ * overrides those global settings for every device on the same bus. The
+ * divider keeps the clock within the panel limit on both supported frequency
+ * domains: 2 MHz on a 16 MHz AVR and 9 MHz on a 72 MHz STM32 bus, below the
+ * roughly 10 MHz the SSD1306 tolerates. The panel RESET pin is not exposed: the
+ * display is expected to be wired with its reset tied to the board reset or to
+ * a power-on RC network.
+ * @param spi - SPI interface the display is connected to
+ * @param cs - Chip-select pin
+ * @param dc - Data/command pin
+ * @returns A configured SSD1306 display
+ */
+export const getDisplaySPI = (spi: SPI, cs: Pin, dc: Pin): Ssd1306Display => {
+    const transport: DisplayTransport = createDisplayTransport(
+        INVALID_CHANNEL,
+        spi as u8,
+        cs as u8,
+        dc as u8,
+        true
+    )
+    return createDisplay(transport)
+}

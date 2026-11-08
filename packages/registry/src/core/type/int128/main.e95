@@ -1,0 +1,10 @@
+// The `int128` sub-library backs the native `i128` and `u128` types. It has no
+// callable API: the types and their arithmetic are handled by the language
+// engine.
+//
+// Under the hood it generates `core_int128.h`/`core_int128.cpp`, which
+// implement `i128`/`u128` as a portable software type: each value is a pair of
+// `u64` halves (lo/hi) with overloaded operators and manual arithmetic
+// (carry/borrow, multi-word multiply and divide). The target toolchains (AVR
+// and ARM Cortex-M) have no native `__int128`, so the codegen calls these
+// helpers for every 128-bit operation.

@@ -1,0 +1,19 @@
+// The `memory` sub-library provides the reference-counted handle motor used by
+// the runtime. It has no callable API: it is internal C++ support that the
+// array/string/object codegen will re-express its heap-backed types on.
+//
+// Under the hood it generates `core_memory.h`, which implements
+// `core_mem::Ref<T>`: a shared-mutable handle to a refcounted heap box with
+// correct RAII (copy acquire, move without acquire, `operator=` release-old +
+// acquire-new, dtor release + free-if-0). Allocation lives in the same block
+// as the payload, so a single `free()` releases both, and no handle operation
+// except construction/clone allocates (an OOM yields a null handle rather than
+// a throw, matching the no-exceptions embedded runtime).
+//
+// Migration status onto this single motor:
+//   - `Array<T>`: DONE (core_array.h includes core_memory.h and re-expresses
+//     Array as Ref<Storage<T>>).
+//   - `String` (copy-on-write): DONE (core_string.h includes core_memory.h and
+//     re-expresses String as Ref<StrStorage>; the old core_array::Buffer was
+//     retired).
+//   - object fields: pending.

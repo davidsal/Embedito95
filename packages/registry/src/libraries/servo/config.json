@@ -1,0 +1,7 @@
+{
+	"name": "servo",
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"package": "@embedito95/servo",
+	"version": "0.1.0"
+}

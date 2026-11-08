@@ -1,0 +1,49 @@
+import { Pin } from '@embedito95/gpio'
+import { getSoftwareSerial, getSoftwareSerialReceiveCapacity, SoftwareSerialPort } from '@embedito95/software-serial'
+
+const BAUD_RATE: u32 = 9600
+const FAST_BAUD_RATE: u32 = 57600
+const TRANSMIT_PIN = Pin.3
+const RECEIVE_PIN = Pin.2
+const SECOND_RECEIVE_PIN = Pin.8
+
+const LINK: SoftwareSerialPort = getSoftwareSerial(TRANSMIT_PIN, RECEIVE_PIN)
+const SECOND_LINK: SoftwareSerialPort = getSoftwareSerial(TRANSMIT_PIN, SECOND_RECEIVE_PIN)
+
+const setup = () => {
+    LINK.initialize(BAUD_RATE)
+    LINK.sendLine("ready")
+}
+
+const main = () => {
+    setup()
+    LINK.send("status")
+    LINK.initialize(FAST_BAUD_RATE)
+    LINK.flushOutput()
+
+    if (LINK.hasData()) {
+        if (LINK.isListening()) {
+            const next: u8 | null = LINK.getNextByte()
+            const incoming: u8 | null = LINK.read()
+            if (incoming != null) {
+                LINK.send("byte")
+            }
+        }
+    }
+
+    const line: string = LINK.readLine()
+    const number: i32 = LINK.readInteger()
+    const capacity: u8 = getSoftwareSerialReceiveCapacity()
+    const overflowed: boolean = LINK.hasOverflowed()
+
+    SECOND_LINK.initialize(FAST_BAUD_RATE)
+    SECOND_LINK.startListening()
+    const secondListening: boolean = SECOND_LINK.isListening()
+    const firstListening: boolean = LINK.isListening()
+    SECOND_LINK.stopListening()
+
+    LINK.stopListening()
+    LINK.close()
+}
+
+main()

@@ -1,0 +1,35 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Point = {
+    x: i16
+    y: i16
+}
+
+// A free function returning a data-object must produce a NEW shared handle
+// (`Object<Point>` transferred by move): each call is an independent instance.
+const makePoint = (x: i16, y: i16): Point => {
+    return { x: x, y: y }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const p1 = makePoint(7, 8)
+    const p2 = makePoint(9, 10)
+    p1.x = 1
+    serial.sendLine(p1.x)
+    serial.sendLine(p2.x)
+
+    const b = p1
+    b.x = 42
+    serial.sendLine(p1.x)
+    serial.sendLine(p2.x)
+}
+
+main()

@@ -1,0 +1,40 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// string is copy-on-write over the ref engine: reading/aliasing shares storage,
+// but the first WRITE on a shared handle detaches it, so a copy diverges from
+// the original only after it is mutated.
+
+// A string parameter is a CoW handle: writing to it detaches the LOCAL one,
+// so the caller's string is untouched.
+const decorate = (s: string) => {
+    s.push('!')
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const greeting: string = "hi"
+
+    // Copying aliases until the copy is written (then it detaches).
+    let copy = greeting
+    copy.push('!')
+    serial.sendLine(greeting.length())
+    serial.sendLine(copy.length())
+
+    // Write through a param stays local (CoW detaches), caller unchanged.
+    decorate(greeting)
+    serial.sendLine(greeting.length())
+
+    // A fresh literal is independent.
+    const other: string = "x"
+    serial.sendLine(other)
+    serial.sendLine(greeting)
+}
+
+main()

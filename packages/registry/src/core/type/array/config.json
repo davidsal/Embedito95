@@ -1,0 +1,8 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "array",
+	"package": "@embedito95/array",
+	"version": "0.1.0",
+	"autoImport": true
+}

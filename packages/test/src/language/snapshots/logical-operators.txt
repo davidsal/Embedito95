@@ -1,0 +1,37 @@
+// Nullable truthiness and ?? / || / && (Issue: falsy/truthy ADR).
+// Reports the error codes raised for each snippet.
+// x ?? y -> ok
+errors: none
+
+// x || y -> ok
+errors: none
+
+// x && y -> ok
+errors: none
+
+// if (x) with nullable x -> ok
+errors: none
+
+// if (!x) with nullable x -> ok
+errors: none
+
+// if (x && y) with nullable operands -> ok
+errors: none
+
+// narrowing in the RHS of && -> ok
+errors: none
+
+// chained x ?? y ?? z -> ok
+errors: none
+
+// mixing ?? with || -> mixedLogicalOperators
+errors: error.mixedLogicalOperators
+
+// incompatible ?? operands -> logicalTypeMismatch
+errors: error.logicalTypeMismatch
+
+// x ?? y assigned to f32 -> ok
+errors: none
+
+// nullable x assigned to f32 (control) -> assignmentTypeMismatch
+errors: error.assignmentTypeMismatch

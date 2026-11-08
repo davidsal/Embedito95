@@ -1,0 +1,8 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "system",
+	"package": "@embedito95/system",
+	"version": "0.1.0",
+	"autoImport": true
+}

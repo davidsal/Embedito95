@@ -1,0 +1,49 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+const greeting: string = "hi"
+const fixed: i16[3] = [10, 20, 30]
+const small = [1, 2, 3]
+let chars: char[] = []
+let buffer: i16[] = []
+let words: string[] = []
+let text: string = ""
+
+type Point = {
+    x: i16
+    y: i16
+}
+
+let points: Point[] = []
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    buffer.push(7)
+    buffer.push(8)
+    buffer.pop()
+    chars.push('a')
+    chars.push('b')
+    words.push("a")
+    words.push("b")
+    text = "hello"
+    text.push('!')
+
+    const total = fixed[0] + buffer[0]
+    let point: Point = { x: 0, y: 0 }
+    point.x = 5
+    point.y = total
+    points.push(point)
+    serial.sendLine(points[0].y)
+    serial.sendLine(greeting)
+    serial.sendLine(small.length())
+    serial.sendLine(chars.length())
+    serial.sendLine(words[0])
+    serial.sendLine(text)
+}
+
+main()

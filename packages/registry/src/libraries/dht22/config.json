@@ -1,0 +1,7 @@
+{
+	"name": "dht22",
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"package": "@embedito95/dht22",
+	"version": "0.1.0"
+}

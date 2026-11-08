@@ -1,0 +1,7 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "time",
+	"package": "@embedito95/time",
+	"version": "0.1.0"
+}

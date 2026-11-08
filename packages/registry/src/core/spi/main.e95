@@ -1,0 +1,106 @@
+/**
+ * Available SPI buses
+ */
+export enum SPI {
+    // e95.postinstall.spiEnum
+}
+
+/**
+ * Order in which the bits of each byte travel over the bus.
+ * @member MSB_FIRST - Transmit the most significant bit first
+ * @member LSB_FIRST - Transmit the least significant bit first
+ */
+export enum SpiBitOrder {
+    MSB_FIRST,
+    LSB_FIRST
+}
+
+/**
+ * Clock polarity and phase pair, which fixes when the bus samples a bit.
+ * @member MODE_0 - Clock idle low, sampled on the leading edge
+ * @member MODE_1 - Clock idle low, sampled on the trailing edge
+ * @member MODE_2 - Clock idle high, sampled on the leading edge
+ * @member MODE_3 - Clock idle high, sampled on the trailing edge
+ */
+export enum SpiClockMode {
+    MODE_0,
+    MODE_1,
+    MODE_2,
+    MODE_3
+}
+
+/**
+ * An SPI bus bound to an interface.
+ */
+export type SpiBus = {
+    /**
+     * Starts the SPI bus.
+     */
+    initialize: () => void
+    /**
+     * Stops the bus and leaves its pins in their inactive state.
+     */
+    close: () => void
+    /**
+     * Sets the bus clock divider, expressed as a divisor of the peripheral
+     * clock feeding the bus.
+     * @param divider - Clock divisor (2, 4, 8, 16, 32, 64 or 128; 256 on STM32)
+     */
+    setClockDivider: (divider: u16) => void
+    /**
+     * Sets the order in which the bits of each byte are transmitted.
+     * @param order - Bit transmission order
+     */
+    setBitOrder: (order: SpiBitOrder) => void
+    /**
+     * Sets the clock polarity and phase pair used to sample each bit.
+     * @param mode - Clock mode
+     */
+    setClockMode: (mode: SpiClockMode) => void
+    /**
+     * Saves the current clock divider, clock mode and bit order, then applies
+     * the given configuration. At most two transactions can be open at once;
+     * a call beyond that limit is ignored.
+     * @param clockDivider - Clock divisor to apply for the transaction
+     * @param mode - Clock mode to apply for the transaction
+     * @param bitOrder - Bit transmission order to apply for the transaction
+     */
+    beginTransaction: (clockDivider: u16, mode: SpiClockMode, bitOrder: SpiBitOrder) => void
+    /**
+     * Restores the configuration saved by the matching `beginTransaction`,
+     * in last-in-first-out order. Does nothing when no transaction is open.
+     */
+    endTransaction: () => void
+    /**
+     * Transfers one byte, returning the byte received at the same time.
+     * @param data - Byte to send
+     * @returns The byte received during the transfer
+     */
+    transfer: (data: u8) => u8
+    /**
+     * Transfers a 16-bit value as two bytes, following the configured bit
+     * order, and returns the 16 bits received in the same order.
+     * @param value - Word to send
+     * @returns The word received during the transfer
+     */
+    transfer16: (value: u16) => u16
+    /**
+     * Transfers a sequence of bytes, returning the bytes received at the same
+     * time, position by position.
+     * @param data - Bytes to send
+     * @returns The bytes received during the transfer
+     */
+    transferBuffer: (data: u8[]) => u8[]
+    /**
+     * Writes a sequence of bytes, discarding the received data.
+     * @param data - Bytes to write
+     */
+    write: (data: u8[]) => void
+}
+
+/**
+ * Creates an SPI bus bound to the given interface.
+ * @param spi - SPI interface to use
+ * @returns A configured SPI bus
+ */
+export const getSPI = (spi: SPI): SpiBus => {}

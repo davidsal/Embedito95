@@ -1,0 +1,51 @@
+import { Pin } from '@embedito95/gpio'
+import { getSoftwareSerial, getSoftwareSerialReceiveCapacity, SoftwareSerialPort } from '@embedito95/software-serial'
+
+// The STM32 strategy implements the same software-serial surface: a timer
+// samples the receive line and the transmit line is bit-banged with the DWT
+// counter. This program exercises the full API at the top of the supported baud
+// range, including two handles that switch the single receive listener.
+const BAUD_RATE: u32 = 115200
+const TRANSMIT_PIN = Pin.A2
+const RECEIVE_PIN = Pin.A3
+const SECOND_RECEIVE_PIN = Pin.A4
+
+const LINK: SoftwareSerialPort = getSoftwareSerial(TRANSMIT_PIN, RECEIVE_PIN)
+const SECOND_LINK: SoftwareSerialPort = getSoftwareSerial(TRANSMIT_PIN, SECOND_RECEIVE_PIN)
+
+const setup = () => {
+    LINK.initialize(BAUD_RATE)
+}
+
+const main = () => {
+    setup()
+    LINK.send("status")
+    LINK.sendLine("ready")
+    LINK.flushOutput()
+
+    if (LINK.hasData()) {
+        if (LINK.isListening()) {
+            const next: u8 | null = LINK.getNextByte()
+            const incoming: u8 | null = LINK.read()
+            if (incoming != null) {
+                LINK.send("byte")
+            }
+        }
+    }
+
+    const line: string = LINK.readLine()
+    const number: i32 = LINK.readInteger()
+    const capacity: u8 = getSoftwareSerialReceiveCapacity()
+    const overflowed: boolean = LINK.hasOverflowed()
+
+    SECOND_LINK.initialize(BAUD_RATE)
+    SECOND_LINK.startListening()
+    const secondListening: boolean = SECOND_LINK.isListening()
+    const firstListening: boolean = LINK.isListening()
+    SECOND_LINK.stopListening()
+
+    LINK.stopListening()
+    LINK.close()
+}
+
+main()

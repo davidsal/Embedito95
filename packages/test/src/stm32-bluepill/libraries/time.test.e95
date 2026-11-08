@@ -1,0 +1,52 @@
+import { setDigital, setMode, Pin, PinMode, DigitalLevel } from '@embedito95/gpio'
+import { delay, delayMicros, getMillis, getMicros } from '@embedito95/time'
+
+const LED_PIN = Pin.LED_BUILTIN
+const PERIOD_MS = 1000
+const PERIOD_US = 1000
+
+const blinkMs = () => {
+    while (true) {
+        setDigital(LED_PIN, DigitalLevel.HIGH)
+        delay(PERIOD_MS)
+        setDigital(LED_PIN, DigitalLevel.LOW)
+        delay(PERIOD_MS)
+    }
+}
+
+const blinkMicros = () => {
+    while (true) {
+        setDigital(LED_PIN, DigitalLevel.HIGH)
+        delayMicros(PERIOD_US)
+        setDigital(LED_PIN, DigitalLevel.LOW)
+        delayMicros(PERIOD_US)
+    }
+}
+
+const blinkElapsed = () => {
+    const startMillis = getMillis()
+    const startMicros = getMicros()
+    while (true) {
+        const elapsedMillis = getMillis() - startMillis
+        if (elapsedMillis >= PERIOD_MS) {
+            setDigital(LED_PIN, DigitalLevel.HIGH)
+        }
+        const elapsedMicros = getMicros() - startMicros
+        if (elapsedMicros >= PERIOD_US) {
+            setDigital(LED_PIN, DigitalLevel.LOW)
+        }
+    }
+}
+
+const setup = () => {
+    setMode(LED_PIN, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    blinkMs()
+    blinkMicros()
+    blinkElapsed()
+}
+
+main()

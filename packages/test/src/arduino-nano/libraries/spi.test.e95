@@ -1,0 +1,46 @@
+import { SPI, SpiBus, SpiBitOrder, SpiClockMode, getSPI } from '@embedito95/spi'
+
+// Wiring (Arduino Nano): SCK on D13, MOSI on D11, MISO on D12.
+
+const CLOCK_DIVISOR: u16 = 8
+
+const bus: SpiBus = getSPI(SPI.1)
+
+const setup = () => {
+    bus.initialize()
+    bus.setClockDivider(CLOCK_DIVISOR)
+    bus.setBitOrder(SpiBitOrder.MSB_FIRST)
+    bus.setClockMode(SpiClockMode.MODE_0)
+}
+
+const exchange = () => {
+    const firstByte: u8 = bus.transfer(0)
+    const echoed = bus.transferBuffer([1, 2, 3])
+    bus.write(echoed)
+    const trailerByte: u8 = 4
+    const request: u8[] = [firstByte, trailerByte]
+    bus.write(request)
+    return echoed
+}
+
+const share = (word: u16): u16 => {
+    bus.beginTransaction(16, SpiClockMode.MODE_3, SpiBitOrder.LSB_FIRST)
+    bus.beginTransaction(32, SpiClockMode.MODE_1, SpiBitOrder.MSB_FIRST)
+    const received: u16 = bus.transfer16(word)
+    bus.endTransaction()
+    bus.endTransaction()
+    return received
+}
+
+const main = () => {
+    setup()
+    const exchanged = exchange()
+    const word: u16 = bus.transfer16(4660)
+    const shared: u16 = share(word)
+    const trailer: u8[] = [(word % 256) as u8, (shared % 256) as u8]
+    bus.write(trailer)
+    bus.close()
+    bus.close()
+}
+
+main()

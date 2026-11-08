@@ -1,0 +1,5 @@
+# Block-local hoisted to a task field and read after the `await`: only the
+# first iteration (value == 0) turns the pin back off.
+digital 10 1
+digital 10 0
+digital 10 1

@@ -1,0 +1,28 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// A module-level nullable `let` shared across tasks lowers to a `nullable<f32>`
+// global; a null read must stay distinguishable from a real 0.
+let reading: f32 | null = null
+
+const sample = async () => {
+    if (reading == null) {
+        setDigital(Pin.10, HIGH)
+    }
+    reading = 1.5
+    if (reading != null) {
+        setDigital(Pin.10, LOW)
+    }
+    await sleep(10)
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    sample()
+}
+
+main()

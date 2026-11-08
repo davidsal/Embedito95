@@ -1,0 +1,68 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Counter = {
+    increment: () => void
+    getValue: () => i16
+}
+
+// Shared-object closure: a factory returning an object literal with inline
+// functions lowers to a `core_object::Object<T>` handle plus FREE functions over
+// `Object<T> &self` (public methods and hoisted private closures alike). Passing
+// a closure BY VALUE still SHARES the captured state: the increment below mutates
+// the caller's object (write-through), because the parameter aliases the same
+// storage; then rebinding the parameter to a fresh counter only repoints the
+// LOCAL handle (binding vs content), so the caller's object is untouched by the
+// increments that follow the rebind.
+const makeCounter = (): Counter => {
+    let count: i16 = 0
+    const add = (amount: i16) => {
+        count = count + amount
+    }
+    return {
+        increment: () => {
+            add(1)
+        },
+        getValue: () => {
+            return count
+        }
+    }
+}
+
+// Passing a shared-object closure BY VALUE still SHARES the captured state: the
+// increment below mutates the caller's object (write-through), because the
+// parameter aliases the same storage; then rebinding the parameter to a fresh
+// counter only repoints the LOCAL handle (binding vs content), so the caller's
+// object is untouched by the increments that follow the rebind.
+const bumpCounter = (c: Counter): i16 => {
+    c.increment()
+    c = makeCounter()
+    c.increment()
+    c.increment()
+    return c.getValue()
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    const counter = makeCounter()
+    counter.increment()
+    counter.increment()
+    const viaClosure = bumpCounter(counter)
+    // counter.getValue() == 3 (2 here + 1 write-through inside bumpCounter)
+    // viaClosure == 2 (a fresh local counter rebinding only repointed the param)
+    serial.sendLine(counter.getValue())
+    serial.sendLine(viaClosure)
+    // `let alias = counter` aliases the same storage (no copy): mutating through
+    // the alias is visible via `counter` (TS object sharing).
+    const alias = counter
+    alias.increment()
+    serial.sendLine(counter.getValue())
+    serial.sendLine(alias.getValue())
+}
+
+main()

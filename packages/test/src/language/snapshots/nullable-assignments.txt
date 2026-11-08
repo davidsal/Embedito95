@@ -1,0 +1,35 @@
+// Nullable RHS assigned to a non-nullable target (Issue 1 guard).
+// A member call returning 'f32 | null' assigned/declared as 'f32' must emit
+// error.assignmentTypeMismatch; nullable or inferred targets must not.
+// declared f32 = f32|null method call -> error
+assignmentTypeMismatch: yes
+
+// declared f32|null = f32|null method call -> ok
+assignmentTypeMismatch: no
+
+// no annotation infers f32|null -> ok
+assignmentTypeMismatch: no
+
+// reassign a let f32 from f32|null method call -> error
+assignmentTypeMismatch: yes
+
+// declared f32 = f32 method call (control, non-nullable) -> ok
+assignmentTypeMismatch: no
+
+// declared char|null = char literal -> ok
+assignmentTypeMismatch: no
+
+// declared string|null = string literal -> ok
+assignmentTypeMismatch: no
+
+// declared char|null = null -> ok
+assignmentTypeMismatch: no
+
+// declared string|null = null -> ok
+assignmentTypeMismatch: no
+
+// declared char|null = string literal -> error
+assignmentTypeMismatch: yes
+
+// declared i16|null = char literal -> error
+assignmentTypeMismatch: yes

@@ -1,0 +1,45 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// Numeric conversion and buffer copies run on every platform: the parsers are
+// hand-written and locale-independent, so the same text yields the same values
+// on AVR and STM32.
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const signedText: string = "  -42abc"
+    serial.sendLine(signedText.parseInteger())
+
+    const empty: string = ""
+    serial.sendLine(empty.parseInteger())
+
+    const overflow: string = " 2147483648"
+    serial.sendLine(overflow.parseInteger())
+
+    const exponent: string = " 2.5e-3"
+    serial.sendLine(exponent.parseFloat64())
+
+    const single: string = " 1.5"
+    serial.sendLine(single.parseFloat32())
+
+    const text: string = "AB"
+    const bytes = text.toByteArray()
+    serial.sendLine(bytes.length())
+    serial.sendLine(bytes[0])
+
+    const characters = text.toCharacterArray()
+    const emptyCharacters = empty.toCharacterArray()
+    serial.sendLine(characters.length())
+    serial.sendLine(characters[2] == emptyCharacters[0] ? 1 : 0)
+
+    text.reserveCapacity(2)
+    serial.sendLine(text.length())
+}
+
+main()

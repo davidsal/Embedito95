@@ -1,0 +1,76 @@
+import { I2C, I2CBus, I2CStatus, getI2C } from '@embedito95/i2c'
+
+// Wiring (Arduino Nano): SDA on A4, SCL on A5, device address 60.
+
+const DEVICE_ADDRESS: u8 = 60
+const REGISTER_ADDRESS: u8 = 0
+const CLOCK_HERTZ: u32 = 100000
+const READ_QUANTITY: u8 = 2
+const SLAVE_ADDRESS: u8 = 66
+const SLAVE_RESPONSE_HIGH: u8 = 1
+const SLAVE_RESPONSE_LOW: u8 = 2
+
+const bus: I2CBus = getI2C(I2C.1)
+
+const setup = () => {
+    bus.initialize()
+    bus.setClock(CLOCK_HERTZ)
+}
+
+const writeRegister = (value: u8): I2CStatus => {
+    bus.beginWrite(DEVICE_ADDRESS)
+    bus.sendByte(REGISTER_ADDRESS)
+    bus.sendByte(value)
+    return bus.endWrite()
+}
+
+const inspectTransaction = (value: u8): I2CStatus => {
+    const status: I2CStatus = writeRegister(value)
+    if (status != I2CStatus.OK) {
+        if (status == I2CStatus.ADDRESS_NACK) {
+            return status
+        }
+        bus.beginWrite(DEVICE_ADDRESS)
+        bus.sendByte(value)
+        return bus.endWrite()
+    }
+    return status
+}
+
+const readRegister = () => {
+    bus.write(DEVICE_ADDRESS, [REGISTER_ADDRESS])
+    bus.requestFrom(DEVICE_ADDRESS, READ_QUANTITY)
+    const highByte: u8 = bus.read()
+    bus.write(DEVICE_ADDRESS, [highByte])
+    const lowByte: u8 = bus.read()
+    bus.write(DEVICE_ADDRESS, [lowByte])
+}
+
+const onSlaveReceive = () => {
+    const pending: u8 = bus.available()
+    if (pending > 0) {
+        bus.read()
+    }
+}
+
+const onSlaveRequest = () => {
+    bus.sendResponse([SLAVE_RESPONSE_HIGH, SLAVE_RESPONSE_LOW])
+}
+
+const configureSlave = () => {
+    bus.initializeSlave(SLAVE_ADDRESS)
+    bus.onReceive(onSlaveReceive)
+    bus.onRequest(onSlaveRequest)
+}
+
+const main = () => {
+    setup()
+    const status: I2CStatus = inspectTransaction(REGISTER_ADDRESS)
+    if (status == I2CStatus.OK) {
+        readRegister()
+    }
+    bus.close()
+    configureSlave()
+}
+
+main()

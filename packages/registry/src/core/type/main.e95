@@ -1,0 +1,10 @@
+// The `type` package is the auto-imported core bundle that backs the native
+// numeric types. It has no callable API: programs use the numeric types
+// (`u8`…`i64`, `f32`, `f64`, `boolean`) as native language types without
+// importing them.
+//
+// Under the hood it generates `core_type.h`, which provides the C++ aliases
+// (`using u8 = uint8_t`, etc.) and the `nullable<T>` wrapper that the codegen
+// relies on when emitting C++. It also acts as the bundle root for the runtime
+// sub-libraries `array`, `string` and `int128`, whose headers are generated
+// into the same build directory and pulled in from `core_type.h`.

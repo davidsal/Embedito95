@@ -1,0 +1,9 @@
+/**
+ * Returns a single column byte of the 5x7 glyph for the given character.
+ * Each column is 7 bits wide, with the least significant bit at the top.
+ * Out-of-range characters and columns return 0.
+ * @param character - Character to look up
+ * @param columnIndex - Column of the glyph (0-4)
+ * @returns The 7-bit column value
+ */
+export const getGlyphColumn = (character: char, columnIndex: u8): u8 => {}

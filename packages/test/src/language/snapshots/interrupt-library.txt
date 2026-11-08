@@ -1,0 +1,81 @@
+// LSP view of the `interrupt` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/interrupt/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// The pin list and trigger list are injected at the postinstall marker,
+// exactly as `embedito95-cli install` fills them: the first block models
+// the AVR target (numeric pins), the second the STM32 EXTI lines
+// (port-prefixed pins).
+// attachPinInterrupt accepts a channel pin and a top-level handler
+diagnostics:
+- none
+types:
+- none
+
+// getInterruptNumber infers u8
+diagnostics:
+- none
+types:
+- channel => u8
+
+// nested interrupt registration produces no diagnostics
+diagnostics:
+- none
+types:
+- nested => boolean
+
+// pin without an interrupt channel is reported
+diagnostics:
+- error error.argumentValueNotAllowed @ 5:24: Argument 'pin' does not accept 'Pin.4'; allowed values: 2, 3.
+types:
+- none
+
+// handler that captures local state is reported
+diagnostics:
+- error error.callbackCapturesLocalState @ 5:37: Callback handler for 'handler' captures local state; register a top-level function instead.
+types:
+- none
+
+// handler that takes parameters is reported
+diagnostics:
+- error error.callbackHasParameters @ 5:31: Callback handler 'onEdge' must take no parameters.
+types:
+- none
+
+// inline handler without captured state is reported
+diagnostics:
+- error error.callbackMustBeNamed @ 4:37: Callback handler for 'handler' must be a top-level function reference.
+types:
+- none
+
+// raw number trigger mode is reported
+diagnostics:
+- error error.argumentTypeMismatch @ 5:39: Argument 'mode' expects type 'InterruptMode' but literal 1 is 'u8'
+types:
+- none
+
+// STM32 accepts port-prefixed pins and every EXTI trigger mode
+diagnostics:
+- none
+types:
+- none
+
+// STM32 nested registration produces no diagnostics
+diagnostics:
+- none
+types:
+- configured => boolean
+
+// STM32 accepts the LED_BUILTIN alias as an EXTI line
+diagnostics:
+- none
+types:
+- none
+
+// STM32 pin without an EXTI line is reported
+diagnostics:
+- error error.argumentValueNotAllowed @ 5:24: Argument 'pin' does not accept 'Pin.C14'; allowed values: A0, A1, B6, C13, LED_BUILTIN.
+types:
+- none

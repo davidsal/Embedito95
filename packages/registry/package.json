@@ -1,0 +1,30 @@
+{
+	"name": "embedito95-registry",
+	"version": "0.1.3",
+	"description": "Embedito95 platforms, strategies and libraries registry",
+	"type": "module",
+	"license": "AGPL-3.0-only",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/davidsal/Embedito95.git",
+		"directory": "packages/registry"
+	},
+	"homepage": "https://github.com/davidsal/Embedito95#readme",
+	"bugs": {
+		"url": "https://github.com/davidsal/Embedito95/issues"
+	},
+	"exports": {
+		"./platforms": "./src/platforms/index.js",
+		"./strategies": "./src/strategies/index.js"
+	},
+	"files": [
+		"src"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {}
+}

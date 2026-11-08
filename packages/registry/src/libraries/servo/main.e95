@@ -1,0 +1,198 @@
+import { Pin } from '@embedito95/gpio'
+import { getChannel, getChannelCount, releaseChannel, setChannelPulse } from '@embedito95/servo-hardware'
+
+const DEFAULT_MINIMUM_PULSE_MICROS: u16 = 1000
+const DEFAULT_MAXIMUM_PULSE_MICROS: u16 = 2000
+const MAXIMUM_PULSE_MICROS: u16 = 19000
+const MINIMUM_ANGLE_DEGREES: u8 = 0
+const MAXIMUM_ANGLE_DEGREES: u8 = 180
+const INITIAL_ANGLE_DEGREES: u8 = 90
+const INITIAL_PULSE_MICROS: u16 = 1500
+const ANGLE_SPAN_DEGREES: u32 = 180
+const NO_CHANNEL: u8 = 0
+
+/**
+ * Converts an angle to the pulse width that produces it within a range.
+ * @param angleDegrees - Angle between 0 and 180 degrees
+ * @param minimumPulseMicros - Pulse width that produces 0 degrees
+ * @param maximumPulseMicros - Pulse width that produces 180 degrees
+ * @returns The pulse width in microseconds
+ */
+const resolvePulseMicros = (angleDegrees: u8, minimumPulseMicros: u16, maximumPulseMicros: u16): u16 => {
+    const spanMicros: u32 = (maximumPulseMicros as u32) - (minimumPulseMicros as u32)
+    const offsetMicros: u32 = (spanMicros * (angleDegrees as u32)) / ANGLE_SPAN_DEGREES
+    return ((minimumPulseMicros as u32) + offsetMicros) as u16
+}
+
+/**
+ * Converts a pulse width back to the nearest angle within a range.
+ * @param pulseMicros - Pulse width in microseconds
+ * @param minimumPulseMicros - Pulse width that produces 0 degrees
+ * @param maximumPulseMicros - Pulse width that produces 180 degrees
+ * @returns The angle between 0 and 180 degrees
+ */
+const resolveAngleDegrees = (pulseMicros: u16, minimumPulseMicros: u16, maximumPulseMicros: u16): u8 => {
+    if (maximumPulseMicros <= minimumPulseMicros) {
+        return MINIMUM_ANGLE_DEGREES
+    }
+    if (pulseMicros <= minimumPulseMicros) {
+        return MINIMUM_ANGLE_DEGREES
+    }
+    if (pulseMicros >= maximumPulseMicros) {
+        return MAXIMUM_ANGLE_DEGREES
+    }
+    const offsetMicros: u32 = (pulseMicros as u32) - (minimumPulseMicros as u32)
+    const spanMicros: u32 = (maximumPulseMicros as u32) - (minimumPulseMicros as u32)
+    return ((offsetMicros * ANGLE_SPAN_DEGREES) / spanMicros) as u8
+}
+
+/**
+ * A servo output bound to one pulse channel.
+ * The commanded angle is limited to 0-180 degrees. Changing the angle or the
+ * pulse width keeps the output in its 50 Hz frame; the operation is immediate
+ * and does not block.
+ */
+export type Servo = {
+    /**
+     * Reports whether the handle owns a pulse channel.
+     * A handle created for a pin without a pulse output stays inactive and
+     * every operation on it has no effect.
+     * @returns True when the handle drives a channel
+     */
+    isActive: () => boolean
+    /**
+     * Moves the servo to an angle. Angles above 180 degrees are clamped.
+     * @param angleDegrees - Target angle between 0 and 180 degrees
+     */
+    setAngle: (angleDegrees: u8) => void
+    /**
+     * Returns the last commanded angle.
+     * @returns The angle between 0 and 180 degrees
+     */
+    getAngle: () => u8
+    /**
+     * Sets the pulse width directly, clamped to the configured pulse range.
+     * @param pulseMicros - Pulse width in microseconds
+     */
+    setPulseWidth: (pulseMicros: u16) => void
+    /**
+     * Returns the current pulse width.
+     * @returns The pulse width in microseconds
+     */
+    getPulseWidth: () => u16
+    /**
+     * Sets the pulse widths that map to 0 and 180 degrees.
+     * A range is accepted only when the minimum is above zero, the maximum is
+     * above the minimum and the maximum does not exceed 19000 microseconds;
+     * otherwise the call has no effect. The current angle is kept.
+     * @param minimumPulseMicros - Pulse width that produces 0 degrees
+     * @param maximumPulseMicros - Pulse width that produces 180 degrees
+     */
+    setPulseRange: (minimumPulseMicros: u16, maximumPulseMicros: u16) => void
+    /**
+     * Stops the pulse output and releases the channel.
+     * After release the handle stays inactive; create a new handle to drive
+     * the pin again.
+     */
+    release: () => void
+}
+
+/**
+ * Number of servo outputs the target can drive at the same time.
+ * @returns The number of available channels
+ */
+export const getServoChannelCount = (): u8 => {
+    return getChannelCount()
+}
+
+/**
+ * Creates a servo output on the given pin. The pin starts emitting pulses on
+ * the first angle or pulse-width command.
+ * Only the pins with a pulse output are accepted; the handle reports
+ * `isActive() == false` for any other pin, and every operation on it is a
+ * no-op.
+ *
+ * The pin is the shared resource: creating a second handle over the same pin
+ * binds it to the same output, so both handles command one channel. Releasing
+ * a handle turns that output off and leaves that handle dead; a sibling handle
+ * on the same pin still owns the channel and drives the output again on its
+ * next command, reconfiguring the counter when no channel is active.
+ *
+ * The outputs also share one counter: Timer1 on AVR and TIM1 on STM32. While at
+ * least one handle is active, that counter and its output pins belong to the
+ * servo library. Programming the same counter through another module stops the
+ * servo pulses and leaves the servo mute until every handle is released,
+ * because a pulse command only configures the counter when no channel is
+ * active. The servo drives the counter again on the first command issued after
+ * the last release.
+ * @param pin - Pin that emits the servo pulses
+ * @returns A servo handle bound to the pin
+ */
+export const getServo = (pin: Pin): Servo => {
+    let channel: u8 = getChannel(pin)
+    let angleDegrees: u8 = INITIAL_ANGLE_DEGREES
+    let pulseMicros: u16 = INITIAL_PULSE_MICROS
+    let minimumPulseMicros: u16 = DEFAULT_MINIMUM_PULSE_MICROS
+    let maximumPulseMicros: u16 = DEFAULT_MAXIMUM_PULSE_MICROS
+
+    return {
+        isActive: () => {
+            return channel != NO_CHANNEL
+        },
+        setAngle: (angle: u8) => {
+            if (channel == NO_CHANNEL) {
+                return
+            }
+            const clamped: u8 = angle > MAXIMUM_ANGLE_DEGREES ? MAXIMUM_ANGLE_DEGREES : angle
+            angleDegrees = clamped
+            pulseMicros = resolvePulseMicros(clamped, minimumPulseMicros, maximumPulseMicros)
+            setChannelPulse(channel, pulseMicros)
+        },
+        getAngle: () => {
+            return angleDegrees
+        },
+        setPulseWidth: (requestedMicros: u16) => {
+            if (channel == NO_CHANNEL) {
+                return
+            }
+            let clamped: u16 = requestedMicros
+            if (clamped < minimumPulseMicros) {
+                clamped = minimumPulseMicros
+            }
+            if (clamped > maximumPulseMicros) {
+                clamped = maximumPulseMicros
+            }
+            pulseMicros = clamped
+            angleDegrees = resolveAngleDegrees(clamped, minimumPulseMicros, maximumPulseMicros)
+            setChannelPulse(channel, clamped)
+        },
+        getPulseWidth: () => {
+            return pulseMicros
+        },
+        setPulseRange: (minimumMicros: u16, maximumMicros: u16) => {
+            if (channel == NO_CHANNEL) {
+                return
+            }
+            if (minimumMicros == 0) {
+                return
+            }
+            if (maximumMicros <= minimumMicros) {
+                return
+            }
+            if (maximumMicros > MAXIMUM_PULSE_MICROS) {
+                return
+            }
+            minimumPulseMicros = minimumMicros
+            maximumPulseMicros = maximumMicros
+            pulseMicros = resolvePulseMicros(angleDegrees, minimumPulseMicros, maximumPulseMicros)
+            setChannelPulse(channel, pulseMicros)
+        },
+        release: () => {
+            if (channel == NO_CHANNEL) {
+                return
+            }
+            releaseChannel(channel)
+            channel = NO_CHANNEL
+        }
+    }
+}

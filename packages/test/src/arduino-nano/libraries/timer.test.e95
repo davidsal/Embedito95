@@ -1,0 +1,46 @@
+import { Timer, HardwareTimer, getTimer, startTone, stopTone, measurePulseWidth } from '@embedito95/timer'
+import { Pin, HIGH, LOW } from '@embedito95/gpio'
+
+// AVR exposes Timer1 (16-bit) and Timer2 (8-bit); the counter that backs the
+// millisecond clock is reserved and is not part of the enum.
+const FIRST_PERIOD_MICROS: u32 = 1000
+const SECOND_PERIOD_MICROS: u32 = 2000
+const TONE_FREQUENCY_HERTZ: u16 = 440
+const PULSE_TIMEOUT_MICROS: u32 = 1000
+
+const onPeriod = () => {}
+
+const firstTimer: HardwareTimer = getTimer(Timer.1)
+const secondTimer: HardwareTimer = getTimer(Timer.2)
+
+const configure = () => {
+    firstTimer.initialize(FIRST_PERIOD_MICROS, onPeriod)
+    secondTimer.initialize(FIRST_PERIOD_MICROS, onPeriod)
+}
+
+const playTone = () => {
+    startTone(Timer.2, Pin.2, TONE_FREQUENCY_HERTZ)
+    stopTone(Pin.2)
+}
+
+const measurePulse = (): u32 => {
+    return measurePulseWidth(Pin.3, HIGH, PULSE_TIMEOUT_MICROS)
+}
+
+const setup = () => {
+    configure()
+    firstTimer.start()
+    secondTimer.start()
+}
+
+const main = () => {
+    setup()
+    firstTimer.setPeriod(SECOND_PERIOD_MICROS)
+    secondTimer.setPeriod(SECOND_PERIOD_MICROS)
+    firstTimer.stop()
+    secondTimer.stop()
+    playTone()
+    const pulseWidthMicros: u32 = measurePulse()
+}
+
+main()

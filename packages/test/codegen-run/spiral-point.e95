@@ -1,0 +1,48 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Closed-form square spiral: ring k is inset by k cells with side
+// MATRIX_SIZE - 2k. Every ring walks the top, right and bottom sides in full
+// and the left side one cell short, so the next ring starts at (k+1, k+1).
+// This must match the step-by-step simulation it replaced for all 64 cells.
+const MATRIX_SIZE: u8 = 8
+
+type Dot = {
+    x: u8,
+    y: u8
+}
+
+const spiralPoint = (step: u8): Dot => {
+    let ring: u8 = 0
+    while (4 * (ring + 1) * (MATRIX_SIZE - (ring + 1)) <= step) {
+        ring = ring + 1
+    }
+    const offset: u8 = step - 4 * ring * (MATRIX_SIZE - ring)
+    const side: u8 = MATRIX_SIZE - 2 * ring
+    let x: u8 = ring
+    let y: u8 = ring
+    if (offset < side) {
+        x = ring + offset
+    } else if (offset < 2 * side - 1) {
+        x = ring + side - 1
+        y = ring + offset - (side - 1)
+    } else if (offset < 3 * side - 2) {
+        x = ring + side - 1 - (offset - (2 * side - 2))
+        y = ring + side - 1
+    } else {
+        y = ring + side - 2 - (offset - (3 * side - 2))
+    }
+    return { x: x, y: y }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    for (let step: u8 = 0; step < 64; step += 1) {
+        const dot = spiralPoint(step)
+        setAnalog(Pin.3, dot.x)
+        setAnalog(Pin.4, dot.y)
+    }
+}
+
+main()

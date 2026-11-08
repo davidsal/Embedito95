@@ -1,0 +1,87 @@
+import { Pin, PinMode, DigitalLevel, BitOrder, MSB_FIRST, LSB_FIRST, VoltageReference, setMode, setDigital, getDigital, writeShift, readShift, setAnalog, getAnalog, setReference } from '@embedito95/gpio'
+
+// Wiring (STM32 Blue Pill):
+//  - PC13: onboard LED (LED_BUILTIN)
+//  - PB9:  LED + resistor to GND (PWM output test, 16-bit 0-65535)
+//  - PA8:  button/jumper to GND (digital input test, internal pull-up)
+//  - PA0:  potentiometer center pin (analog read test, 12-bit 0-4095)
+//  - PB10: shift data pin (bit-banged output/input test)
+//  - PB11: shift clock pin (bit-banged output/input test)
+
+const LED_PIN = Pin.LED_BUILTIN
+const PWM_PIN = Pin.B9
+const INPUT_PIN = Pin.A8
+const ADC_PIN = Pin.A0
+const SHIFT_DATA_PIN = Pin.B10
+const SHIFT_CLOCK_PIN = Pin.B11
+
+const testPinMode = () => {
+    setMode(LED_PIN, PinMode.OUTPUT)
+    setMode(PWM_PIN, PinMode.OUTPUT)
+    setMode(INPUT_PIN, PinMode.INPUT)
+    setMode(INPUT_PIN, PinMode.INPUT_PULLUP)
+    setMode(ADC_PIN, PinMode.INPUT)
+}
+
+const testSetPinDigital = () => {
+    setDigital(LED_PIN, DigitalLevel.HIGH)
+    setDigital(LED_PIN, DigitalLevel.LOW)
+    setDigital(LED_PIN, DigitalLevel.HIGH)
+    setDigital(LED_PIN, DigitalLevel.LOW)
+}
+
+const testReadPinDigital = () => {
+    setDigital(LED_PIN, getDigital(INPUT_PIN))
+    setDigital(LED_PIN, getDigital(INPUT_PIN))
+    setDigital(LED_PIN, getDigital(INPUT_PIN))
+    setDigital(LED_PIN, getDigital(INPUT_PIN))
+    setDigital(LED_PIN, getDigital(INPUT_PIN))
+}
+
+const testSetPinAnalog = () => {
+    setAnalog(PWM_PIN, 0)
+    setAnalog(PWM_PIN, 16384)
+    setAnalog(PWM_PIN, 32768)
+    setAnalog(PWM_PIN, 49152)
+    setAnalog(PWM_PIN, 65535)
+    setAnalog(PWM_PIN, 0)
+}
+
+const testReadPinAnalog = () => {
+    setAnalog(PWM_PIN, getAnalog(ADC_PIN))
+    setAnalog(PWM_PIN, getAnalog(ADC_PIN))
+    setAnalog(PWM_PIN, getAnalog(ADC_PIN))
+    setAnalog(PWM_PIN, getAnalog(ADC_PIN))
+}
+
+const testConfigureAnalog = () => {
+    setReference(VoltageReference.SUPPLY)
+}
+
+const testWriteShift = () => {
+    writeShift(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, BitOrder.MSB_FIRST, 165)
+    writeShift(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, BitOrder.LSB_FIRST, 60)
+    writeShift(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, MSB_FIRST, 255)
+}
+
+const testReadShift = () => {
+    setAnalog(PWM_PIN, readShift(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, BitOrder.MSB_FIRST))
+    setAnalog(PWM_PIN, readShift(SHIFT_DATA_PIN, SHIFT_CLOCK_PIN, LSB_FIRST))
+}
+
+const setup = () => {
+    testPinMode()
+}
+
+const main = () => {
+    setup()
+    testSetPinDigital()
+    testReadPinDigital()
+    testSetPinAnalog()
+    testReadPinAnalog()
+    testConfigureAnalog()
+    testWriteShift()
+    testReadShift()
+}
+
+main()

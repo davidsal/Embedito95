@@ -1,0 +1,43 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Cfg = {
+    pin: i16
+    label: string
+    isValid?: boolean
+}
+
+// A closure whose factory CAPTURES a data object (shared handle) and a returned
+// method reads a subfield of that captured object (`cfg.pin` inside a shared
+// closure method). Captured handles become fields of the `Object<Bound>` storage
+// as `Object<Cfg>`, so reading a subfield must dereference it (`self->cfg->pin`).
+type Bound = {
+    readPin: () => i16
+    readLabel: () => string
+}
+
+const makeBound = (cfg: Cfg): Bound => {
+    return {
+        readPin: () => {
+            return cfg.pin
+        },
+        readLabel: () => {
+            return cfg.label
+        }
+    }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    const cfg: Cfg = { pin: 7, label: "x", isValid: true }
+    const bound = makeBound(cfg)
+    serial.sendLine(bound.readPin())
+    serial.sendLine(bound.readLabel())
+}
+
+main()

@@ -1,0 +1,145 @@
+/**
+ * Available serial interfaces
+ */
+export enum Serial {
+    // e95.postinstall.serialEnum
+}
+
+/**
+ * A serial port bound to a serial interface.
+ */
+export type SerialPort = {
+    /**
+     * Configures the serial port and starts communication at the given baud rate.
+     * @param baudRate - Communication speed in bits per second
+     */
+    initialize: (baudRate: u32) => void
+    /**
+     * Shuts the serial port down and releases the line it was using.
+     */
+    close: () => void
+    /**
+     * Blocks until every byte queued for transmission has left the port.
+     */
+    flushOutput: () => void
+    /**
+     * Sends a single piece of data through the serial line.
+     * @param data - The data to send (text or any numeric value)
+     */
+    send: (data: string | char | u8 | i8 | u16 | i16 | u32 | i32 | u64 | i64 | f32 | f64) => void
+    /**
+     * Sends data followed by a newline terminator.
+     * @param data - The data to send (text or any numeric value)
+     */
+    sendLine: (data: string | char | u8 | i8 | u16 | i16 | u32 | i32 | u64 | i64 | f32 | f64) => void
+    /**
+     * Reads one incoming byte from the receive buffer.
+     * @returns The received byte, or null if no data is available
+     */
+    read: () => u8 | null
+    /**
+     * Inspects the next incoming byte without removing it from the receive
+     * buffer.
+     * @returns The next byte, or null if no data is available
+     */
+    peekByte: () => u8 | null
+    /**
+     * Reports how many bytes the transmit buffer can accept right now.
+     * @returns The free transmit space in bytes, or 0 when the port has no
+     * transmit buffer
+     */
+    getWriteSpace: () => u16
+    /**
+     * Reads up to `maximum` bytes, stopping when that many have arrived or when
+     * no data shows up before the timeout, whichever happens first.
+     * @param maximum - Upper bound on the number of bytes to read
+     * @returns The received bytes, empty when none arrive before the timeout
+     */
+    readBlock: (maximum: u16) => u8[]
+    /**
+     * Reads bytes until the terminator arrives or `maximum` bytes have been
+     * collected. The terminator is not included. Collection also stops when no
+     * data shows up before the timeout.
+     * @param terminator - Byte that ends the collection
+     * @param maximum - Upper bound on the number of bytes to read
+     * @returns The received bytes before the terminator, empty when none arrive
+     */
+    readBlockUntil: (terminator: u8, maximum: u16) => u8[]
+    /**
+     * Sends a sequence of bytes, in order, as raw values.
+     * @param data - Bytes to send
+     */
+    sendBuffer: (data: u8[]) => void
+    /**
+     * Reads a line of text, excluding the trailing newline. Collection stops
+     * when the newline arrives or when no data shows up before the timeout.
+     * @returns The received text, empty when the timeout expires first
+     */
+    readLine: () => string
+    /**
+     * Reads text from the stream, excluding the terminator. Collection stops
+     * when the terminator arrives or when no data shows up before the timeout.
+     * @param terminator - Byte that ends the collection
+     * @returns The received text, empty when the timeout expires first
+     */
+    readTextUntil: (terminator: char) => string
+    /**
+     * Reads text from the stream, appending every byte that arrives until the
+     * receive line stays quiet for the configured read timeout.
+     * @returns The received text, empty when the timeout expires first
+     */
+    readText: () => string
+    /**
+     * Consumes bytes until the needle arrives, including its last byte.
+     * @param needle - Text to search for in the incoming stream
+     * @returns True when the needle was found, false when the timeout expires
+     */
+    findText: (needle: string) => boolean
+    /**
+     * Consumes bytes until the needle arrives or the terminator shows up,
+     * whichever happens first. The needle bytes are consumed; the terminator is
+     * dropped.
+     * @param needle - Text to search for in the incoming stream
+     * @param terminator - Byte that ends the search before the needle arrives
+     * @returns True when the needle was found, false on terminator or timeout
+     */
+    findTextUntil: (needle: string, terminator: char) => boolean
+    /**
+     * Reads a decimal integer from the stream, skipping leading non-numeric
+     * characters. Collection stops at the first non-digit after the number or
+     * when no data shows up before the timeout.
+     * @returns The received value, or 0 when no digits arrive
+     */
+    readInteger: () => i32
+    /**
+     * Reads a floating-point number from the stream, skipping leading
+     * non-numeric characters. Accepts an optional sign, a decimal point and an
+     * exponent. Collection stops at the first character that is not part of the
+     * number or when no data shows up before the timeout.
+     * @returns The received value, or 0 when no number arrives
+     */
+    readFloat: () => f32
+    /**
+     * Sets how long a blocking read waits for the next byte.
+     * @param milliseconds - Wait budget per byte in milliseconds; 0 makes every
+     * read return immediately with whatever data is already buffered
+     */
+    setReadTimeout: (milliseconds: u32) => void
+    /**
+     * Reports how long a blocking read waits for the next byte.
+     * @returns The wait budget per byte in milliseconds
+     */
+    getReadTimeout: () => u32
+    /**
+     * Checks whether there is data waiting in the receive buffer.
+     * @returns True if data is available, false otherwise
+     */
+    hasData: () => boolean
+}
+
+/**
+ * Creates a serial port bound to the given serial interface.
+ * @param serial - Serial interface to use
+ * @returns A configured serial port
+ */
+export const getSerial = (serial: Serial): SerialPort => {}

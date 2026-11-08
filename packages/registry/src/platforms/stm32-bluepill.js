@@ -1,0 +1,44 @@
+import { DATA_TYPE, DEFAULT_TYPES } from "./enums.js";
+import {
+	adc,
+	i2c,
+	interrupts,
+	pinModes,
+	pwm,
+	serial,
+	spi,
+	timers,
+} from "./stm32-bluepill/peripherals.js";
+import { pins } from "./stm32-bluepill/pins.js";
+
+export const platform = {
+	name: "stm32-bluepill",
+	package: "@embedito95/stm32-bluepill",
+	version: "0.1.0",
+	strategy: "stm32-ll",
+	displayName: "STM32 Blue Pill",
+	types: [...DEFAULT_TYPES, DATA_TYPE.f64],
+	pins,
+	pinModes,
+	spi,
+	i2c,
+	serial,
+	timers,
+	adc,
+	pwm,
+	interrupts,
+	voltage: 3.3,
+	specs: {
+		mcu: "STM32F103C8T6",
+		mcuDefine: "STM32F103xB",
+		arrayGrowthFactor: 1.5,
+		architecture: "ARM Cortex-M3",
+		progmem: false,
+		wordSize: 32,
+		frequency: 72000000,
+		apb1Frequency: 36000000,
+		crystal: 8000000,
+		flash: 65536,
+		sram: 20480,
+	},
+};

@@ -1,0 +1,7 @@
+node_modules
+dist
+sandbox
+*.vsix
+packages/lsp-vscode/server/
+packages/test/testers/
+.e95state.json

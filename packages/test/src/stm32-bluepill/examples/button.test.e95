@@ -1,0 +1,31 @@
+// Reads the digital state of a button and turns the onboard LED on while it is pressed.
+// Example created by David Melara.
+
+import { setDigital, setMode, getDigital, Pin, INPUT_PULLUP, OUTPUT, HIGH, LOW, LED_BUILTIN } from '@embedito95/gpio'
+import { delay } from '@embedito95/time'
+
+const button = () => {
+    while (true) {
+        const buttonState = getDigital(Pin.A8)
+
+        if (buttonState == LOW) {
+            setDigital(LED_BUILTIN, LOW)
+        } else {
+            setDigital(LED_BUILTIN, HIGH)
+        }
+
+        delay(50)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.A8, INPUT_PULLUP)
+    setMode(LED_BUILTIN, OUTPUT)
+}
+
+const main = () => {
+    setup()
+    button()
+}
+
+main()

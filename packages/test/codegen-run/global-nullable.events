@@ -1,0 +1,4 @@
+# The module-level nullable starts as null (pin high) and turns non-null after
+# the assignment (pin low), so the two states stay distinct.
+digital 10 1
+digital 10 0

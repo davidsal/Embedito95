@@ -1,0 +1,29 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// A param (`count`) and a hoisted local (`label`) referenced inside a template
+// literal must be rewritten to `task.<name>` when the async function is
+// desugared. If the formatter emits the stale `raw` text, the intermediate keeps
+// `${count}` / `${label}` and fails to compile.
+let message: string = ""
+
+const pulse = async (count: u8) => {
+    const label: u8 = count
+    message = `param ${count}`
+    message = `local ${label}`
+    setDigital(Pin.10, HIGH)
+    await sleep(50)
+    setDigital(Pin.10, LOW)
+    await sleep(50)
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    pulse(1)
+}
+
+main()

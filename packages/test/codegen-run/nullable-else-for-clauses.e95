@@ -1,0 +1,49 @@
+import { Pin, setDigital, HIGH, LOW } from '@embedito95/gpio'
+
+// Both `for` clauses assign the nullable local in the `else` branch. The
+// narrowed region must end there, and the assignment target must use the
+// declared `nullable<u8>` type so the generated C++ compiles.
+const computeFromUpdate = (): u8 | null => {
+    let value: u8 | null = 7 as u8
+    let flag: boolean = true
+    if (value == null) {
+        return null
+    } else {
+        for (; flag; value = null) {
+            flag = false
+        }
+    }
+    return value
+}
+
+const computeFromInit = (): u8 | null => {
+    let value: u8 | null = 7 as u8
+    if (value == null) {
+        return null
+    } else {
+        for (value = null; true; ) {
+            break
+        }
+    }
+    return value
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const updatedValue = computeFromUpdate()
+    if (updatedValue == null) {
+        setDigital(Pin.10, HIGH)
+    } else {
+        setDigital(Pin.10, LOW)
+    }
+    const initializedValue = computeFromInit()
+    if (initializedValue == null) {
+        setDigital(Pin.11, HIGH)
+    } else {
+        setDigital(Pin.11, LOW)
+    }
+}
+
+main()

@@ -1,0 +1,31 @@
+import { Pin, setMode, PinMode, setAnalog } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Two awaits in one expression: each child is marked CONSUMED only after the
+// whole statement reads both values, so neither queue slot can be reused (and
+// have its payload swapped) while the other is still pending.
+const one = async (): u8 => {
+    await sleep(5)
+    return 1
+}
+
+const two = async (): u8 => {
+    await sleep(5)
+    return 2
+}
+
+const run = async () => {
+    const total = await one() + await two()
+    setAnalog(Pin.3, total)
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

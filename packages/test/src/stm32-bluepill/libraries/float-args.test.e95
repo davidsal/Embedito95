@@ -1,0 +1,23 @@
+// Float-typed function parameters accept float arguments (matching types are ok),
+// and integer arguments are coerced with a warning (never a hard error).
+const setup = () => {}
+
+const combine = (a: f32, b: f32) => {
+    return a * 2.0 + b
+}
+
+const main = () => {
+    setup()
+
+    const base: f32 = 2.5
+    const whole: u8 = 3
+
+    const fromFloat = combine(base, 1.5)
+    const coerced = combine(base, whole)
+    const fromIntLiteral = combine(4, 0.5)
+
+    combine(fromFloat + coerced, fromIntLiteral)
+    combine(base, coerced)
+}
+
+main()

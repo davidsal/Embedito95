@@ -1,0 +1,166 @@
+import { Pin, DigitalLevel, LOW, HIGH, INPUT, OUTPUT, setMode, setDigital, getDigital } from '@embedito95/gpio'
+import { delayMicros, getMicros, hasElapsedMicros } from '@embedito95/time'
+
+export type Dht22Sensor = {
+    /**
+     * Reads the ambient temperature in degrees Celsius.
+     * @returns The temperature, or null if the read failed
+     */
+    getTemperature: () => f32 | null
+    /**
+     * Reads the relative humidity as a percentage.
+     * @returns The humidity, or null if the read failed
+     */
+    getHumidity: () => f32 | null
+}
+
+enum Type {
+    TEMPERATURE,
+    HUMIDITY
+}
+
+const READ_INTERVAL_MICROS: u32 = 2000000
+const READ_TIMEOUT_MICROS: u32 = 10000
+const BYTE_SCALE: u16 = 256
+const TENTH_DIVISOR: f32 = 10
+
+/**
+ * Waits for the data line to change from the given level.
+ * @param pin - Digital pin the sensor data line is connected to
+ * @param level - The level to wait to leave
+ * @returns True if the level changed before the timeout, false on timeout
+ */
+const waitForLevelChange = (pin: Pin, level: DigitalLevel): boolean => {
+    const start = getMicros()
+
+    while (getDigital(pin) == level) {
+        if (hasElapsedMicros(start, READ_TIMEOUT_MICROS)) {
+            return false
+        }
+    }
+
+    return true
+}
+
+/**
+ * Reads one 8-bit byte of DHT22 data from the data line.
+ * @param pin - Digital pin the sensor data line is connected to
+ * @returns The byte read, or null on a timeout
+ */
+const readByte = (pin: Pin) => {
+    let value: u8 = 0
+
+    for (let bit = 0; bit < 8; bit += 1) {
+        if (!waitForLevelChange(pin, HIGH)) {
+            return null
+        }
+
+        if (!waitForLevelChange(pin, LOW)) {
+            return null
+        }
+
+        delayMicros(40)
+
+        if (getDigital(pin) == HIGH) {
+            value = value * 2 + 1
+        } else {
+            value = value * 2
+        }
+    }
+
+    return value
+}
+
+/**
+ * Performs a full DHT22 read and parses the humidity and temperature values.
+ * @param pin - Digital pin the sensor data line is connected to
+ * @returns An object with the humidity and temperature, or null on a failed read
+ */
+const readSensor = (pin: Pin) => {
+    setMode(pin, OUTPUT)
+    setDigital(pin, LOW)
+    delayMicros(20000)
+    setMode(pin, INPUT)
+    delayMicros(50)
+
+    if (!waitForLevelChange(pin, LOW)) {
+        return null
+    }
+
+    if (!waitForLevelChange(pin, HIGH)) {
+        return null
+    }
+
+    const humidityHigh = readByte(pin)
+    const humidityLow = readByte(pin)
+    const temperatureHigh = readByte(pin)
+    const temperatureLow = readByte(pin)
+    const checksum = readByte(pin)
+
+    if (humidityHigh == null) {
+        return null
+    }
+    if (humidityLow == null) {
+        return null
+    }
+    if (temperatureHigh == null) {
+        return null
+    }
+    if (temperatureLow == null) {
+        return null
+    }
+    if (checksum == null) {
+        return null
+    }
+
+    const humidity: f32 = (((humidityHigh as u16) * BYTE_SCALE + (humidityLow as u16)) as f32) / TENTH_DIVISOR
+    const temperature: f32 = (((temperatureHigh as u16) * BYTE_SCALE + (temperatureLow as u16)) as f32) / TENTH_DIVISOR
+    const success = (humidityHigh + humidityLow + temperatureHigh + temperatureLow) % BYTE_SCALE == checksum
+
+    if (success) {
+        return {
+            humidity: humidity,
+            temperature: temperature
+        }
+    }
+    return null
+}
+/**
+ * Creates a DHT22 sensor bound to the given digital pin.
+ * @param pin - Digital pin the sensor data line is connected to
+ * @returns A DHT22 sensor
+ */
+export const getSensor = (pin: Pin): Dht22Sensor => {
+    let lastTemperature: f32 = 0
+    let lastHumidity: f32 = 0
+    let lastFetch: u32 = 0
+
+    const getReading = (type: Type): f32 | null => {
+        if (hasElapsedMicros(lastFetch, READ_INTERVAL_MICROS)) {
+            const result = readSensor(pin)
+
+            if (result == null) {
+                return null
+            }
+
+            lastFetch = getMicros()
+            lastTemperature = result.temperature
+            lastHumidity = result.humidity
+        }
+
+        if (type == Type.TEMPERATURE) {
+            return lastTemperature
+        }
+
+        return lastHumidity
+    }
+
+    return {
+        getTemperature: () => {
+            return getReading(Type.TEMPERATURE)
+        },
+        getHumidity: () => {
+            return getReading(Type.HUMIDITY)
+        }
+    }
+}

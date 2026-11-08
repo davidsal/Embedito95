@@ -1,0 +1,15 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Bug C: a `const string` is a CoW handle; mutating it (push) is TS-like and
+// must compile (the handle is const, not the text).
+const setup = () => {
+    const s: string = "hi"
+    s.push('!')
+    setAnalog(Pin.3, s.length())
+}
+
+const main = () => {
+    setup()
+}
+
+main()

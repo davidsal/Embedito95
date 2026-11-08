@@ -1,0 +1,7 @@
+{
+	"name": "software-serial",
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"package": "@embedito95/software-serial",
+	"version": "0.1.0"
+}

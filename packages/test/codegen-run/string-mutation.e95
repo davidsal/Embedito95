@@ -1,0 +1,37 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// String mutators must compile and run end to end: trimming, ASCII case
+// folding, character writes, append, replace and range removal, while a copy
+// on write diverges from the original without touching it.
+const setup = () => {
+    let text: string = "  Hello  "
+    text.trimWhitespace()
+    setAnalog(Pin.2, text.length())
+
+    let alias = text
+    alias.toUpperCase()
+    setAnalog(Pin.3, text.matchesText("Hello") ? 1 : 0)
+    setAnalog(Pin.4, alias.matchesText("HELLO") ? 1 : 0)
+
+    alias.setCharacter(0, 'J')
+    setAnalog(Pin.5, alias.getCharacter(0) == 'J' ? 1 : 0)
+
+    alias.appendText("!")
+    setAnalog(Pin.6, alias.length())
+
+    const replaced = alias.replaceText("L", "LL")
+    setAnalog(Pin.7, replaced ? 1 : 0)
+    setAnalog(Pin.8, alias.length())
+
+    alias.removeRange(0, 2)
+    setAnalog(Pin.9, alias.getCharacter(0) == 'L' ? 1 : 0)
+
+    alias.toLowerCase()
+    setAnalog(Pin.10, alias.matchesText("llllo!") ? 1 : 0)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

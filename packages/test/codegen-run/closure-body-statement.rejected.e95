@@ -1,0 +1,27 @@
+// Statements other than declarations and the returned object would be dropped
+// by the closure-factory lowering, so the checker rejects them.
+type Writer = {
+    write: (value: i16) => void
+}
+
+type BodyScreen = {
+    paint: () => void
+}
+
+const getBodyScreen = (writer: Writer): BodyScreen => {
+    const paint = () => {
+        writer.write(2)
+    }
+    paint()
+    return { paint: paint }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const writer: Writer = { write: (value: i16) => {} }
+    getBodyScreen(writer).paint()
+}
+
+main()

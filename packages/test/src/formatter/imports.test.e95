@@ -1,0 +1,20 @@
+import { delay as delayMillis } from '@embedito95/time'
+
+import { getMillis as millis, getMicros as micros } from '@embedito95/time'
+import { setMode, LED_BUILTIN, OUTPUT } from '@embedito95/gpio'
+
+const blink = () => {
+    setMode(LED_BUILTIN, OUTPUT)
+    while (true) {
+        delayMillis(100)
+    }
+}
+
+const measure = () => {
+    const start = millis()
+    const end = micros()
+    if (end > start) {
+        return end
+    }
+    return start
+}

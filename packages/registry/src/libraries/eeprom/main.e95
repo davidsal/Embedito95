@@ -1,0 +1,91 @@
+import { getCellCount, readCell, updateCell, writeCell } from '@embedito95/eeprom-hardware'
+
+// Value an unwritten or unreachable cell reads back as.
+const UNWRITTEN_CELL: u8 = 255
+
+// Highest address the u16 cell address can express.
+const MAXIMUM_CELL_ADDRESS: u32 = 65535
+
+/**
+ * Returns the number of non-volatile cells available on the target.
+ * @returns The number of addressable cells
+ */
+export const getCapacity = (): u16 => {
+    return getCellCount()
+}
+
+/**
+ * Reads one byte from a non-volatile cell.
+ * An address outside `0` to `getCapacity() - 1` reads back as `0xFF`, the value
+ * of an unwritten cell.
+ * @param address - Zero-based cell address
+ * @returns The stored byte, or `0xFF` for an unwritten or out-of-range cell
+ */
+export const readEepromByte = (address: u16): u8 => {
+    return readCell(address)
+}
+
+/**
+ * Stores one byte in a non-volatile cell and blocks until the write completes.
+ * An address outside `0` to `getCapacity() - 1` has no effect.
+ * @param address - Zero-based cell address
+ * @param value - Byte to store
+ */
+export const writeEepromByte = (address: u16, value: u8) => {
+    writeCell(address, value)
+}
+
+/**
+ * Stores one byte only when it differs from the value already in the cell.
+ * Skipping an unchanged value avoids the program/erase cycle and its wear.
+ * An address outside `0` to `getCapacity() - 1` has no effect.
+ * @param address - Zero-based cell address
+ * @param value - Byte to store when it differs from the current value
+ */
+export const updateEepromByte = (address: u16, value: u8) => {
+    updateCell(address, value)
+}
+
+/**
+ * Reads consecutive non-volatile cells into a byte sequence.
+ * Every position past the last installed cell, or past the addressable range,
+ * reads back as `0xFF`. A multi-byte value is a plain byte sequence: the caller
+ * lays out its bytes (integers least-significant byte first) and joins them
+ * back.
+ * @param address - Zero-based address of the first cell
+ * @param length - Number of consecutive cells to read; `0` reads no cell
+ * @returns The stored bytes, one per requested cell
+ */
+export const readEepromBlock = (address: u16, length: u16): u8[] => {
+    const bytes: u8[] = []
+    for (let offset: u16 = 0; offset < length; offset += 1) {
+        const cellAddress: u32 = (address as u32) + offset
+        if (cellAddress > MAXIMUM_CELL_ADDRESS) {
+            bytes.push(UNWRITTEN_CELL)
+        } else {
+            bytes.push(readCell(cellAddress as u16))
+        }
+    }
+    return bytes
+}
+
+/**
+ * Writes a byte sequence into consecutive non-volatile cells and blocks until
+ * the writes complete.
+ * Each byte goes to the next cell, starting at `address`; a position past the
+ * last installed cell, or past the addressable range, is left untouched, so a
+ * sequence that reaches the end of the storage is clipped cell by cell. A
+ * multi-byte value is a plain byte sequence: the caller splits it (integers
+ * least-significant byte first) and the read side joins the bytes back.
+ * @param address - Zero-based address of the first cell
+ * @param data - Bytes to store, one per cell; an empty sequence writes nothing
+ */
+export const writeEepromBlock = (address: u16, data: u8[]) => {
+    for (let offset: u16 = 0; offset < data.length(); offset += 1) {
+        const cellAddress: u32 = (address as u32) + offset
+        if (cellAddress > MAXIMUM_CELL_ADDRESS) {
+            return
+        }
+        writeCell(cellAddress as u16, data[offset])
+    }
+}

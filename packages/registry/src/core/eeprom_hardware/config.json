@@ -1,0 +1,7 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "eeprom_hardware",
+	"package": "@embedito95/eeprom-hardware",
+	"version": "0.1.0"
+}

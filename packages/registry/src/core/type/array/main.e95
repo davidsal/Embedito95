@@ -1,0 +1,25 @@
+// The `array` sub-library backs the native dynamic and fixed-size array types
+// (`T[]`, `T[N]`). It has no callable API: methods such as `push`, `pop` and
+// `length` are exposed by the language itself.
+//
+// Under the hood it generates `core_array.h`, which implements a growable
+// `Buffer` reused across the whole runtime. Several techniques keep heap
+// fragmentation low on these memory-constrained targets:
+//
+// - Single contiguous block: an `Array<T>` is one `realloc`-managed region and
+//   elements are placement-constructed in place, so there is never one
+//   allocation per element.
+// - Geometric growth: capacity grows as `capacity + capacity/divisor + 1`
+//   (~1.25x by default, divisor configurable per platform). Repeated `push`es
+//   only reallocate every few appends, amortizing cost and reducing heap churn.
+// - Minimum capacity floor (4) and a u16 saturation guard so capacity never
+//   accidentally shrinks on overflow.
+// - `pop` shrinks by halves, and only when `size <= capacity/2` with capacity
+//   above the minimum, releasing memory in coarse blocks instead of one byte
+//   at a time.
+// - Integer-only growth math avoids pulling in the float library.
+// - `reserve` sizes a single allocation up front (initializer lists and
+//   copies), and move assignment hands off the buffer pointer (`stealFrom`)
+//   with no reallocation.
+// - Fixed-size arrays (`T[N]`) live on the stack as a compile-time buffer, so
+//   they allocate no heap at all and cannot fragment it.

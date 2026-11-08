@@ -1,0 +1,11 @@
+/**
+ * Configures the system clock for the processor and resets the time counter
+ * used by getMillis/getMicros.
+ */
+const initializeSystemClock = () => {}
+
+/**
+ * Returns the amount of free heap memory in bytes.
+ * @returns Free heap memory in bytes.
+ */
+export const getFreeHeap = (): e95.postinstall.freeHeapType => {}

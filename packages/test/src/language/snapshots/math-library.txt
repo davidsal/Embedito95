@@ -1,0 +1,103 @@
+// LSP view of the `math` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/math/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// integer and bit helpers infer their declared types
+diagnostics:
+- none
+types:
+- integerResult => i32
+- clamped => i32
+- smallest => i32
+- bitResult => u32
+
+// float helpers infer f32
+diagnostics:
+- none
+types:
+- remapped => f32
+- root => f32
+- rounded => f32
+- radians => f32
+
+// bit read infers boolean
+diagnostics:
+- none
+types:
+- flag => boolean
+
+// inverse trigonometry, logarithms and exponentials infer f32
+diagnostics:
+- none
+types:
+- angle => f32
+- arc => f32
+- natural => f32
+- decimal => f32
+- raised => f32
+
+// square, remainder and truncate infer f32
+diagnostics:
+- none
+types:
+- squared => f32
+- remainder => f32
+- whole => f32
+
+// byte helpers infer u8 and bitMask infers u32
+diagnostics:
+- none
+types:
+- low => u8
+- high => u8
+- mask => u32
+
+// nested math calls inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => i32
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'setBitValue' expects 2 argument(s) but got 1
+types:
+- badCount => u32
+
+// unknown export reported and left unresolved
+diagnostics:
+- error error.unknownImport @ 1:10: 'notExported' is not exported by the library
+types:
+- missing => unresolved
+
+// wider integer argument warns on a u8 parameter
+diagnostics:
+- warning error.argumentTypeMismatch @ 3:40: Argument 'bitIndex' expects type 'u8' but 'wideIndex' is 'i32'
+types:
+- widened => u32
+
+// non-numeric argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 2:41: Argument 'value' expects type 'i32' but 'ten' is 'string'
+types:
+- badType => i32
+
+// arity of arcTangent2 reported
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'arcTangent2' expects 2 argument(s) but got 1
+types:
+- badArity => f32
+
+// integer argument warns on an f32 parameter
+diagnostics:
+- warning error.argumentTypeMismatch @ 3:37: Argument 'value' expects type 'f32' but 'wholeNumber' is 'i32'
+types:
+- integerAngle => f32
+
+// nested inverse trigonometry calls produce no diagnostics
+diagnostics:
+- none
+types:
+- nestedAngle => f32

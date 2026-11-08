@@ -1,0 +1,41 @@
+// Gradually increases and decreases the brightness of an LED using PWM output.
+// Example created by David Melara.
+
+import { setAnalog, setMode, Pin, OUTPUT } from '@embedito95/gpio'
+import { delay } from '@embedito95/time'
+
+const MAX_VALUE = 255
+const MIN_VALUE = 0
+const STEP_SIZE = 1
+
+const fade = () => {
+    let value = 0
+    let step = STEP_SIZE
+
+    while (true) {
+        setAnalog(Pin.10, value)
+        value = value + step
+
+        if (value >= MAX_VALUE) {
+            value = MAX_VALUE
+            step = -STEP_SIZE
+        }
+        if (value <= MIN_VALUE) {
+            value = MIN_VALUE
+            step = STEP_SIZE
+        }
+
+        delay(4)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.10, OUTPUT)
+}
+
+const main = () => {
+    setup()
+    fade()
+}
+
+main()

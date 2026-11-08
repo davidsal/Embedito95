@@ -1,0 +1,78 @@
+// LSP view of the `gpio` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/gpio/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// readShift infers u8 and accepts both bit order forms
+diagnostics:
+- none
+types:
+- received => u8
+- first => u8
+
+// writeShift accepts an enum member and a bit order constant
+diagnostics:
+- none
+types:
+- none
+
+// nested shift reads inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'readShift' expects 3 argument(s) but got 2
+types:
+- badCount => u8
+
+// unknown export reported and left unresolved
+diagnostics:
+- error error.unknownImport @ 1:10: 'notExported' is not exported by the library
+types:
+- missing => unresolved
+
+// wider integer argument warns on a u8 parameter
+diagnostics:
+- warning error.argumentTypeMismatch @ 4:50: Argument 'value' expects type 'u8' but 'wideValue' is 'i32'
+types:
+- none
+
+// non-enum bit order argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:30: Argument 'bitOrder' expects type 'BitOrder' but literal 1 is 'u8'
+types:
+- none
+
+// non-numeric argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:50: Argument 'value' expects type 'u8' but 'byte' is 'string'
+types:
+- none
+
+// reference setter accepts every enum member
+diagnostics:
+- none
+types:
+- none
+
+// nested reference configuration produces no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// literal reference argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:18: Argument 'reference' expects type 'VoltageReference' but literal 1 is 'u8'
+types:
+- none
+
+// enum member of the wrong type reported for the reference
+diagnostics:
+- error error.argumentTypeMismatch @ 3:18: Argument 'reference' expects type 'VoltageReference' but 'PinMode.OUTPUT' is 'PinMode.OUTPUT'
+types:
+- none

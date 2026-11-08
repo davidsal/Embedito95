@@ -1,0 +1,24 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Response = {
+    type: i16
+    from: i16
+}
+
+const parseResponse = (type: i16, data: Response) => {
+    return data.type + data.from
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    const data: Response = { type: 7, from: 3 }
+    serial.sendLine(parseResponse(1, data))
+}
+
+main()

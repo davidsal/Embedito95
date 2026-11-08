@@ -1,0 +1,23 @@
+// Switch exhaustiveness on enum discriminants (TS-like).
+// A switch over an enum without a 'default' must cover every member;
+// a 'default' satisfies exhaustiveness. Non-enum discriminants are not
+// checked. Emits error.nonExhaustiveSwitch.
+// enum switch without default missing BLUE -> non-exhaustive
+nonExhaustiveSwitch: yes
+missing: BLUE
+
+// enum switch without default missing BLUE and SLEEP -> non-exhaustive
+nonExhaustiveSwitch: yes
+missing: BLUE, SLEEP
+
+// enum switch with default but missing BLUE -> ok (TS-like)
+nonExhaustiveSwitch: no
+missing: -
+
+// enum switch covering all cases -> ok
+nonExhaustiveSwitch: no
+missing: -
+
+// switch on non-enum (u8) without default -> ok (not checkable)
+nonExhaustiveSwitch: no
+missing: -

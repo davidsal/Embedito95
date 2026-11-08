@@ -1,0 +1,88 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A handle is a shared closure: its methods compile to free functions over the
+// handle. A method call must resolve the receiver type even when the receiver is
+// a captured field, a call result or a parenthesized handle, and must mutate the
+// shared state (not a copy).
+type Counter = {
+    value: () => i16
+    increment: () => void
+}
+
+const makeCounter = (start: i16): Counter => {
+    let current: i16 = start
+    return {
+        value: () => {
+            return current
+        },
+        increment: () => {
+            current = current + 1
+        }
+    }
+}
+
+type Reader = {
+    read: () => i16
+    bump: () => void
+}
+
+const makeReader = (counter: Counter): Reader => {
+    return {
+        read: () => {
+            return counter.value()
+        },
+        bump: () => {
+            counter.increment()
+        }
+    }
+}
+
+type Box = {
+    counter: Counter
+}
+
+type Screen = {
+    paint: () => void
+}
+
+const makeScreen = (writer: Counter): Screen => {
+    return {
+        paint: () => {
+            this.writer.increment()
+        }
+    }
+}
+
+// The cast receiver starts the block so a leading parenthesis cannot be parsed
+// as a call on the previous statement.
+const incrementCast = (counter: Counter) => {
+    (counter as Counter).increment()
+}
+
+const setup = () => {
+    const counter: Counter = makeCounter(3)
+    const reader: Reader = makeReader(counter)
+    setAnalog(Pin.3, counter.value())
+    setAnalog(Pin.4, reader.read())
+    setAnalog(Pin.5, makeCounter(5).value())
+    setAnalog(Pin.6, (counter).value())
+    setAnalog(Pin.8, (makeCounter(9) as Counter).value())
+    reader.bump()
+    setAnalog(Pin.7, reader.read())
+    const box: Box = { counter: makeCounter(10) }
+    setAnalog(Pin.9, box.counter.value())
+    box.counter.increment()
+    setAnalog(Pin.10, box.counter.value())
+    incrementCast(counter)
+    setAnalog(Pin.11, counter.value())
+    const screen: Screen = makeScreen(counter)
+    setAnalog(Pin.12, counter.value())
+    screen.paint()
+    setAnalog(Pin.13, counter.value())
+}
+
+const main = () => {
+    setup()
+}
+
+main()

@@ -1,0 +1,171 @@
+// Parser diagnostics for every prefix of the reference statements.
+// Each line is: <source>/<length>/<suffix> <source-json> [<kind>] => <diagnostics>.
+// The range is rendered as 0-based line:character (LSP convention).
+0/0/plain "" [none] => none
+0/0/newline "\n" [none] => none
+0/1/plain "i" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'i'
+0/1/newline "i\n" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'i'
+0/2/plain "if" [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+0/2/newline "if\n" [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+0/3/plain "if " [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+0/3/newline "if \n" [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+0/4/plain "if (" [parse] => 0:3->0:4 error.unexpectedEof Unexpected end of file
+0/4/newline "if (\n" [parse] => 0:3->0:4 error.unexpectedEof Unexpected end of file
+0/5/plain "if (1" [parse] => 0:3->0:5 error.unexpectedEof Unexpected end of file
+0/5/newline "if (1\n" [parse] => 0:3->0:5 error.unexpectedEof Unexpected end of file
+0/6/plain "if (1)" [parse] => 0:5->0:6 error.unexpectedEof Unexpected end of file
+0/6/newline "if (1)\n" [parse] => 0:5->0:6 error.unexpectedEof Unexpected end of file
+0/7/plain "if (1) " [parse] => 0:5->0:6 error.unexpectedEof Unexpected end of file
+0/7/newline "if (1) \n" [parse] => 0:5->0:6 error.unexpectedEof Unexpected end of file
+0/8/plain "if (1) {" [parse] => 0:7->0:8 error.unexpectedEof Unexpected end of file
+0/8/newline "if (1) {\n" [parse] => 0:7->0:8 error.unexpectedEof Unexpected end of file
+0/9/plain "if (1) {}" [none] => none
+0/9/newline "if (1) {}\n" [none] => none
+1/0/plain "" [none] => none
+1/0/newline "\n" [none] => none
+1/1/plain "i" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'i'
+1/1/newline "i\n" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'i'
+1/2/plain "im" [parse] => 0:0->0:2 error.expectedStatement Expected a function call or assignment, but found 'im'
+1/2/newline "im\n" [parse] => 0:0->0:2 error.expectedStatement Expected a function call or assignment, but found 'im'
+1/3/plain "imp" [parse] => 0:0->0:3 error.expectedStatement Expected a function call or assignment, but found 'imp'
+1/3/newline "imp\n" [parse] => 0:0->0:3 error.expectedStatement Expected a function call or assignment, but found 'imp'
+1/4/plain "impo" [parse] => 0:0->0:4 error.expectedStatement Expected a function call or assignment, but found 'impo'
+1/4/newline "impo\n" [parse] => 0:0->0:4 error.expectedStatement Expected a function call or assignment, but found 'impo'
+1/5/plain "impor" [parse] => 0:0->0:5 error.expectedStatement Expected a function call or assignment, but found 'impor'
+1/5/newline "impor\n" [parse] => 0:0->0:5 error.expectedStatement Expected a function call or assignment, but found 'impor'
+1/6/plain "import" [parse] => 0:0->0:6 error.unexpectedEof Unexpected end of file
+1/6/newline "import\n" [parse] => 0:0->0:6 error.unexpectedEof Unexpected end of file
+1/7/plain "import " [parse] => 0:0->0:6 error.unexpectedEof Unexpected end of file
+1/7/newline "import \n" [parse] => 0:0->0:6 error.unexpectedEof Unexpected end of file
+1/8/plain "import {" [parse] => 0:7->0:8 error.unexpectedEof Unexpected end of file
+1/8/newline "import {\n" [parse] => 0:7->0:8 error.unexpectedEof Unexpected end of file
+1/9/plain "import { " [parse] => 0:7->0:8 error.unexpectedEof Unexpected end of file
+1/9/newline "import { \n" [parse] => 0:7->0:8 error.unexpectedEof Unexpected end of file
+1/10/plain "import { X" [parse] => 0:7->0:10 error.unexpectedEof Unexpected end of file
+1/10/newline "import { X\n" [parse] => 0:7->0:10 error.unexpectedEof Unexpected end of file
+1/11/plain "import { X " [parse] => 0:7->0:10 error.unexpectedEof Unexpected end of file
+1/11/newline "import { X \n" [parse] => 0:7->0:10 error.unexpectedEof Unexpected end of file
+1/12/plain "import { X }" [parse] => 0:11->0:12 error.unexpectedEof Unexpected end of file
+1/12/newline "import { X }\n" [parse] => 0:11->0:12 error.unexpectedEof Unexpected end of file
+1/13/plain "import { X } " [parse] => 0:11->0:12 error.unexpectedEof Unexpected end of file
+1/13/newline "import { X } \n" [parse] => 0:11->0:12 error.unexpectedEof Unexpected end of file
+1/14/plain "import { X } f" [parse] => 0:13->0:14 error.unexpectedToken Expected keyword but found identifier ; 0:13->0:14 error.expectedStatement Expected a function call or assignment, but found 'f'
+1/14/newline "import { X } f\n" [parse] => 0:13->0:14 error.unexpectedToken Expected keyword but found identifier ; 0:13->0:14 error.expectedStatement Expected a function call or assignment, but found 'f'
+1/15/plain "import { X } fr" [parse] => 0:13->0:15 error.unexpectedToken Expected keyword but found identifier ; 0:13->0:15 error.expectedStatement Expected a function call or assignment, but found 'fr'
+1/15/newline "import { X } fr\n" [parse] => 0:13->0:15 error.unexpectedToken Expected keyword but found identifier ; 0:13->0:15 error.expectedStatement Expected a function call or assignment, but found 'fr'
+1/16/plain "import { X } fro" [parse] => 0:13->0:16 error.unexpectedToken Expected keyword but found identifier ; 0:13->0:16 error.expectedStatement Expected a function call or assignment, but found 'fro'
+1/16/newline "import { X } fro\n" [parse] => 0:13->0:16 error.unexpectedToken Expected keyword but found identifier ; 0:13->0:16 error.expectedStatement Expected a function call or assignment, but found 'fro'
+1/17/plain "import { X } from" [parse] => 0:13->0:17 error.unexpectedEof Unexpected end of file
+1/17/newline "import { X } from\n" [parse] => 0:13->0:17 error.unexpectedEof Unexpected end of file
+1/18/plain "import { X } from " [parse] => 0:13->0:17 error.unexpectedEof Unexpected end of file
+1/18/newline "import { X } from \n" [parse] => 0:13->0:17 error.unexpectedEof Unexpected end of file
+1/19/plain "import { X } from '" [lex] => 0:18->0:19 error.unexpectedEof Unexpected end of file
+1/19/newline "import { X } from '\n" [lex] => 0:18->0:19 error.unexpectedEof Unexpected end of file
+1/20/plain "import { X } from 'm" [lex] => 0:18->0:20 error.unexpectedEof Unexpected end of file
+1/20/newline "import { X } from 'm\n" [lex] => 0:18->0:20 error.unexpectedEof Unexpected end of file
+1/21/plain "import { X } from 'm'" [none] => none
+1/21/newline "import { X } from 'm'\n" [none] => none
+2/0/plain "" [none] => none
+2/0/newline "\n" [none] => none
+2/1/plain "c" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'c'
+2/1/newline "c\n" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'c'
+2/2/plain "co" [parse] => 0:0->0:2 error.expectedStatement Expected a function call or assignment, but found 'co'
+2/2/newline "co\n" [parse] => 0:0->0:2 error.expectedStatement Expected a function call or assignment, but found 'co'
+2/3/plain "con" [parse] => 0:0->0:3 error.expectedStatement Expected a function call or assignment, but found 'con'
+2/3/newline "con\n" [parse] => 0:0->0:3 error.expectedStatement Expected a function call or assignment, but found 'con'
+2/4/plain "cons" [parse] => 0:0->0:4 error.expectedStatement Expected a function call or assignment, but found 'cons'
+2/4/newline "cons\n" [parse] => 0:0->0:4 error.expectedStatement Expected a function call or assignment, but found 'cons'
+2/5/plain "const" [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+2/5/newline "const\n" [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+2/6/plain "const " [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+2/6/newline "const \n" [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+2/7/plain "const f" [none] => none
+2/7/newline "const f\n" [none] => none
+2/8/plain "const f " [none] => none
+2/8/newline "const f \n" [none] => none
+2/9/plain "const f =" [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+2/9/newline "const f =\n" [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+2/10/plain "const f = " [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+2/10/newline "const f = \n" [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+2/11/plain "const f = (" [parse] => 0:10->0:11 error.unexpectedEof Unexpected end of file
+2/11/newline "const f = (\n" [parse] => 0:10->0:11 error.unexpectedEof Unexpected end of file
+2/12/plain "const f = ()" [parse] => 0:11->0:12 error.unexpectedToken Expected expression but found ")"
+2/12/newline "const f = ()\n" [parse] => 0:11->0:12 error.unexpectedToken Expected expression but found ")"
+2/13/plain "const f = () " [parse] => 0:11->0:12 error.unexpectedToken Expected expression but found ")"
+2/13/newline "const f = () \n" [parse] => 0:11->0:12 error.unexpectedToken Expected expression but found ")"
+2/14/plain "const f = () =" [parse] => 0:11->0:12 error.unexpectedToken Expected expression but found ")" ; 0:13->0:14 error.unexpectedToken Expected expression but found "="
+2/14/newline "const f = () =\n" [parse] => 0:11->0:12 error.unexpectedToken Expected expression but found ")" ; 0:13->0:14 error.unexpectedToken Expected expression but found "="
+2/15/plain "const f = () =>" [parse] => 0:13->0:15 error.unexpectedEof Unexpected end of file
+2/15/newline "const f = () =>\n" [parse] => 0:13->0:15 error.unexpectedEof Unexpected end of file
+2/16/plain "const f = () => " [parse] => 0:13->0:15 error.unexpectedEof Unexpected end of file
+2/16/newline "const f = () => \n" [parse] => 0:13->0:15 error.unexpectedEof Unexpected end of file
+2/17/plain "const f = () => {" [parse] => 0:16->0:17 error.unexpectedEof Unexpected end of file
+2/17/newline "const f = () => {\n" [parse] => 0:16->0:17 error.unexpectedEof Unexpected end of file
+2/18/plain "const f = () => {}" [none] => none
+2/18/newline "const f = () => {}\n" [none] => none
+3/0/plain "" [none] => none
+3/0/newline "\n" [none] => none
+3/1/plain "i" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'i'
+3/1/newline "i\n" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'i'
+3/2/plain "if" [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+3/2/newline "if\n" [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+3/3/plain "if " [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+3/3/newline "if \n" [parse] => 0:0->0:2 error.unexpectedEof Unexpected end of file
+3/4/plain "if (" [parse] => 0:3->0:4 error.unexpectedEof Unexpected end of file
+3/4/newline "if (\n" [parse] => 0:3->0:4 error.unexpectedEof Unexpected end of file
+3/5/plain "if (1" [parse] => 0:3->0:5 error.unexpectedEof Unexpected end of file
+3/5/newline "if (1\n" [parse] => 0:3->0:5 error.unexpectedEof Unexpected end of file
+3/6/plain "if (1\n" [parse] => 0:3->0:5 error.unexpectedEof Unexpected end of file
+3/6/newline "if (1\n\n" [parse] => 0:3->0:5 error.unexpectedEof Unexpected end of file
+3/7/plain "if (1\nf" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:1 error.expectedStatement Expected a function call or assignment, but found 'f'
+3/7/newline "if (1\nf\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:1 error.expectedStatement Expected a function call or assignment, but found 'f'
+3/8/plain "if (1\nfo" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:2 error.expectedStatement Expected a function call or assignment, but found 'fo'
+3/8/newline "if (1\nfo\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:2 error.expectedStatement Expected a function call or assignment, but found 'fo'
+3/9/plain "if (1\nfoo" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:3 error.expectedStatement Expected a function call or assignment, but found 'foo'
+3/9/newline "if (1\nfoo\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:3 error.expectedStatement Expected a function call or assignment, but found 'foo'
+3/10/plain "if (1\nfoo(" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:3->1:4 error.unexpectedEof Unexpected end of file
+3/10/newline "if (1\nfoo(\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier ; 1:3->1:4 error.unexpectedEof Unexpected end of file
+3/11/plain "if (1\nfoo()" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier
+3/11/newline "if (1\nfoo()\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier
+3/12/plain "if (1\nfoo()\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier
+3/12/newline "if (1\nfoo()\n\n" [parse] => 0:3->0:5 error.unexpectedToken Expected ")" but found identifier
+4/0/plain "" [none] => none
+4/0/newline "\n" [none] => none
+4/1/plain "c" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'c'
+4/1/newline "c\n" [parse] => 0:0->0:1 error.expectedStatement Expected a function call or assignment, but found 'c'
+4/2/plain "co" [parse] => 0:0->0:2 error.expectedStatement Expected a function call or assignment, but found 'co'
+4/2/newline "co\n" [parse] => 0:0->0:2 error.expectedStatement Expected a function call or assignment, but found 'co'
+4/3/plain "con" [parse] => 0:0->0:3 error.expectedStatement Expected a function call or assignment, but found 'con'
+4/3/newline "con\n" [parse] => 0:0->0:3 error.expectedStatement Expected a function call or assignment, but found 'con'
+4/4/plain "cons" [parse] => 0:0->0:4 error.expectedStatement Expected a function call or assignment, but found 'cons'
+4/4/newline "cons\n" [parse] => 0:0->0:4 error.expectedStatement Expected a function call or assignment, but found 'cons'
+4/5/plain "const" [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+4/5/newline "const\n" [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+4/6/plain "const " [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+4/6/newline "const \n" [parse] => 0:0->0:5 error.unexpectedEof Unexpected end of file
+4/7/plain "const f" [none] => none
+4/7/newline "const f\n" [none] => none
+4/8/plain "const f " [none] => none
+4/8/newline "const f \n" [none] => none
+4/9/plain "const f =" [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+4/9/newline "const f =\n" [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+4/10/plain "const f = " [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+4/10/newline "const f = \n" [parse] => 0:8->0:9 error.unexpectedEof Unexpected end of file
+4/11/plain "const f = (" [parse] => 0:10->0:11 error.unexpectedEof Unexpected end of file
+4/11/newline "const f = (\n" [parse] => 0:10->0:11 error.unexpectedEof Unexpected end of file
+4/12/plain "const f = (a" [parse] => 0:10->0:12 error.unexpectedEof Unexpected end of file
+4/12/newline "const f = (a\n" [parse] => 0:10->0:12 error.unexpectedEof Unexpected end of file
+4/13/plain "const f = (a\n" [parse] => 0:10->0:12 error.unexpectedEof Unexpected end of file
+4/13/newline "const f = (a\n\n" [parse] => 0:10->0:12 error.unexpectedEof Unexpected end of file
+4/14/plain "const f = (a\nf" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:1 error.expectedStatement Expected a function call or assignment, but found 'f'
+4/14/newline "const f = (a\nf\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:1 error.expectedStatement Expected a function call or assignment, but found 'f'
+4/15/plain "const f = (a\nfo" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:2 error.expectedStatement Expected a function call or assignment, but found 'fo'
+4/15/newline "const f = (a\nfo\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:2 error.expectedStatement Expected a function call or assignment, but found 'fo'
+4/16/plain "const f = (a\nfoo" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:3 error.expectedStatement Expected a function call or assignment, but found 'foo'
+4/16/newline "const f = (a\nfoo\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:0->1:3 error.expectedStatement Expected a function call or assignment, but found 'foo'
+4/17/plain "const f = (a\nfoo(" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:3->1:4 error.unexpectedEof Unexpected end of file
+4/17/newline "const f = (a\nfoo(\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier ; 1:3->1:4 error.unexpectedEof Unexpected end of file
+4/18/plain "const f = (a\nfoo()" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier
+4/18/newline "const f = (a\nfoo()\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier
+4/19/plain "const f = (a\nfoo()\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier
+4/19/newline "const f = (a\nfoo()\n\n" [parse] => 0:10->0:12 error.unexpectedToken Expected ")" but found identifier

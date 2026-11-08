@@ -1,0 +1,31 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Repeatedly awaits a child whose value is read (expression await) plus a bare
+// sleep (statement await). Each finished child is marked CONSUMED at its last
+// use, so `_addAsyncTask` reuses its queue slot instead of waiting for the
+// compactor. ASan catches a use-after-free if a slot is reused too early.
+const next = async (input: u8): u8 => {
+    await sleep(10)
+    return input
+}
+
+const run = async () => {
+    for (let index: u8 = 0; index < 3; index += 1) {
+        const value = await next(index + 1)
+        setAnalog(Pin.3, value)
+        await sleep(5)
+        setDigital(Pin.10, LOW)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

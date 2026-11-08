@@ -1,0 +1,27 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// A block-local (`value`) is read after an `await`: it must be hoisted to a task
+// field, otherwise the generated C++ rejects the step `switch` and, if it
+// compiled, the value would be read after its scope was left.
+const pulse = async () => {
+    for (let index: u8 = 0; index < 2; index += 1) {
+        const value: u8 = index
+        setDigital(Pin.10, HIGH)
+        await sleep(50)
+        if (value == 0) {
+            setDigital(Pin.10, LOW)
+        }
+    }
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    pulse()
+}
+
+main()

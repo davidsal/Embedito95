@@ -1,0 +1,6 @@
+.vscode/**
+build.*
+src/extension.js
+node_modules/**
+.gitignore
+*.md

@@ -1,0 +1,21 @@
+{
+	"name": "@embedito95/test",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "node test.js",
+		"test:snapshot": "node test.js --update",
+		"test:compile": "node test-compile.js",
+		"test:compile:checks": "node test-compile-checks.js",
+		"test:runtime": "node stm32-syntax-check.js && node stm32-syntax-check.js src/stm32-bluepill/snapshots/engine/interrupt/core_interrupt.cpp && node stm32-syntax-check.js src/stm32-bluepill/snapshots/libraries/interrupt.cpp && node stm32-syntax-check.js src/stm32-bluepill/snapshots/libraries/method-receiver.cpp && node stm32-syntax-check.js src/stm32-bluepill/snapshots/libraries/closure-local.cpp && node eeprom-stm32-check.js && node servo-stm32-check.js && node software-serial-stm32-check.js && node ssd1306-stm32-check.js && node engine-syntax-checks.js && node runtime-test.js",
+		"test:leak": "node codegen-leak/run.js",
+		"test:run": "node codegen-run/run.js",
+		"embedito95-cli": "embedito95-cli"
+	},
+	"devDependencies": {
+		"embedito95-cli": "workspace:*",
+		"embedito95-core": "workspace:*",
+		"embedito95-registry": "workspace:*"
+	}
+}

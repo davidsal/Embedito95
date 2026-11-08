@@ -1,0 +1,37 @@
+// Float arithmetic: the 'int | f32' alternative of the result table is selected
+// only where a real float operand reaches the node. Pure-integer subexpressions
+// are always computed in their integer table type; assigning an integer result
+// to a float target coerces via a cast (a warning, not an error), so a float
+// result is typically obtained with a float operand or an explicit cast.
+const setup = () => {}
+
+const computeRatio = () => {
+    let a: u8 = 200
+    let b: u8 = 100
+    let c: f32 = 3.0
+
+    const viaCast: f32 = ((a + b) as f32) / c
+    const viaFloatOperand: f32 = (a + b) / c
+    const integerFirst = (a + b) / c
+
+    return viaCast + viaFloatOperand + integerFirst
+}
+
+const computeAccumulation = () => {
+    let total: f32 = 0
+    let step: i16 = 1
+
+    total = total + step
+    total = total + (step as f32)
+    total = 255
+    total = 0
+    return total
+}
+
+const main = () => {
+    setup()
+    computeRatio()
+    computeAccumulation()
+}
+
+main()

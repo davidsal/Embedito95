@@ -1,0 +1,69 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// A named type with methods AND data fields built from a DIRECT object literal
+// lowers to a shared `core_object::Object<T>` handle: the struct keeps only the
+// fields, each method becomes a free function over `Object<T> &self` (so
+// `this.x` -> `self->x`), and `p.sum()` -> `sum(p)`.
+type Point = {
+    x: i16
+    y: i16
+    sum: () => i16
+}
+
+// A method-only type (no data fields) is a callback record: its struct holds
+// function POINTERS, so a literal must reference named functions.
+type Handler = {
+    onEvent: (value: i16) => void
+}
+
+// `twice` avoids colliding with C++'s `double` keyword; escaping such
+// identifiers is tracked in TICKET-95.
+// Methods of a handle type are free functions that may call each other in any
+// order: prototypes are emitted so `quadruple` can call `twice` declared later.
+type Accumulator = {
+    value: i16
+    quadruple: () => i16
+    twice: () => i16
+}
+
+const printValue = (value: i16) => {
+    serial.sendLine(value)
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const p: Point = { x: 3, y: 4, sum: () => { return this.x + this.y } }
+    serial.sendLine(p.sum())
+
+    // Mutating a field through the handle is visible via the method.
+    p.x = 10
+    serial.sendLine(p.sum())
+
+    // `alias` shares the same storage (no copy): mutating through it is visible
+    // through `p` too.
+    const alias = p
+    alias.y = 20
+    serial.sendLine(p.sum())
+    serial.sendLine(alias.sum())
+
+    // Callback record: the literal stores the named function's address.
+    const handler: Handler = { onEvent: printValue }
+    handler.onEvent(7)
+
+    // A handle method can call a method declared later in the type.
+    const acc: Accumulator = {
+        value: 3,
+        quadruple: () => { return this.twice() * 2 },
+        twice: () => { return this.value * 2 }
+    }
+    serial.sendLine(acc.quadruple())
+}
+
+main()

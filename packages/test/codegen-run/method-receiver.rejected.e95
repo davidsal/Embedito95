@@ -1,0 +1,76 @@
+// Every call below goes through `this.<field>` in a factory or object literal.
+// The checker must resolve the enclosing type and reject the call before the
+// codegen can emit `self->writer->missing()` / `self->count.value()`.
+type Writer = {
+    send: (value: i16) => void
+}
+
+type Screen = {
+    paint: () => void
+}
+
+const makeWriter = (): Writer => {
+    return {
+        send: (value: i16) => {}
+    }
+}
+
+const makeScreen = (writer: Writer): Screen => {
+    return {
+        paint: () => {
+            this.writer.missing()
+            this.writer.send()
+            this.writer.send("bad")
+        }
+    }
+}
+
+type PrimitiveScreen = {
+    paint: () => void
+}
+
+const makePrimitiveScreen = (): PrimitiveScreen => {
+    const count: i16 = 1
+    return {
+        paint: () => {
+            this.count.value()
+        }
+    }
+}
+
+type Counter = {
+    value: () => i16
+}
+
+type Holder = {
+    counter: Counter
+    run: () => void
+}
+
+const makeCounter = (start: i16): Counter => {
+    return {
+        value: () => {
+            return start
+        }
+    }
+}
+
+const holder: Holder = {
+    counter: makeCounter(1),
+    run: () => {
+        this.counter.missing()
+    }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const screen: Screen = makeScreen(makeWriter())
+    screen.paint()
+    const primitiveScreen: PrimitiveScreen = makePrimitiveScreen()
+    primitiveScreen.paint()
+    holder.run()
+}
+
+main()

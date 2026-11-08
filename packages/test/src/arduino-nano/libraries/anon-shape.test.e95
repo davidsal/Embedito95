@@ -1,0 +1,46 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// An anonymous shape (an object literal with no declared `type`) compiles to a
+// shared, refcounted handle `core_object::Object<...>`, exactly like a named
+// data-object type. So copying a binding ALIASES the same storage.
+const makePoint = (x: i16, y: i16) => {
+    return { x: x, y: y }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    // `a` is an anonymous shape inferred from the literal -> shared handle.
+    const a = { x: 1, y: 2 }
+    // Copying the binding aliases the same storage (not a deep copy).
+    let b = a
+    b.x = 9
+    serial.sendLine(a.x)
+    serial.sendLine(a.y)
+    serial.sendLine(b.x)
+
+    // Reassigning the `let` binding rebinds ONLY the local handle; `a` keeps
+    // its own storage.
+    // 110 stays inside the inferred i8; out-of-range literals still lack a
+    // diagnostic, tracked in TICKET-96 (the original value was 200).
+    b = { x: 100, y: 110 }
+    serial.sendLine(a.x)
+    serial.sendLine(b.x)
+
+    // A factory returning an anonymous shape yields an independent instance per
+    // call; mutating one field through the local handle is visible on it.
+    const p = makePoint(3, 4)
+    const q = p
+    q.y = 40
+    serial.sendLine(p.x)
+    serial.sendLine(p.y)
+    serial.sendLine(q.x)
+}
+
+main()

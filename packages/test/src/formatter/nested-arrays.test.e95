@@ -1,0 +1,7 @@
+const flat: u8[] = [1,2,3]
+
+const matrix: u8[][] = [[0, 36, 36, 0],[0, 0, 102, 0],[0, 72, 72, 0]]
+
+const points: Point[] = [{ x: 1, y: 2 },{ x: 3, y: 4 }]
+
+const empty: u8[] = []

@@ -1,0 +1,24 @@
+// A method property whose value is not a function cannot be wired into the
+// struct, so the checker reports a type mismatch at the property.
+type Writer = {
+    write: (value: i16) => void
+}
+
+type NumberScreen = {
+    paint: () => void
+}
+
+const getNumberScreen = (writer: Writer): NumberScreen => {
+    const n: i16 = 1
+    return { paint: n }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const writer: Writer = { write: (value: i16) => {} }
+    getNumberScreen(writer).paint()
+}
+
+main()

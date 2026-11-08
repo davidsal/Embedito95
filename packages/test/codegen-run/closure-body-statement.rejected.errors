@@ -1,0 +1,1 @@
+Statements other than declarations and the returned object are not supported in a closure factory body. Move this statement into a method.

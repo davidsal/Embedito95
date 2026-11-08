@@ -1,0 +1,441 @@
+// User function return type inference (inferFunctionReturnType + checker)
+// 'inferred' is the merged return type; 'CONFLICT' means the returns are
+// incompatible (no type contains all of them) and the checker flags it.
+// '(): T' is a return type annotation on the parentheses; the checker emits
+// returnTypeMismatch when the inferred type/value is not contained in it.
+// ': T' on the const name of a function emits functionTypeAnnotation (the
+// return type must be declared on the parameters, not the const name).
+// 'nullableOperation' flags arithmetic/member uses of a perhaps-null value.
+// return 1000
+inferred: i16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return a; return b [a: i16, b: i32]
+inferred: i32
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return a; return true [a: i16]
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return 1.5; return 100
+inferred: f32
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return a; return b [a: i16, b: f64]
+inferred: f64
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return 1000 as i64; return 5
+inferred: i64
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return a [a: u16]
+inferred: u16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return a > b [a: i16, b: i16]
+inferred: boolean
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): boolean return 1000
+inferred: i16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): i16 return 1000
+inferred: i16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): i32 return 1000
+inferred: i16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 return 42
+inferred: i8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 if (value == null) {;     return 0 as u8; }; return value [value: u8 | null]
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 return value [value: u8 | null]
+inferred: u8 | null
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 if (value == null) {;     setup(); }; return value [value: u8 | null]
+inferred: u8 | null
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 if (value != null) {;     return value; }; return 0 as u8 [value: u8 | null]
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 if (value == null) {;     return 0 as u8; }; return value [value: u8 | null]
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 return null
+inferred: null
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; return value
+inferred: u8 | null
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     setup(); }; return value
+inferred: u8 | null
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return value; }; value = null; return value
+inferred: u8 | null
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: yes
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value != null) {;     return value; }; return 0 as u8
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     return value; }
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     setup(); }; return true
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value != null) {;     value = null;     return value; }; return 0 as u8
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     value = null;     return value; }
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     value = null; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; }; const reset = (value: u8): u8 => {;     value = 0 as u8;     return value; }; reset(0 as u8); return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let code: u8 = 0; if (value == null) {;     switch (code) {;         case 1:;             return 1 as u8;         default:;             return 0 as u8;     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let code: u8 = 0; if (value == null) {;     switch (code) {;         case 1:;             return 1 as u8;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// : boolean  return 1000
+inferred: i16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: yes
+checker nullableOperation: no
+
+// : i16  return 1000
+inferred: i16
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: yes
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value != null) {;     value += 1;     return 0 as u8; }; return 0 as u8
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value != null) {;     value = value + 1;     return 0 as u8; }; return 0 as u8
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; }; value = value + 1; return 0 as u8
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; while (value != null) {;     value += 1; }; return 0 as u8
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else if (flag) {;     value = null;     return 1 as u8; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; }; const reset = () => {;     value = null; }; reset(); return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     if (flag) {;         value = null;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let code: u8 = 0; if (value == null) {;     return 0 as u8; } else {;     switch (code) {;         case 1:;             value = null;             break;         default:;             break;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else if (flag) {;     return 1 as u8; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     if (flag) {;         return 1 as u8;     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     while (flag) {;         value = null;         break;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     while (flag) {;         value = null;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     for (let index: u8 = 0; index < 1; index += 1) {;         value = null;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     do {;         value = null;     } while (flag); }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     while (flag) {;         value += 1;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     while (true) {;         value = null;         break;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     while (true) {;         return 1 as u8;     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     while (flag) {;         setup();     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     while (true) {;         if (flag) {;             value = null;             return 1 as u8;         };     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     for (;;) {;         value = null;     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     for (value = null; flag; value = null) {;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     while (false) {;         value = null;     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     for (; flag; value = null) {;         flag = false;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     for (value = null; true; ) {;         break;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     while (value = null) {;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     for (; value = null; ) {;     }; }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; if (value == null) {;     return 0 as u8; } else {;     do {;     } while (value = null); }; return value
+inferred: CONFLICT
+checker incompatibleReturnTypes: yes
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// (): u8 let value: u8 | null = null; let flag: boolean = false; if (value == null) {;     return 0 as u8; } else {;     for (; flag; value = null) {;         return 1 as u8;     }; }; return value
+inferred: u8
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no

@@ -1,0 +1,68 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// Slice 1 of "data-objects with array/nested-object fields": a named object type
+// whose field is ANOTHER named data-object handle (`Inner` inside `Outer`) is now
+// itself a shared handle. `Outer` carries a `string` and an `Object<Inner>` member;
+// mutating through `o.inner.x` reaches the shared `Inner` (cascade release).
+
+type Inner = {
+    x: i16
+    y: i16
+}
+
+type Outer = {
+    label: string
+    inner: Inner
+}
+
+// Write-through on the NESTED object: `o.inner.x` reaches the caller's Inner
+// (the Outer handle shares the Inner handle it holds).
+const shift = (o: Outer, dx: i16) => {
+    o.inner.x = o.inner.x + dx
+}
+
+// Rebinding the param rebinds only the LOCAL handle (caller untouched).
+// A fresh literal is built into a local so the constructor seam is exercised.
+const swap = (o: Outer) => {
+    const fresh: Outer = { label: "swap", inner: { x: 100, y: 200 } }
+    o = fresh
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const o: Outer = { label: "hello", inner: { x: 1, y: 2 } }
+    serial.sendLine(o.inner.x)
+    serial.sendLine(o.inner.y)
+
+    // Alias shares the whole tree.
+    let p = o
+    p.inner.x = 9
+    serial.sendLine(o.inner.x)
+    serial.sendLine(p.inner.x)
+
+    // Write-through through a param reaches the caller's Inner.
+    shift(o, 5)
+    serial.sendLine(o.inner.x)
+    serial.sendLine(p.inner.x)
+
+    // Rebinding is local only.
+    swap(o)
+    serial.sendLine(o.label)
+    serial.sendLine(o.inner.x)
+
+    // A fresh Outer with its own literal Inner.
+    const q: Outer = { label: "world", inner: { x: 40, y: 50 } }
+    serial.sendLine(q.inner.x)
+    serial.sendLine(q.inner.y)
+    serial.sendLine(q.label)
+    serial.sendLine(o.inner.x)
+}
+
+main()

@@ -1,0 +1,8 @@
+{
+	"name": "arduino-nano-lsp",
+	"type": "project",
+	"embedito95Version": "embedito95@0.1.0",
+	"platform": "arduino-nano",
+	"core": {},
+	"libraries": {}
+}

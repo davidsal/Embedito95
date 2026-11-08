@@ -1,0 +1,25 @@
+// Reads a potentiometer connected to an analog pin and controls the brightness of an LED with PWM.
+// Example created by David Melara.
+
+import { setAnalog, setMode, getAnalog, Pin, INPUT, OUTPUT } from '@embedito95/gpio'
+import { delay } from '@embedito95/time'
+
+const dimmer = () => {
+    while (true) {
+        const brightness = getAnalog(Pin.A0) * 16
+        setAnalog(Pin.B1, brightness)
+        delay(50)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.A0, INPUT)
+    setMode(Pin.B1, OUTPUT)
+}
+
+const main = () => {
+    setup()
+    dimmer()
+}
+
+main()

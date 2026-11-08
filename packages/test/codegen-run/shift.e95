@@ -1,0 +1,17 @@
+import { Pin, BitOrder, writeShift } from '@embedito95/gpio'
+
+// writeShift drives the data pin bit by bit and pulses the clock pin once per
+// bit. The host driver records every digitalWrite, so the emitted event stream
+// pins the exact bit order for both MSB-first and LSB-first transfers.
+const DATA_PIN = Pin.4
+const CLOCK_PIN = Pin.5
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    writeShift(DATA_PIN, CLOCK_PIN, BitOrder.MSB_FIRST, 165)
+    writeShift(DATA_PIN, CLOCK_PIN, BitOrder.LSB_FIRST, 60)
+}
+
+main()

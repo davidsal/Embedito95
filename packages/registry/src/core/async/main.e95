@@ -1,0 +1,46 @@
+import { getMillis, getMicros, hasElapsed, hasElapsedMicros } from '@embedito95/time'
+
+/**
+ * A single slot in the async task queue.
+ */
+export type AsyncTask<T = null> = {
+    /**
+     * Whether the task has finished running.
+     */
+    completed: boolean
+
+    /**
+     * The value produced by the task.
+     */
+    value: T
+}
+
+/**
+ * Sleeps for the given number of milliseconds. A duration of 0 (the default)
+ * yields one event-loop pass instead of starting a timer.
+ * @param milliseconds - Duration to sleep in milliseconds.
+ */
+export const sleep = async (milliseconds: u32 = 0): AsyncTask => {
+    const start = getMillis()
+
+    if (!hasElapsed(start, milliseconds)) {
+        return { completed: false }
+    }
+
+    return { completed: true }
+}
+
+/**
+ * Sleeps for the given number of microseconds. A duration of 0 (the default)
+ * yields one event-loop pass instead of starting a timer.
+ * @param microseconds - Duration to sleep in microseconds.
+ */
+export const sleepMicros = async (microseconds: u32 = 0): AsyncTask => {
+    const start = getMicros()
+
+    if (!hasElapsedMicros(start, microseconds)) {
+        return { completed: false }
+    }
+
+    return { completed: true }
+}

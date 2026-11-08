@@ -1,0 +1,10 @@
+import { PIN_MODE } from "../enums.js";
+
+export const DIGITAL_MODES = [
+	PIN_MODE.INPUT,
+	PIN_MODE.OUTPUT,
+	PIN_MODE.INPUT_PULLUP,
+	PIN_MODE.INPUT_PULLDOWN,
+];
+
+export const INPUT_ONLY_MODES = [PIN_MODE.INPUT];

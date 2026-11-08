@@ -1,0 +1,20 @@
+// The `string` sub-library backs the native `string` and `char` types. It has
+// no callable API: the string methods and operators are exposed by the
+// language itself.
+//
+// Under the hood it generates `core_string.h`/`core_string.cpp`, which reuse
+// the same growable `core_array::Buffer` that powers arrays. Concatenation is
+// designed to keep heap allocation (and fragmentation) to a minimum:
+//
+// - Single contiguous block: a `String` is one character buffer backed by the
+//   array `Buffer`, so there is never an allocation per character.
+// - `+=`/`<<` reuse the same buffer: they append with `memcpy` into the
+//   existing block and only `realloc` when capacity is insufficient, avoiding
+//   a fresh `malloc` for every concatenation.
+// - Template literals (`"...${expr}..."`) compile to a single accumulator
+//   `String(...) << part << part`, so multi-part strings build one growing
+//   buffer instead of several intermediate `String`s via `operator+`.
+// - The terminator is always present, so `c_str()` is always valid; an empty
+//   string is a minimal one-byte allocation, never a null pointer.
+// - `push` grows geometrically (~1.25x) and `pop` shrinks by halves, matching
+//   the array policy. Numeric formatting helpers live in `number_format`.

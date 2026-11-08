@@ -1,0 +1,23 @@
+// Direct object self-reference guard (refcount has no GC).
+// 'obj.field = obj' where the field holds the object's own type must emit
+// error.objectSelfReference (a length-1 reference cycle), including when the
+// field is nullable. Assigning a DIFFERENT instance, building an acyclic
+// linked list, or forming an indirect cycle across variables must not flag;
+// indirect cycles are a documented restriction that leaks memory.
+// type Node = { next: Node }; n.next = n -> cycle error
+objectSelfReference: yes
+
+// type Node = { next: Node | null }; n.next = n -> cycle error
+objectSelfReference: yes
+
+// n.next = m (a different Node, not self) -> ok
+objectSelfReference: no
+
+// acyclic linked list a.next = b; b.next = null -> ok
+objectSelfReference: no
+
+// indirect cycle a.next = b; b.next = a -> not detected (ok)
+objectSelfReference: no
+
+// scalar field self-name is not an object field -> ok
+objectSelfReference: no

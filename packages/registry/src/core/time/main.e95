@@ -1,0 +1,41 @@
+/**
+ * Delays execution for the given number of milliseconds.
+ * @param milliseconds - Duration to wait in milliseconds.
+ */
+export const delay = (milliseconds: u32) => {}
+
+/**
+ * Delays execution for the given number of microseconds.
+ * @param microseconds - Duration to wait in microseconds.
+ */
+export const delayMicros = (microseconds: u32) => {}
+
+/**
+ * Returns the number of milliseconds elapsed since the board started.
+ * @returns Elapsed time in milliseconds.
+ */
+export const getMillis = (): u32 => {}
+
+/**
+ * Returns the number of microseconds elapsed since the board started.
+ * @returns Elapsed time in microseconds.
+ */
+export const getMicros = (): u32 => {}
+
+/**
+ * Checks whether at least the given number of milliseconds have elapsed
+ * since a recorded start time. Safe against unsigned counter overflow.
+ * @param startMillis - Reference time previously returned by getMillis().
+ * @param elapsedMillis - Minimum elapsed milliseconds to test for.
+ * @returns True if elapsedMillis or more have passed since startMillis.
+ */
+export const hasElapsed = (startMillis: u32, elapsedMillis: u32): boolean => {}
+
+/**
+ * Checks whether at least the given number of microseconds have elapsed
+ * since a recorded start time. Safe against unsigned counter overflow.
+ * @param startMicros - Reference time previously returned by getMicros().
+ * @param elapsedMicros - Minimum elapsed microseconds to test for.
+ * @returns True if elapsedMicros or more have passed since startMicros.
+ */
+export const hasElapsedMicros = (startMicros: u32, elapsedMicros: u32): boolean => {}

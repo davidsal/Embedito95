@@ -1,0 +1,28 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
+	"files": {
+		"includes": [
+			"packages/**/*.js",
+			"packages/**/*.json",
+			"!packages/test/testers"
+		],
+		"ignoreUnknown": true
+	},
+	"formatter": {
+		"enabled": true,
+		"includes": [
+			"packages/**/*.js",
+			"packages/**/*.json",
+			"!packages/test/testers"
+		]
+	},
+	"linter": {
+		"enabled": true,
+		"includes": ["packages/**/*.js", "!packages/test/testers"],
+		"rules": {
+			"performance": {
+				"noNamespaceImport": "error"
+			}
+		}
+	}
+}

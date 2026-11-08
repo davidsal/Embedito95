@@ -1,0 +1,7 @@
+{
+	"name": "max7219",
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"package": "@embedito95/max7219",
+	"version": "0.1.0"
+}

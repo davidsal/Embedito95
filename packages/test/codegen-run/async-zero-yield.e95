@@ -1,0 +1,30 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep, sleepMicros } from '@embedito95/async'
+
+// Zero (or omitted) durations must not allocate timer fields: `await sleep(0)`
+// and `await sleepMicros(0)` become plain yields, so two tasks that both await
+// a zero sleep interleave instead of running to completion back to back.
+const blinkA = async () => {
+    setDigital(Pin.10, HIGH)
+    await sleep()
+    setDigital(Pin.10, LOW)
+}
+
+const blinkB = async () => {
+    setDigital(Pin.11, HIGH)
+    await sleepMicros(0)
+    setDigital(Pin.11, LOW)
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+    setMode(Pin.11, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    blinkA()
+    blinkB()
+}
+
+main()

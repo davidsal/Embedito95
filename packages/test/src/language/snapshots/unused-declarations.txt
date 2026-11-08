@@ -1,0 +1,41 @@
+// Unused declarations. A type alias that no annotation, parameter,
+// return type or 'as' cast references emits warning.unusedType; an enum
+// that nothing references emits warning.unusedEnum; a top-level or local
+// variable/function that nothing references emits warning.unusedConstant/
+// unusedFunction. Types referenced from a field (including a self-
+// reference) count as used.
+// type never referenced -> unusedType
+unused: probando:unusedType
+
+// type used as a variable annotation -> not unused
+unused: none
+
+// type used as an array element -> not unused
+unused: none
+
+// type used as a parameter -> not unused
+unused: none
+
+// type used as a return type -> not unused
+unused: none
+
+// type used in an 'as' cast -> not unused
+unused: none
+
+// type only referenced by its own fields -> not unused
+unused: none
+
+// enum never referenced -> unusedEnum
+unused: Color:unusedEnum
+
+// enum referenced through a member -> not unused
+unused: none
+
+// unused const and let -> unusedConstant
+unused: FOO:unusedConstant, bar:unusedConstant
+
+// unused top-level function -> unusedFunction
+unused: helper:unusedFunction
+
+// used variable and function -> not unused
+unused: none

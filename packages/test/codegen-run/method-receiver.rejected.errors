@@ -1,0 +1,5 @@
+'this.writer.missing' is not a method of type 'Writer'
+'this.writer.send' expects 1 argument(s) but got 0
+Argument 'value' expects type 'i16'
+'this.count.value' is not a method of type 'i16'
+'this.counter.missing' is not a method of type 'Counter'

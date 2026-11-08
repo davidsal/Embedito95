@@ -1,0 +1,24 @@
+import { setMode, setDigital, HIGH, LOW, OUTPUT, LED_BUILTIN } from '@embedito95/gpio'
+import { delay } from '@embedito95/time'
+
+const INTERVAL = 1000
+
+const blinkLed = () => {
+    while (true) {
+        setDigital(LED_BUILTIN, LOW)
+        delay(INTERVAL)
+        setDigital(LED_BUILTIN, HIGH)
+        delay(INTERVAL)
+    }
+}
+
+const setup = () => {
+    setMode(LED_BUILTIN, OUTPUT)
+}
+
+const main = () => {
+    setup()
+    blinkLed()
+}
+
+main()

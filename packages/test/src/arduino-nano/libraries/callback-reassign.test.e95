@@ -1,0 +1,37 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Handler = {
+    onEvent: (value: i16) => void
+}
+
+const first = (value: i16) => {
+    serial.sendLine(value + 1)
+}
+
+const second = (value: i16) => {
+    serial.sendLine(value + 2)
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const handler: Handler = { onEvent: first }
+    handler.onEvent(10)
+
+    // Reassigning a slot overwrites the function-pointer member in place.
+    handler.onEvent = second
+    handler.onEvent(10)
+
+    // A copy of the binding aliases the same storage, so it sees the new slot.
+    const alias = handler
+    handler.onEvent = first
+    alias.onEvent(20)
+}
+
+main()

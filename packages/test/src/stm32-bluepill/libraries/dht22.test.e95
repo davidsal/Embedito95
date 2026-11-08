@@ -1,0 +1,28 @@
+import { getSerial, Serial } from '@embedito95/serial'
+import { Pin } from '@embedito95/gpio'
+import { getSensor } from '@embedito95/dht22'
+
+const serial = getSerial(Serial.1)
+const sensor = getSensor(Pin.A0)
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    const temperature = sensor.getTemperature()
+    const humidity = sensor.getHumidity()
+    if (temperature > 0.0) {
+        serial.sendLine(1)
+    } else {
+        serial.sendLine(0)
+    }
+    if (humidity > 0.0) {
+        serial.sendLine(1)
+    } else {
+        serial.sendLine(0)
+    }
+}
+
+main()

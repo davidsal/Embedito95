@@ -1,0 +1,35 @@
+import { SPI, SpiBitOrder, SpiClockMode, getSPI } from '@embedito95/spi'
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Exercises the SPI transaction surface end to end: two nested transactions
+// (the supported maximum), the ignored third open, and 16-bit transfers whose
+// returned words are forwarded to analog writes, so the host driver records
+// what the generated code actually produced.
+const CLOCK_DIVISOR: u16 = 8
+
+const bus = getSPI(SPI.1)
+
+const setup = () => {
+    bus.initialize()
+}
+
+const main = () => {
+    setup()
+    bus.beginTransaction(CLOCK_DIVISOR, SpiClockMode.MODE_0, SpiBitOrder.MSB_FIRST)
+    const firstWord: u16 = bus.transfer16(4660)
+    bus.endTransaction()
+
+    bus.beginTransaction(16, SpiClockMode.MODE_3, SpiBitOrder.LSB_FIRST)
+    bus.beginTransaction(32, SpiClockMode.MODE_1, SpiBitOrder.LSB_FIRST)
+    const secondWord: u16 = bus.transfer16(firstWord)
+    bus.endTransaction()
+    bus.endTransaction()
+
+    bus.close()
+    bus.close()
+
+    setAnalog(Pin.3, firstWord)
+    setAnalog(Pin.5, secondWord)
+}
+
+main()

@@ -1,0 +1,85 @@
+// LSP view of a local closure returned by reference from a factory.
+// The checker recognizes the returned identifier as the public method and
+// the codegen lowers it once under the property key, so the editor reports
+// no diagnostic for the direct, mapped, collision or stateless forms.
+// The unsupported forms report an actionable diagnostic (with severity and
+// position) instead of reaching the codegen: local closures outside a
+// factory or in a nested block, nested closure properties, extra factory
+// statements, declarations whose initializer would be dropped, and
+// non-function method properties.
+// local closure returned by reference hovers and reports no diagnostics
+diagnostics:
+- none
+types:
+- writer => Writer
+- screen => Screen
+- getScreen(writer) => Screen
+
+// returned local closure maps the property key to the method name
+diagnostics:
+- none
+types:
+- mapped => MappedScreen
+- getMappedScreen(writer) => MappedScreen
+
+// returned method colliding with a local closure name reports no diagnostics
+diagnostics:
+- none
+types:
+- collision => CollisionScreen
+- getCollisionScreen(writer) => CollisionScreen
+
+// stateless local closure returned by reference reports no diagnostics
+diagnostics:
+- none
+types:
+- stateless => StatelessScreen
+- getStatelessScreen() => StatelessScreen
+
+// local closure outside a factory reports unsupportedLocalClosure
+diagnostics:
+- error error.unsupportedLocalClosure @ 4:11: Local closure 'paint' is not supported here. Declare it at module level or return it directly as a property of a closure factory.
+types:
+- none
+
+// local closure in a nested block reports unsupportedLocalClosure
+diagnostics:
+- error error.unsupportedLocalClosure @ 6:19: Local closure 'paint' is not supported here. Declare it at module level or return it directly as a property of a closure factory.
+types:
+- none
+
+// nested closure property reports unsupportedNestedClosureProperty
+diagnostics:
+- error error.unsupportedNestedClosureProperty @ 14:23: Closure 'paint' is nested inside property 'inner'; a closure returned by a factory must be a direct property of the returned object.
+types:
+- none
+
+// factory body statement reports unsupportedClosureFactoryStatement
+diagnostics:
+- error error.unsupportedClosureFactoryStatement @ 11:5: Statements other than declarations and the returned object are not supported in a closure factory body. Move this statement into a method.
+types:
+- none
+
+// uncaptured factory declaration reports unsupportedClosureFactoryLocal
+diagnostics:
+- error error.unsupportedClosureFactoryLocal @ 8:11: Local 'reading' of a closure factory is neither a local closure nor captured by a method, so its initializer would be dropped. Move it into a method or capture it.
+types:
+- none
+
+// factory declaration used only by a captured initializer reports unsupportedClosureFactoryLocal
+diagnostics:
+- error error.unsupportedClosureFactoryLocal @ 11:11: Local 'reading' of a closure factory is neither a local closure nor captured by a method, so its initializer would be dropped. Move it into a method or capture it.
+types:
+- none
+
+// returned method colliding with a stateless local closure name reports no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// non-function method property reports assignmentTypeMismatch
+diagnostics:
+- error error.assignmentTypeMismatch @ 9:14: Cannot assign 'i16' value to 'paint' of type '() => void'.
+types:
+- none

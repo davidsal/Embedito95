@@ -1,0 +1,214 @@
+// leading program comment
+
+import { setMode, setDigital } from 'gpio' // standalone import inline
+import { Pin } from '@embedito95/gpio' // import with neighbour above
+import { read } from 'adc' // import with neighbour below
+
+// comment above const a
+const a: u8 = 1
+
+// multiple comment lines
+// above const b
+const b: u8 = 2
+
+const c: u8 = 3 // inline comment on const
+
+// first comment line
+
+// second comment line, separated by a blank line
+const d: u8 = 4
+
+/*
+ * block comment above const e
+ */
+const e: u8 = 5
+
+/**
+ * doc comment above const f
+ */
+const f: u8 = 6
+
+if (x == 1) {
+    // comment inside if block
+    const g: u8 = 7
+    // comment between statements inside if
+    const h: u8 = 8
+    const i: u8 = 9 // inline inside if
+    // trailing comment in if block
+} else {
+    // comment inside else block
+    const j: u8 = 10
+}
+
+while (x < 10) {
+    // comment inside while
+    x = x + 1
+    // comment before loop end
+}
+
+for (let k: u8 = 0; k < 10; k = k + 1) {
+    // comment inside for
+    a = a + k
+}
+
+const fn = () => {
+    // comment inside function
+    const m: u8 = 1
+    // comment before return
+    return m // inline comment on return
+}
+
+// comment before expression statement
+doSomething()
+// comment after expression statement
+
+// comment above enum
+export enum Mode {
+    // comment above first member
+    OFF,
+    // comment above second member
+    ON
+}
+
+export enum Level {
+    LOW, // inline comment on member
+    HIGH // inline comment on last member
+}
+
+// regression: no spurious blank between statements that share a trailing comment group
+const readSensor = () => {
+    while (true) {
+        const temperature = sensor.getTemperature()
+        const humidity = sensor.getHumidity()
+
+        // commented-out block must not force a blank before the previous statements
+        // if (humidity != null) {
+        //     humidity += 1
+        // }
+
+        log(temperature, humidity)
+    }
+}
+
+// doc comments inside a type declaration stay attached to their members
+export type Sample = {
+    /**
+     * Starts the first thing.
+     */
+    first: () => void,
+    /**
+     * Does the second thing.
+     * With a wrapped description.
+     */
+    second: (value: u8) => void
+}
+
+// regression: inline comments on type members stay inline, including the last one
+export type InlineCommentFace = {
+    center: u8[], // first member inline
+    blink: u8[], // middle member inline
+    mouth: u8[] // last member inline
+}
+
+// multiline block comment above an enum member
+export enum Flags {
+    /**
+     * First flag.
+     */
+    ONE,
+    // comment above second member
+    TWO
+}
+
+const nestedBlock = () => {
+    /*
+     * multiline block comment inside a nested block
+     * with a second line
+     */
+    const value: u8 = 1
+    return value
+}
+
+// regression: inline comments on block/literal headers stay on the header line
+const headerFunction = () => { // function header
+    let counter: u8 = 1
+    while (counter < 2) { // while header
+        counter = counter + 1
+    } // while closing
+    if (counter == 2) { // if header
+        counter = 3
+    } else { // else header
+        counter = 4
+    } // if closing
+    for (let index: u8 = 0; index < 2; index = index + 1) { // for header
+        counter = index
+    } // for closing
+    return counter // return inline
+} // function closing
+
+const headerObject = { // object header
+    first: 1
+} // object closing
+
+const headerArray: u8[] = [ // array header
+    1
+] // array closing
+
+// regression: ticket minimal reproduction
+const reproFunction = () => { // MARK
+    let value: u8 = 1
+    while (value < 2) { // MARK
+        value = value + 1
+    } // MARK
+    return value
+}
+const reproObject = { // MARK
+    x: 1
+} // MARK
+
+const nestedHeaders = () => { // outer header
+    if (counter == 1) { // outer if header
+        while (counter < 3) { // nested while header
+            counter = counter + 1
+        } // nested while closing
+    } // outer if closing
+} // outer closing
+
+// regression: do/while closing comment must not land before the while condition
+const doWhileHeaders = () => {
+    let step: u8 = 0
+    do { // do header
+        step = step + 1
+    } while (step < 3) // do closing
+    return step
+}
+
+// regression: empty block keeps the closing brace out of its header line comment
+const emptyBlockHeaders = () => { // empty block header
+} // empty block closing
+
+// regression: empty object keeps its header and closing comment
+const emptyObjectHeaders = { // empty object header
+} // empty object closing
+
+// regression: switch inline comments must survive on their own lines
+switch (mode) { // switch header
+    // comment before first case
+    case 1: // case label inline
+        break // break inline
+    // comment before default
+    default:
+        break
+} // switch closing
+
+// regression: switch with comments only on header and closing lines
+switch (mode) { // header only
+} // closing only
+
+// regression: arrow function inline header comment must not be lost
+const inlineArrow = (value: u8): u8 => { // arrow header inline
+    return value + 1
+} // arrow closing inline
+
+// trailing program comment
+

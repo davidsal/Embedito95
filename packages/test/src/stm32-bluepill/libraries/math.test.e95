@@ -1,0 +1,155 @@
+import {
+    interpolateRange, interpolateRangeFloat, clamp, clampFloat,
+    power, squareRoot, absolute, absoluteFloat, minimum, minimumFloat,
+    maximum, maximumFloat, roundDown, roundUp, roundNearest,
+    randomInteger, seedRandom, readBitValue, writeBitValue, setBitValue,
+    clearBitValue, lowByteValue, highByteValue, bitMask,
+    sine, cosine, tangent, arcSine, arcCosine, arcTangent, arcTangent2,
+    toRadians, toDegrees, square, naturalLog, logarithm10, exponential,
+    remainderFloat, truncate
+} from '@embedito95/math'
+
+// Pure computation: no wiring required on the STM32 Blue Pill.
+
+const testInterpolateRangeIntegers = () => {
+    const atMinimum: i32 = interpolateRange(0, 0, 4095, 0, 65535)
+    const atMaximum: i32 = interpolateRange(4095, 0, 4095, 0, 65535)
+    const middle: i32 = interpolateRange(2048, 0, 4095, 0, 65535)
+    // Inverted target range (decreasing output).
+    const inverted: i32 = interpolateRange(4095, 0, 4095, 65535, 0)
+    // Target span smaller than the source span (truncated like integer division).
+    const narrow: i32 = interpolateRange(5, 0, 10, 0, 1)
+    return atMinimum + atMaximum + middle + inverted + narrow
+}
+
+const testInterpolateRangeFloat = () => {
+    const atMinimum: f32 = interpolateRangeFloat(0.0, 0.0, 4095.0, 0.0, 3.3)
+    const atMaximum: f32 = interpolateRangeFloat(4095.0, 0.0, 4095.0, 0.0, 3.3)
+    const inverted: f32 = interpolateRangeFloat(4095.0, 0.0, 4095.0, 3.3, 0.0)
+    return atMinimum + atMaximum + inverted
+}
+
+const testClampIntegers = () => {
+    const below: i32 = clamp(-10, 0, 100)
+    const inside: i32 = clamp(50, 0, 100)
+    const above: i32 = clamp(250, 0, 100)
+    return below + inside + above
+}
+
+const testClampFloat = () => {
+    const below: f32 = clampFloat(-1.5, 0.0, 1.0)
+    const inside: f32 = clampFloat(0.5, 0.0, 1.0)
+    const above: f32 = clampFloat(2.5, 0.0, 1.0)
+    return below + inside + above
+}
+
+const testIntegerMath = () => {
+    const magnitude: i32 = absolute(-42)
+    const smallest: i32 = minimum(3, 8)
+    const largest: i32 = maximum(3, 8)
+    return magnitude + smallest + largest
+}
+
+const testFloatMath = () => {
+    const raised: f32 = power(2.0, 10.0)
+    const root: f32 = squareRoot(16.0)
+    const squared: f32 = square(4.0)
+    const magnitude: f32 = absoluteFloat(-3.5)
+    const smallest: f32 = minimumFloat(1.5, 0.5)
+    const largest: f32 = maximumFloat(1.5, 0.5)
+    return raised + root + squared + magnitude + smallest + largest
+}
+
+const testLogarithms = () => {
+    const natural: f32 = naturalLog(2.7182817)
+    const decimal: f32 = logarithm10(100.0)
+    const raised: f32 = exponential(1.0)
+    return natural + decimal + raised
+}
+
+const testRemainderAndTruncate = () => {
+    const remainder: f32 = remainderFloat(5.5, 2.0)
+    const negativeRemainder: f32 = remainderFloat(-5.5, 2.0)
+    const towardPositive: f32 = truncate(3.9)
+    const towardNegative: f32 = truncate(-3.9)
+    return remainder + negativeRemainder + towardPositive + towardNegative
+}
+
+const testRounding = () => {
+    const down: f32 = roundDown(3.7)
+    const up: f32 = roundUp(3.2)
+    const nearest: f32 = roundNearest(3.5)
+    // Halfway away from zero.
+    const nearestNegative: f32 = roundNearest(-3.5)
+    return down + up + nearest + nearestNegative
+}
+
+const testRandom = () => {
+    seedRandom(12345)
+    const first: i32 = randomInteger(0, 100)
+    const second: i32 = randomInteger(0, 100)
+    return first + second
+}
+
+const testBitHelpers = () => {
+    const source: u32 = 10
+    const isSet: boolean = readBitValue(source, 1)
+    const withHigh: u32 = setBitValue(source, 3)
+    const withLow: u32 = clearBitValue(source, 1)
+    const conditional: u32 = writeBitValue(source, 2, isSet)
+    if (isSet) {
+        return withHigh + withLow + conditional + 1
+    }
+    return withHigh + withLow + conditional
+}
+
+const testByteAndMaskHelpers = () => {
+    const source: u32 = 43981
+    const low: u8 = lowByteValue(source)
+    const high: u8 = highByteValue(source)
+    const firstBit: u32 = bitMask(0)
+    const eighthBit: u32 = bitMask(7)
+    const highestBit: u32 = bitMask(31)
+    const outOfRange: u32 = bitMask(32)
+    return low + high + firstBit + eighthBit + highestBit + outOfRange
+}
+
+const testTrigonometry = () => {
+    const sinZero: f32 = sine(0.0)
+    const cosZero: f32 = cosine(0.0)
+    const tanZero: f32 = tangent(0.0)
+    const radians: f32 = toRadians(180.0)
+    const degrees: f32 = toDegrees(radians)
+    return sinZero + cosZero + tanZero + radians + degrees
+}
+
+const testInverseTrigonometry = () => {
+    const fromSine: f32 = arcSine(0.5)
+    const fromCosine: f32 = arcCosine(0.5)
+    const fromTangent: f32 = arcTangent(1.0)
+    const quadrant: f32 = arcTangent2(1.0, -1.0)
+    const domainEdge: f32 = arcSine(1.0)
+    return fromSine + fromCosine + fromTangent + quadrant + domainEdge
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    testInterpolateRangeIntegers()
+    testInterpolateRangeFloat()
+    testClampIntegers()
+    testClampFloat()
+    testIntegerMath()
+    testFloatMath()
+    testLogarithms()
+    testRounding()
+    testRemainderAndTruncate()
+    testRandom()
+    testBitHelpers()
+    testByteAndMaskHelpers()
+    testTrigonometry()
+    testInverseTrigonometry()
+}
+
+main()

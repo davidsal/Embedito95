@@ -1,0 +1,90 @@
+// LSP view of the `spi` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/spi/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// transfer infers u8 and transferBuffer infers u8[]
+diagnostics:
+- none
+types:
+- received => u8
+- exchanged => u8[]
+
+// transfer16 infers u16
+diagnostics:
+- none
+types:
+- word => u16
+
+// transaction scope accepts its arguments and restores without diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// configuration setters accept every enum member without diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// nested configuration and word transfer produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 4:5: 'bus.transfer' expects 1 argument(s) but got 2
+types:
+- none
+
+// transfer16 wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 4:5: 'bus.transfer16' expects 1 argument(s) but got 0
+types:
+- none
+
+// transaction wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 4:5: 'bus.beginTransaction' expects 3 argument(s) but got 2
+types:
+- none
+
+// transaction bit order argument type reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:50: Argument 'bitOrder' expects type 'SpiBitOrder' but literal 1 is 'u8'
+types:
+- none
+
+// close rejects arguments
+diagnostics:
+- error error.wrongArgumentCount @ 4:5: 'bus.close' expects 0 argument(s) but got 1
+types:
+- none
+
+// non-enum bit order argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:21: Argument 'order' expects type 'SpiBitOrder' but literal 1 is 'u8'
+types:
+- none
+
+// enum member of the wrong type reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:21: Argument 'order' expects type 'SpiBitOrder' but 'SpiClockMode.MODE_0' is 'SpiClockMode.MODE_0'
+types:
+- none
+
+// non-numeric clock divider reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:25: Argument 'divider' expects type 'u16' but 'fast' is 'string'
+types:
+- none
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 3:28: 'bus.configure' is not a method of type 'SpiBus'
+types:
+- missing => unresolved

@@ -1,0 +1,89 @@
+import { Pin, DigitalLevel } from '@embedito95/gpio'
+
+/**
+ * Available hardware timers. Counters owned by the runtime (for example, the
+ * AVR counter that backs the millisecond clock) are not listed, so they cannot
+ * be selected.
+ */
+export enum Timer {
+    // e95.postinstall.timerEnum
+}
+
+/**
+ * A hardware timer bound to one of the board's timer peripherals.
+ */
+export type HardwareTimer = {
+    /**
+     * Configures the timer period and the function invoked on every period
+     * match, then disables period callbacks. The counter starts running as
+     * soon as its period is configured.
+     * @param periodMicros - Period between matches, in microseconds
+     * @param callback - Function invoked on each period match; it must be a
+     * top-level function without captured state
+     */
+    initialize: (periodMicros: u32, callback) => void
+    /**
+     * Changes the timer period while keeping the timer in its current
+     * running state.
+     * @param periodMicros - Period between matches, in microseconds
+     */
+    setPeriod: (periodMicros: u32) => void
+    /**
+     * Starts delivering period callbacks.
+     */
+    start: () => void
+    /**
+     * Stops delivering period callbacks. The counter keeps running.
+     */
+    stop: () => void
+}
+
+/**
+ * Creates a hardware timer bound to the given timer peripheral.
+ * @param timer - Timer peripheral to use
+ * @returns A configured hardware timer
+ */
+export const getTimer = (timer: Timer): HardwareTimer => {}
+
+/**
+ * Starts a square-wave tone on `pin`. The selected timer generates the wave by
+ * toggling the pin on every compare match, so the pin does not need a PWM
+ * peripheral. While the tone runs, the timer belongs to the tone generator
+ * within this API: any compare-match callback registered on the same timer is
+ * ignored. Call stopTone to release the timer; the callback stays registered
+ * but the timer stops delivering compare matches.
+ *
+ * The counter may also back PWM: `setAnalog` uses Timer1/Timer2 on AVR and
+ * TIM2/TIM3/TIM4 on STM32, so configuring the same counter with this function
+ * stops the PWM running on its pins. Counter width and prescaler limit the
+ * tone: frequencies outside the representable range saturate at the nearest
+ * period (about 31 Hz on the 8-bit AVR Timer2).
+ *
+ * While a servo output is active, the servo library owns Timer1 on AVR and
+ * TIM1 on STM32; starting a tone on one of those counters stops the pulses.
+ * @param timer - Timer peripheral that generates the wave
+ * @param pin - Pin that emits the tone
+ * @param frequencyHertz - Tone frequency in hertz
+ */
+export const startTone = (timer: Timer, pin: Pin, frequencyHertz: u16) => {}
+
+/**
+ * Stops the tone running on `pin` and leaves the pin at LOW. The timer that
+ * generated the wave keeps running but stops delivering compare matches.
+ * @param pin - Pin that emits the tone
+ */
+export const stopTone = (pin: Pin) => {}
+
+/**
+ * Measures how long `pin` stays at `pulseLevel`, in microseconds. The pin is
+ * configured as an input. The call blocks until the pulse completes; when the
+ * pulse does not complete before `timeoutMicros`, it returns 0. Waiting for the
+ * pulse to start and waiting for it to end each use their own timeout, so a
+ * pulse that both starts late and outlasts the timeout can block for about
+ * twice `timeoutMicros` before returning 0.
+ * @param pin - Pin to measure
+ * @param pulseLevel - Level that defines the pulse (LOW or HIGH)
+ * @param timeoutMicros - Maximum time to wait for the pulse, in microseconds
+ * @returns Pulse width in microseconds, or 0 when the timeout expires
+ */
+export const measurePulseWidth = (pin: Pin, pulseLevel: DigitalLevel, timeoutMicros: u32): u32 => {}

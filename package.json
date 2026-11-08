@@ -1,0 +1,26 @@
+{
+  "name": "embedito95",
+  "version": "0.1.3",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "format": "biome format --write",
+    "test": "pnpm run --filter @embedito95/test test",
+    "test:snapshot": "pnpm run --filter @embedito95/test test:snapshot",
+    "test:compile": "pnpm run --filter @embedito95/test test:compile",
+    "test:compile:checks": "pnpm run --filter @embedito95/test test:compile:checks",
+    "test:runtime": "pnpm run --filter @embedito95/test test:runtime",
+    "test:run": "pnpm run --filter @embedito95/test test:run",
+    "embedito95-cli": "node packages/cli/src/cli.js",
+    "lsp:install": "pnpm run --filter @embedito95/lsp build && node packages/lsp-vscode/build.mjs && cd packages/lsp-vscode && echo y | npx vsce package --allow-missing-repository --no-dependencies && code --install-extension embedito95-*.vsix"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.4"
+  }
+}

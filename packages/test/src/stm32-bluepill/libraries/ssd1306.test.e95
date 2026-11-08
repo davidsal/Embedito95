@@ -1,0 +1,37 @@
+import { I2C } from '@embedito95/i2c'
+import { SPI } from '@embedito95/spi'
+import { Pin } from '@embedito95/gpio'
+import { getDisplayI2C, getDisplaySPI } from '@embedito95/ssd1306'
+
+// Wiring (STM32 Blue Pill):
+//  - I2C_1: PB6 (SCL) / PB7 (SDA)
+//  - SPI_1: PA7 (MOSI), PA5 (SCK); the panel only receives, so MISO is unused
+//  - CS: PA4
+//  - DC: PA8
+
+const i2cDisplay = getDisplayI2C(I2C.1)
+const spiDisplay = getDisplaySPI(SPI.1, Pin.A4, Pin.A8)
+
+const setup = () => {
+    i2cDisplay.initialize()
+    i2cDisplay.setTextScale(2)
+    spiDisplay.initialize()
+    spiDisplay.setTextScale(2)
+}
+
+const main = () => {
+    setup()
+    i2cDisplay.clearDisplay()
+    i2cDisplay.setCursor(0, 0)
+    i2cDisplay.write("Hello")
+    i2cDisplay.setCursor(0, 16)
+    i2cDisplay.write("World")
+
+    spiDisplay.clearDisplay()
+    spiDisplay.setCursor(0, 0)
+    spiDisplay.write("Hello")
+    spiDisplay.setCursor(0, 16)
+    spiDisplay.write("World")
+}
+
+main()

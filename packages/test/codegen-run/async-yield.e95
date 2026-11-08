@@ -1,0 +1,21 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// `sleep()` with no argument defaults to 0 ms: the inlined timer has already
+// elapsed on the next step, so it just yields one event-loop pass.
+const run = async () => {
+    setDigital(Pin.10, HIGH)
+    await sleep()
+    setDigital(Pin.10, LOW)
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

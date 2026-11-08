@@ -1,0 +1,16 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Bug A: an array declaration annotated with a non-literal initializer must
+// still initialize (here it should alias `source`, so length is 3).
+const source: i16[] = [1, 2, 3]
+const copy: i16[] = source
+
+const setup = () => {
+    setAnalog(Pin.3, copy.length())
+}
+
+const main = () => {
+    setup()
+}
+
+main()

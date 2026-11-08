@@ -1,0 +1,37 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// Nested arrays: Array<Array<u8>>. Each inner literal is its own array and can
+// be indexed, passed to a function and measured.
+const FRAMES: u8[][] = [
+    [0, 36, 36, 0],
+    [0, 0, 102, 0],
+    [0, 72, 72, 0]
+]
+
+const drawRow = (row: u8[]) => {
+    for (let index: u8 = 0; index < row.length(); index += 1) {
+        serial.sendLine(row[index])
+    }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    serial.sendLine(FRAMES.length())
+
+    for (let frame: u8 = 0; frame < FRAMES.length(); frame += 1) {
+        const row: u8[] = FRAMES[frame]
+        serial.sendLine(row.length())
+        drawRow(row)
+    }
+
+    serial.sendLine(FRAMES[1][2])
+}
+
+main()

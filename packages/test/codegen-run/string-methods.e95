@@ -1,0 +1,23 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Read-only String accessors and searches must compile and run end to end:
+// index access, slicing, forward/backward search, prefix/suffix and equality.
+const setup = () => {
+    const text: string = "Hello"
+
+    setAnalog(Pin.2, text.length())
+    setAnalog(Pin.3, text.getCharacter(1) == 'e' ? 1 : 0)
+    setAnalog(Pin.4, text.getSlice(1, 4).length())
+    setAnalog(Pin.5, text.findTextFrom("l", 0))
+    setAnalog(Pin.6, text.findLastTextFrom("l", 5))
+    setAnalog(Pin.7, text.hasPrefix("He") ? 1 : 0)
+    setAnalog(Pin.8, text.hasSuffix("lo") ? 1 : 0)
+    setAnalog(Pin.9, text.matchesText("Hello") ? 1 : 0)
+    setAnalog(Pin.10, text.matchesTextIgnoringCase("hello") ? 1 : 0)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

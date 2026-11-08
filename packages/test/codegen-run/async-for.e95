@@ -1,0 +1,22 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+const pulse = async (count: u8) => {
+    for (let index: u8 = 0; index < count; index += 1) {
+        setDigital(Pin.10, HIGH)
+        await sleep(50)
+        setDigital(Pin.10, LOW)
+        await sleep(50)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    pulse(2)
+}
+
+main()

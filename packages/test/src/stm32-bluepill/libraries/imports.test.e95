@@ -1,0 +1,35 @@
+import { setDigital as writeDigital, setMode as configureMode, LED_BUILTIN as LED, Pin as Port, PinMode as Mode, DigitalLevel as Level } from '@embedito95/gpio'
+import { delay as delayMillis, getMillis as millis } from '@embedito95/time'
+
+const LED_PIN = Port.LED_BUILTIN
+const PERIOD_MS = 1000
+
+const blink = () => {
+    configureMode(LED_PIN, Mode.OUTPUT)
+    while (true) {
+        writeDigital(LED_PIN, Level.HIGH)
+        delayMillis(PERIOD_MS)
+        writeDigital(LED_PIN, Level.LOW)
+        delayMillis(PERIOD_MS)
+    }
+}
+
+const measure = () => {
+    const start = millis()
+    const end = millis()
+    if (end > start) {
+        return end
+    }
+    return start
+}
+
+const setup = () => {
+    blink()
+}
+
+const main = () => {
+    setup()
+    measure()
+}
+
+main()

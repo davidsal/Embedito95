@@ -1,0 +1,42 @@
+import { SPI, SpiBus, SpiBitOrder, SpiClockMode, getSPI } from '@embedito95/spi'
+
+// Wiring (STM32 Blue Pill): SPI1 SCK on A5, MOSI on A7, MISO on A6.
+
+const CLOCK_DIVISOR: u16 = 64
+
+const bus: SpiBus = getSPI(SPI.1)
+
+const setup = () => {
+    bus.initialize()
+    bus.setClockDivider(CLOCK_DIVISOR)
+    bus.setBitOrder(SpiBitOrder.LSB_FIRST)
+    bus.setClockMode(SpiClockMode.MODE_2)
+}
+
+const loopback = () => {
+    const echoed = bus.transferBuffer([9, 8, 7])
+    bus.write(echoed)
+    return echoed
+}
+
+const share = (word: u16): u16 => {
+    bus.beginTransaction(16, SpiClockMode.MODE_3, SpiBitOrder.MSB_FIRST)
+    bus.beginTransaction(256, SpiClockMode.MODE_1, SpiBitOrder.LSB_FIRST)
+    const received: u16 = bus.transfer16(word)
+    bus.endTransaction()
+    bus.endTransaction()
+    return received
+}
+
+const main = () => {
+    setup()
+    loopback()
+    const word: u16 = bus.transfer16(4660)
+    const shared: u16 = share(word)
+    const trailer: u8[] = [(word % 256) as u8, (shared % 256) as u8]
+    bus.write(trailer)
+    bus.close()
+    bus.close()
+}
+
+main()

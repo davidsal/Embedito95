@@ -1,0 +1,22 @@
+import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// The zero-duration optimization is syntactic only (a literal 0 or omitted):
+// a variable that happens to be 0 at runtime still goes through the inlined
+// timer and must complete normally.
+const run = async (duration: u32) => {
+    setDigital(Pin.10, HIGH)
+    await sleep(duration)
+    setDigital(Pin.10, LOW)
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run(0)
+}
+
+main()

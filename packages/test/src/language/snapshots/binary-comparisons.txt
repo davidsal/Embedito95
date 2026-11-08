@@ -1,0 +1,485 @@
+// Binary comparison result types (numeric operands only)
+// Comparisons always yield 'boolean'; the cast in parentheses is the type
+// the operands are promoted to before comparing (the C++ signed/unsigned
+// gotcha is avoided by widening to a signed type when signedness mixes).
+// Pairs are listed once (symmetric).
+// Operator "=="
+u8 == u8 = boolean (u8)
+u8 == i8 = boolean (i16)
+u8 == u16 = boolean (u16)
+u8 == i16 = boolean (i16)
+u8 == u32 = boolean (u32)
+u8 == i32 = boolean (i32)
+u8 == u64 = boolean (u64)
+u8 == i64 = boolean (i64)
+u8 == i128 = boolean (i128)
+u8 == u128 = boolean (u128)
+u8 == f32 = error
+u8 == f64 = error
+i8 == i8 = boolean (i8)
+i8 == u16 = boolean (i32)
+i8 == i16 = boolean (i16)
+i8 == u32 = boolean (i64)
+i8 == i32 = boolean (i32)
+i8 == u64 = boolean (i128)
+i8 == i64 = boolean (i64)
+i8 == i128 = boolean (i128)
+i8 == u128 = boolean (i128)
+i8 == f32 = error
+i8 == f64 = error
+u16 == u16 = boolean (u16)
+u16 == i16 = boolean (i32)
+u16 == u32 = boolean (u32)
+u16 == i32 = boolean (i32)
+u16 == u64 = boolean (u64)
+u16 == i64 = boolean (i64)
+u16 == i128 = boolean (i128)
+u16 == u128 = boolean (u128)
+u16 == f32 = error
+u16 == f64 = error
+i16 == i16 = boolean (i16)
+i16 == u32 = boolean (i64)
+i16 == i32 = boolean (i32)
+i16 == u64 = boolean (i128)
+i16 == i64 = boolean (i64)
+i16 == i128 = boolean (i128)
+i16 == u128 = boolean (i128)
+i16 == f32 = error
+i16 == f64 = error
+u32 == u32 = boolean (u32)
+u32 == i32 = boolean (i64)
+u32 == u64 = boolean (u64)
+u32 == i64 = boolean (i64)
+u32 == i128 = boolean (i128)
+u32 == u128 = boolean (u128)
+u32 == f32 = error
+u32 == f64 = error
+i32 == i32 = boolean (i32)
+i32 == u64 = boolean (i128)
+i32 == i64 = boolean (i64)
+i32 == i128 = boolean (i128)
+i32 == u128 = boolean (i128)
+i32 == f32 = error
+i32 == f64 = error
+u64 == u64 = boolean (u64)
+u64 == i64 = boolean (i128)
+u64 == i128 = boolean (i128)
+u64 == u128 = boolean (u128)
+u64 == f32 = error
+u64 == f64 = error
+i64 == i64 = boolean (i64)
+i64 == i128 = boolean (i128)
+i64 == u128 = boolean (i128)
+i64 == f32 = error
+i64 == f64 = error
+i128 == i128 = boolean (i128)
+i128 == u128 = boolean (i128)
+i128 == f32 = error
+i128 == f64 = error
+u128 == u128 = boolean (u128)
+u128 == f32 = error
+u128 == f64 = error
+f32 == f32 = boolean (f32)
+f32 == f64 = boolean (f64)
+f64 == f64 = boolean (f64)
+
+// Operator "!="
+u8 != u8 = boolean (u8)
+u8 != i8 = boolean (i16)
+u8 != u16 = boolean (u16)
+u8 != i16 = boolean (i16)
+u8 != u32 = boolean (u32)
+u8 != i32 = boolean (i32)
+u8 != u64 = boolean (u64)
+u8 != i64 = boolean (i64)
+u8 != i128 = boolean (i128)
+u8 != u128 = boolean (u128)
+u8 != f32 = error
+u8 != f64 = error
+i8 != i8 = boolean (i8)
+i8 != u16 = boolean (i32)
+i8 != i16 = boolean (i16)
+i8 != u32 = boolean (i64)
+i8 != i32 = boolean (i32)
+i8 != u64 = boolean (i128)
+i8 != i64 = boolean (i64)
+i8 != i128 = boolean (i128)
+i8 != u128 = boolean (i128)
+i8 != f32 = error
+i8 != f64 = error
+u16 != u16 = boolean (u16)
+u16 != i16 = boolean (i32)
+u16 != u32 = boolean (u32)
+u16 != i32 = boolean (i32)
+u16 != u64 = boolean (u64)
+u16 != i64 = boolean (i64)
+u16 != i128 = boolean (i128)
+u16 != u128 = boolean (u128)
+u16 != f32 = error
+u16 != f64 = error
+i16 != i16 = boolean (i16)
+i16 != u32 = boolean (i64)
+i16 != i32 = boolean (i32)
+i16 != u64 = boolean (i128)
+i16 != i64 = boolean (i64)
+i16 != i128 = boolean (i128)
+i16 != u128 = boolean (i128)
+i16 != f32 = error
+i16 != f64 = error
+u32 != u32 = boolean (u32)
+u32 != i32 = boolean (i64)
+u32 != u64 = boolean (u64)
+u32 != i64 = boolean (i64)
+u32 != i128 = boolean (i128)
+u32 != u128 = boolean (u128)
+u32 != f32 = error
+u32 != f64 = error
+i32 != i32 = boolean (i32)
+i32 != u64 = boolean (i128)
+i32 != i64 = boolean (i64)
+i32 != i128 = boolean (i128)
+i32 != u128 = boolean (i128)
+i32 != f32 = error
+i32 != f64 = error
+u64 != u64 = boolean (u64)
+u64 != i64 = boolean (i128)
+u64 != i128 = boolean (i128)
+u64 != u128 = boolean (u128)
+u64 != f32 = error
+u64 != f64 = error
+i64 != i64 = boolean (i64)
+i64 != i128 = boolean (i128)
+i64 != u128 = boolean (i128)
+i64 != f32 = error
+i64 != f64 = error
+i128 != i128 = boolean (i128)
+i128 != u128 = boolean (i128)
+i128 != f32 = error
+i128 != f64 = error
+u128 != u128 = boolean (u128)
+u128 != f32 = error
+u128 != f64 = error
+f32 != f32 = boolean (f32)
+f32 != f64 = boolean (f64)
+f64 != f64 = boolean (f64)
+
+// Operator "<"
+u8 < u8 = boolean (u8)
+u8 < i8 = boolean (i16)
+u8 < u16 = boolean (u16)
+u8 < i16 = boolean (i16)
+u8 < u32 = boolean (u32)
+u8 < i32 = boolean (i32)
+u8 < u64 = boolean (u64)
+u8 < i64 = boolean (i64)
+u8 < i128 = boolean (i128)
+u8 < u128 = boolean (u128)
+u8 < f32 = error
+u8 < f64 = error
+i8 < i8 = boolean (i8)
+i8 < u16 = boolean (i32)
+i8 < i16 = boolean (i16)
+i8 < u32 = boolean (i64)
+i8 < i32 = boolean (i32)
+i8 < u64 = boolean (i128)
+i8 < i64 = boolean (i64)
+i8 < i128 = boolean (i128)
+i8 < u128 = boolean (i128)
+i8 < f32 = error
+i8 < f64 = error
+u16 < u16 = boolean (u16)
+u16 < i16 = boolean (i32)
+u16 < u32 = boolean (u32)
+u16 < i32 = boolean (i32)
+u16 < u64 = boolean (u64)
+u16 < i64 = boolean (i64)
+u16 < i128 = boolean (i128)
+u16 < u128 = boolean (u128)
+u16 < f32 = error
+u16 < f64 = error
+i16 < i16 = boolean (i16)
+i16 < u32 = boolean (i64)
+i16 < i32 = boolean (i32)
+i16 < u64 = boolean (i128)
+i16 < i64 = boolean (i64)
+i16 < i128 = boolean (i128)
+i16 < u128 = boolean (i128)
+i16 < f32 = error
+i16 < f64 = error
+u32 < u32 = boolean (u32)
+u32 < i32 = boolean (i64)
+u32 < u64 = boolean (u64)
+u32 < i64 = boolean (i64)
+u32 < i128 = boolean (i128)
+u32 < u128 = boolean (u128)
+u32 < f32 = error
+u32 < f64 = error
+i32 < i32 = boolean (i32)
+i32 < u64 = boolean (i128)
+i32 < i64 = boolean (i64)
+i32 < i128 = boolean (i128)
+i32 < u128 = boolean (i128)
+i32 < f32 = error
+i32 < f64 = error
+u64 < u64 = boolean (u64)
+u64 < i64 = boolean (i128)
+u64 < i128 = boolean (i128)
+u64 < u128 = boolean (u128)
+u64 < f32 = error
+u64 < f64 = error
+i64 < i64 = boolean (i64)
+i64 < i128 = boolean (i128)
+i64 < u128 = boolean (i128)
+i64 < f32 = error
+i64 < f64 = error
+i128 < i128 = boolean (i128)
+i128 < u128 = boolean (i128)
+i128 < f32 = error
+i128 < f64 = error
+u128 < u128 = boolean (u128)
+u128 < f32 = error
+u128 < f64 = error
+f32 < f32 = boolean (f32)
+f32 < f64 = boolean (f64)
+f64 < f64 = boolean (f64)
+
+// Operator "<="
+u8 <= u8 = boolean (u8)
+u8 <= i8 = boolean (i16)
+u8 <= u16 = boolean (u16)
+u8 <= i16 = boolean (i16)
+u8 <= u32 = boolean (u32)
+u8 <= i32 = boolean (i32)
+u8 <= u64 = boolean (u64)
+u8 <= i64 = boolean (i64)
+u8 <= i128 = boolean (i128)
+u8 <= u128 = boolean (u128)
+u8 <= f32 = error
+u8 <= f64 = error
+i8 <= i8 = boolean (i8)
+i8 <= u16 = boolean (i32)
+i8 <= i16 = boolean (i16)
+i8 <= u32 = boolean (i64)
+i8 <= i32 = boolean (i32)
+i8 <= u64 = boolean (i128)
+i8 <= i64 = boolean (i64)
+i8 <= i128 = boolean (i128)
+i8 <= u128 = boolean (i128)
+i8 <= f32 = error
+i8 <= f64 = error
+u16 <= u16 = boolean (u16)
+u16 <= i16 = boolean (i32)
+u16 <= u32 = boolean (u32)
+u16 <= i32 = boolean (i32)
+u16 <= u64 = boolean (u64)
+u16 <= i64 = boolean (i64)
+u16 <= i128 = boolean (i128)
+u16 <= u128 = boolean (u128)
+u16 <= f32 = error
+u16 <= f64 = error
+i16 <= i16 = boolean (i16)
+i16 <= u32 = boolean (i64)
+i16 <= i32 = boolean (i32)
+i16 <= u64 = boolean (i128)
+i16 <= i64 = boolean (i64)
+i16 <= i128 = boolean (i128)
+i16 <= u128 = boolean (i128)
+i16 <= f32 = error
+i16 <= f64 = error
+u32 <= u32 = boolean (u32)
+u32 <= i32 = boolean (i64)
+u32 <= u64 = boolean (u64)
+u32 <= i64 = boolean (i64)
+u32 <= i128 = boolean (i128)
+u32 <= u128 = boolean (u128)
+u32 <= f32 = error
+u32 <= f64 = error
+i32 <= i32 = boolean (i32)
+i32 <= u64 = boolean (i128)
+i32 <= i64 = boolean (i64)
+i32 <= i128 = boolean (i128)
+i32 <= u128 = boolean (i128)
+i32 <= f32 = error
+i32 <= f64 = error
+u64 <= u64 = boolean (u64)
+u64 <= i64 = boolean (i128)
+u64 <= i128 = boolean (i128)
+u64 <= u128 = boolean (u128)
+u64 <= f32 = error
+u64 <= f64 = error
+i64 <= i64 = boolean (i64)
+i64 <= i128 = boolean (i128)
+i64 <= u128 = boolean (i128)
+i64 <= f32 = error
+i64 <= f64 = error
+i128 <= i128 = boolean (i128)
+i128 <= u128 = boolean (i128)
+i128 <= f32 = error
+i128 <= f64 = error
+u128 <= u128 = boolean (u128)
+u128 <= f32 = error
+u128 <= f64 = error
+f32 <= f32 = boolean (f32)
+f32 <= f64 = boolean (f64)
+f64 <= f64 = boolean (f64)
+
+// Operator ">"
+u8 > u8 = boolean (u8)
+u8 > i8 = boolean (i16)
+u8 > u16 = boolean (u16)
+u8 > i16 = boolean (i16)
+u8 > u32 = boolean (u32)
+u8 > i32 = boolean (i32)
+u8 > u64 = boolean (u64)
+u8 > i64 = boolean (i64)
+u8 > i128 = boolean (i128)
+u8 > u128 = boolean (u128)
+u8 > f32 = error
+u8 > f64 = error
+i8 > i8 = boolean (i8)
+i8 > u16 = boolean (i32)
+i8 > i16 = boolean (i16)
+i8 > u32 = boolean (i64)
+i8 > i32 = boolean (i32)
+i8 > u64 = boolean (i128)
+i8 > i64 = boolean (i64)
+i8 > i128 = boolean (i128)
+i8 > u128 = boolean (i128)
+i8 > f32 = error
+i8 > f64 = error
+u16 > u16 = boolean (u16)
+u16 > i16 = boolean (i32)
+u16 > u32 = boolean (u32)
+u16 > i32 = boolean (i32)
+u16 > u64 = boolean (u64)
+u16 > i64 = boolean (i64)
+u16 > i128 = boolean (i128)
+u16 > u128 = boolean (u128)
+u16 > f32 = error
+u16 > f64 = error
+i16 > i16 = boolean (i16)
+i16 > u32 = boolean (i64)
+i16 > i32 = boolean (i32)
+i16 > u64 = boolean (i128)
+i16 > i64 = boolean (i64)
+i16 > i128 = boolean (i128)
+i16 > u128 = boolean (i128)
+i16 > f32 = error
+i16 > f64 = error
+u32 > u32 = boolean (u32)
+u32 > i32 = boolean (i64)
+u32 > u64 = boolean (u64)
+u32 > i64 = boolean (i64)
+u32 > i128 = boolean (i128)
+u32 > u128 = boolean (u128)
+u32 > f32 = error
+u32 > f64 = error
+i32 > i32 = boolean (i32)
+i32 > u64 = boolean (i128)
+i32 > i64 = boolean (i64)
+i32 > i128 = boolean (i128)
+i32 > u128 = boolean (i128)
+i32 > f32 = error
+i32 > f64 = error
+u64 > u64 = boolean (u64)
+u64 > i64 = boolean (i128)
+u64 > i128 = boolean (i128)
+u64 > u128 = boolean (u128)
+u64 > f32 = error
+u64 > f64 = error
+i64 > i64 = boolean (i64)
+i64 > i128 = boolean (i128)
+i64 > u128 = boolean (i128)
+i64 > f32 = error
+i64 > f64 = error
+i128 > i128 = boolean (i128)
+i128 > u128 = boolean (i128)
+i128 > f32 = error
+i128 > f64 = error
+u128 > u128 = boolean (u128)
+u128 > f32 = error
+u128 > f64 = error
+f32 > f32 = boolean (f32)
+f32 > f64 = boolean (f64)
+f64 > f64 = boolean (f64)
+
+// Operator ">="
+u8 >= u8 = boolean (u8)
+u8 >= i8 = boolean (i16)
+u8 >= u16 = boolean (u16)
+u8 >= i16 = boolean (i16)
+u8 >= u32 = boolean (u32)
+u8 >= i32 = boolean (i32)
+u8 >= u64 = boolean (u64)
+u8 >= i64 = boolean (i64)
+u8 >= i128 = boolean (i128)
+u8 >= u128 = boolean (u128)
+u8 >= f32 = error
+u8 >= f64 = error
+i8 >= i8 = boolean (i8)
+i8 >= u16 = boolean (i32)
+i8 >= i16 = boolean (i16)
+i8 >= u32 = boolean (i64)
+i8 >= i32 = boolean (i32)
+i8 >= u64 = boolean (i128)
+i8 >= i64 = boolean (i64)
+i8 >= i128 = boolean (i128)
+i8 >= u128 = boolean (i128)
+i8 >= f32 = error
+i8 >= f64 = error
+u16 >= u16 = boolean (u16)
+u16 >= i16 = boolean (i32)
+u16 >= u32 = boolean (u32)
+u16 >= i32 = boolean (i32)
+u16 >= u64 = boolean (u64)
+u16 >= i64 = boolean (i64)
+u16 >= i128 = boolean (i128)
+u16 >= u128 = boolean (u128)
+u16 >= f32 = error
+u16 >= f64 = error
+i16 >= i16 = boolean (i16)
+i16 >= u32 = boolean (i64)
+i16 >= i32 = boolean (i32)
+i16 >= u64 = boolean (i128)
+i16 >= i64 = boolean (i64)
+i16 >= i128 = boolean (i128)
+i16 >= u128 = boolean (i128)
+i16 >= f32 = error
+i16 >= f64 = error
+u32 >= u32 = boolean (u32)
+u32 >= i32 = boolean (i64)
+u32 >= u64 = boolean (u64)
+u32 >= i64 = boolean (i64)
+u32 >= i128 = boolean (i128)
+u32 >= u128 = boolean (u128)
+u32 >= f32 = error
+u32 >= f64 = error
+i32 >= i32 = boolean (i32)
+i32 >= u64 = boolean (i128)
+i32 >= i64 = boolean (i64)
+i32 >= i128 = boolean (i128)
+i32 >= u128 = boolean (i128)
+i32 >= f32 = error
+i32 >= f64 = error
+u64 >= u64 = boolean (u64)
+u64 >= i64 = boolean (i128)
+u64 >= i128 = boolean (i128)
+u64 >= u128 = boolean (u128)
+u64 >= f32 = error
+u64 >= f64 = error
+i64 >= i64 = boolean (i64)
+i64 >= i128 = boolean (i128)
+i64 >= u128 = boolean (i128)
+i64 >= f32 = error
+i64 >= f64 = error
+i128 >= i128 = boolean (i128)
+i128 >= u128 = boolean (i128)
+i128 >= f32 = error
+i128 >= f64 = error
+u128 >= u128 = boolean (u128)
+u128 >= f32 = error
+u128 >= f64 = error
+f32 >= f32 = boolean (f32)
+f32 >= f64 = boolean (f64)
+f64 >= f64 = boolean (f64)
+

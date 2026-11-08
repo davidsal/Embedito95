@@ -1,0 +1,4 @@
+# The `for` update and init clauses assign null in the `else` branch, so both
+# results must be null (pins high), not the option payload 7.
+digital 10 1
+digital 11 1

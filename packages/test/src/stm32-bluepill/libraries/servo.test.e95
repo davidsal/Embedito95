@@ -1,0 +1,44 @@
+import { getServo, getServoChannelCount, Servo } from '@embedito95/servo'
+import { Pin } from '@embedito95/gpio'
+
+// STM32 exposes four pulse channels on PA8..PA11; every other pin creates an
+// inactive handle.
+const FIRST_PIN = Pin.A8
+const SECOND_PIN = Pin.A9
+const THIRD_PIN = Pin.A10
+const FOURTH_PIN = Pin.A11
+const UNSUPPORTED_PIN = Pin.B0
+
+const FIRST: Servo = getServo(FIRST_PIN)
+const SECOND: Servo = getServo(SECOND_PIN)
+const THIRD: Servo = getServo(THIRD_PIN)
+const FOURTH: Servo = getServo(FOURTH_PIN)
+const DISABLED: Servo = getServo(UNSUPPORTED_PIN)
+
+const setup = () => {
+    FIRST.setPulseRange(500, 2500)
+    FIRST.setAngle(180)
+    SECOND.setAngle(45)
+    SECOND.setPulseWidth(1750)
+    THIRD.setAngle(90)
+    FOURTH.setAngle(0)
+}
+
+const main = () => {
+    setup()
+    FIRST.setAngle(200)
+    FIRST.setPulseWidth(5000)
+    const angle: u8 = FIRST.getAngle()
+    const pulse: u16 = FIRST.getPulseWidth()
+    const active: boolean = FIRST.isActive()
+    const disabledActive: boolean = DISABLED.isActive()
+    const channelCount: u8 = getServoChannelCount()
+    DISABLED.setAngle(90)
+    DISABLED.release()
+    SECOND.release()
+    THIRD.release()
+    FOURTH.release()
+    FIRST.release()
+}
+
+main()

@@ -1,0 +1,36 @@
+import { getServo, getServoChannelCount, Servo } from '@embedito95/servo'
+import { Pin } from '@embedito95/gpio'
+
+// AVR exposes two pulse channels on pins 9 and 10; every other pin creates an
+// inactive handle.
+const ARM_PIN = Pin.9
+const SPARE_PIN = Pin.10
+const UNSUPPORTED_PIN = Pin.5
+
+const ARM: Servo = getServo(ARM_PIN)
+const SPARE: Servo = getServo(SPARE_PIN)
+const DISABLED: Servo = getServo(UNSUPPORTED_PIN)
+
+const setup = () => {
+    ARM.setPulseRange(500, 2500)
+    ARM.setAngle(180)
+    SPARE.setAngle(45)
+    SPARE.setPulseWidth(1750)
+}
+
+const main = () => {
+    setup()
+    ARM.setAngle(200)
+    ARM.setPulseWidth(5000)
+    const angle: u8 = ARM.getAngle()
+    const pulse: u16 = ARM.getPulseWidth()
+    const active: boolean = ARM.isActive()
+    const disabledActive: boolean = DISABLED.isActive()
+    const channelCount: u8 = getServoChannelCount()
+    DISABLED.setAngle(90)
+    DISABLED.release()
+    SPARE.release()
+    ARM.release()
+}
+
+main()

@@ -1,0 +1,80 @@
+// LSP view of the `servo` library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real libraries/servo/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// The installed STM32 view is injected at the postinstall marker,
+// so the servo cases use the pins wired to TIM1 (PA8..PA11).
+// getServo infers the servo handle type
+diagnostics:
+- none
+types:
+- servo => Servo
+
+// getServoChannelCount infers u8
+diagnostics:
+- none
+types:
+- count => u8
+
+// setAngle and getAngle use a u8 angle
+diagnostics:
+- none
+types:
+- angle => u8
+
+// setPulseWidth and getPulseWidth use u16 microseconds
+diagnostics:
+- none
+types:
+- pulse => u16
+
+// setPulseRange accepts two pulse widths and release has no result
+diagnostics:
+- none
+types:
+- active => boolean
+
+// nested servo configuration produces no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 5:5: 'servo.setAngle' expects 1 argument(s) but got 0
+types:
+- none
+
+// non-pin servo argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 2:32: Argument 'pin' expects type 'Pin' but literal 9 is 'u8'
+types:
+- badPin => Servo
+
+// non-numeric angle reported
+diagnostics:
+- error error.argumentTypeMismatch @ 5:20: Argument 'angleDegrees' expects type 'u8' but 'wide' is 'string'
+types:
+- none
+
+// angle beyond u8 range reported
+diagnostics:
+- error error.argumentTypeMismatch @ 5:20: Argument 'angleDegrees' expects type 'u8' but literal 300 is 'u16'
+types:
+- none
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 4:30: 'servo.attach' is not a method of type 'Servo'
+types:
+- missing => unresolved
+
+// STM32 accepts all four pulse pins
+diagnostics:
+- none
+types:
+- first => Servo
+- fourth => Servo

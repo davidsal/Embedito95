@@ -1,0 +1,40 @@
+// Calls to the core async timing builtins (`sleep`, `sleepMicros`) must be
+// awaited and can only appear inside an `async` function.
+// `missingAwait` = called in async without `await`.
+// `asyncBuiltinOutsideAsync` = called (without await) in a non-async function.
+// Awaited calls in a non-async function report the pre-existing `awaitOutsideAsync`.
+// sleep without await inside a non-async function -> outside async
+codes: error.asyncBuiltinOutsideAsync
+
+// sleep without await inside an async function -> missing await
+codes: error.missingAwait
+
+// await sleep inside an async function -> ok
+codes: ok
+
+// await sleep inside a non-async function -> await outside async
+codes: error.awaitOutsideAsync
+
+// sleepMicros without await inside a non-async function -> outside async
+codes: error.asyncBuiltinOutsideAsync
+
+// sleepMicros without await inside an async function -> missing await
+codes: error.missingAwait
+
+// await sleepMicros inside an async function -> ok
+codes: ok
+
+// sleep assigned without await inside an async function -> missing await
+codes: error.missingAwait
+
+// sleep assigned with await inside an async function -> ok
+codes: ok
+
+// sleep nested in a call without await inside an async function -> missing await
+codes: error.missingAwait
+
+// sleep aliased on import without await inside an async function -> missing await
+codes: error.missingAwait
+
+// user-defined sleep without the async import -> ok
+codes: ok

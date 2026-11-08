@@ -1,0 +1,82 @@
+// LSP view of the `eeprom` library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real libraries/eeprom/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// The inference is platform-independent, so these cases cover both
+// targets; only the STM32 strategy rejects the library at build time
+// (the F103 has no internal EEPROM).
+// readEepromByte infers u8, readEepromBlock infers u8[] and getCapacity infers u16
+diagnostics:
+- none
+types:
+- stored => u8
+- block => u8[]
+- capacity => u16
+
+// writeEepromByte and updateEepromByte accept a u16 address and a u8 value
+diagnostics:
+- none
+types:
+- none
+
+// writeEepromBlock accepts a u16 address and a u8[] byte sequence
+diagnostics:
+- none
+types:
+- none
+
+// nested reads and updates inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// nested block reads and writes inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- block => u8[]
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'readEepromByte' expects 1 argument(s) but got 0
+types:
+- badCount => u8
+
+// readEepromBlock reports a wrong argument count
+diagnostics:
+- error error.wrongArgumentCount @ 2:30: 'readEepromBlock' expects 2 argument(s) but got 1
+types:
+- none
+
+// writeEepromBlock reports a data argument that is not a byte sequence
+diagnostics:
+- error error.argumentTypeMismatch @ 3:25: Argument 'data' expects type 'u8[]' but '1' is 'i8'
+types:
+- none
+
+// unknown export reported and left unresolved
+diagnostics:
+- error error.unknownImport @ 1:10: 'eraseAll' is not exported by the library
+types:
+- missing => unresolved
+
+// wider integer argument warns on a u8 value
+diagnostics:
+- warning error.argumentTypeMismatch @ 4:24: Argument 'value' expects type 'u8' but 'wideValue' is 'i32'
+types:
+- none
+
+// non-numeric address reported
+diagnostics:
+- error error.argumentTypeMismatch @ 2:39: Argument 'address' expects type 'u16' but 'first' is 'string'
+types:
+- badType => u8
+
+// a u16 literal beyond the installed cell count stays type-valid
+diagnostics:
+- none
+types:
+- outOfRange => u8

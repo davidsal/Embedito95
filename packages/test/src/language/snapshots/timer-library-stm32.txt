@@ -1,0 +1,122 @@
+// LSP view of the `timer` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/timer/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// The installed STM32 view is injected at the postinstall marker: TIMER_1
+// through TIMER_4 are all selectable and TIMER_0 does not exist.
+// getTimer infers the hardware timer type
+diagnostics:
+- none
+types:
+- timer => HardwareTimer
+
+// initialize accepts a period and a top-level callback
+diagnostics:
+- none
+types:
+- none
+
+// setPeriod accepts every available timer and period
+diagnostics:
+- none
+types:
+- none
+
+// nested timer configuration produces no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// reserved timer member is reported as unknown
+diagnostics:
+- error error.argumentTypeMismatch @ 2:33: Argument 'timer' expects type 'Timer' but 'Timer.0' is 'Timer.0'
+- error error.undefinedReference @ 2:39: 'Timer.0' is not defined
+types:
+- missing => HardwareTimer
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 4:5: 'timer.setPeriod' expects 1 argument(s) but got 0
+types:
+- none
+
+// non-numeric period reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:21: Argument 'periodMicros' expects type 'u32' but 'slow' is 'string'
+types:
+- none
+
+// non-enum timer selector reported
+diagnostics:
+- error error.argumentTypeMismatch @ 2:37: Argument 'timer' expects type 'Timer' but literal 1 is 'u8'
+types:
+- badSelector => HardwareTimer
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 3:30: 'timer.configure' is not a method of type 'HardwareTimer'
+types:
+- missing => unresolved
+
+// startTone accepts a timer, a pin and a frequency
+diagnostics:
+- none
+types:
+- none
+
+// measurePulseWidth infers u32 microseconds
+diagnostics:
+- none
+types:
+- width => u32
+
+// nested tone and pulse configuration produces no diagnostics
+diagnostics:
+- none
+types:
+- nested => u32
+
+// non-pin tone argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:24: Argument 'pin' expects type 'Pin' but literal 2 is 'u8'
+types:
+- none
+
+// tone frequency outside u16 range reported
+diagnostics:
+- error error.argumentTypeMismatch @ 4:32: Argument 'frequencyHertz' expects type 'u16' but literal 70000 is 'u32'
+types:
+- none
+
+// non-level pulse argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:52: Argument 'pulseLevel' expects type 'DigitalLevel' but literal 1 is 'u8'
+types:
+- none
+
+// stopTone requires a pin
+diagnostics:
+- error error.argumentTypeMismatch @ 3:14: Argument 'pin' expects type 'Pin' but literal 2 is 'u8'
+types:
+- none
+
+// startTone wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 4:5: 'startTone' expects 3 argument(s) but got 2
+types:
+- none
+
+// STM32 accepts the fourth hardware timer
+diagnostics:
+- none
+types:
+- timer => HardwareTimer
+
+// STM32 tone accepts any of the four timers
+diagnostics:
+- none
+types:
+- none

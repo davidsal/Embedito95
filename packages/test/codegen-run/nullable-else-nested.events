@@ -1,0 +1,4 @@
+# `compute(true)` assigns null in the nested else branch, so the result must be
+# null (pin high), not the option payload 0. `compute(false)` keeps 7 (pin low).
+digital 10 1
+digital 10 0

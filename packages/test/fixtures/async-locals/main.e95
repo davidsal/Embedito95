@@ -1,0 +1,24 @@
+// Versioned copy of the async locals used by the generated Arduino Nano
+// tester `main.e95`. The testers directory is gitignored, so the unit checks
+// read this fixture when a fresh checkout has not generated it yet. Both
+// locals stay unannotated on purpose: the checker inference must widen them to
+// the target word type and the async lowering must hoist that same type.
+
+const FADE_STEP_SIZE = 1
+const FADE_MAX_VALUE = 255
+const MATRIX_SIZE = 8
+
+const fade = async () => {
+    let value = 0
+    let step = FADE_STEP_SIZE
+    while (value < FADE_MAX_VALUE) {
+        value = value + step
+    }
+}
+
+const animateFace = async () => {
+    let value = 0
+    for (let step = 0; step < MATRIX_SIZE; step = step + 1) {
+        value = value + step
+    }
+}

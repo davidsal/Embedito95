@@ -1,0 +1,32 @@
+// A closure stored in a nested object property is not lowered by the factory
+// machinery, so the checker rejects the nested property instead of emitting
+// invalid C++.
+type Writer = {
+    write: (value: i16) => void
+}
+
+type Inner = {
+    paint: () => void
+}
+
+type NestedScreen = {
+    inner: Inner
+}
+
+const getNestedScreen = (writer: Writer): NestedScreen => {
+    const paint = () => {
+        writer.write(1)
+    }
+    return { inner: { paint: paint } }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const writer: Writer = { write: (value: i16) => {} }
+    const screen = getNestedScreen(writer)
+    screen.inner.paint()
+}
+
+main()

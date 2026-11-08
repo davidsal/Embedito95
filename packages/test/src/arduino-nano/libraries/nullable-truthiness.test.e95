@@ -1,0 +1,204 @@
+import { getSerial, Serial } from '@embedito95/serial'
+import { Pin } from '@embedito95/gpio'
+import { getSensor } from '@embedito95/dht22'
+
+const serial = getSerial(Serial.1)
+const sensor = getSensor(Pin.2)
+
+const testTruthiness = () => {
+    const temperature = sensor.getTemperature()
+    if (temperature) {
+        serial.sendLine(1)
+    }
+    if (!temperature) {
+        serial.sendLine(0)
+    }
+    serial.sendLine(temperature ? 1 : 0)
+}
+
+const testNullish = () => {
+    const temperature = sensor.getTemperature()
+    const fallback = temperature ?? 0.0
+    if (fallback > 10.0) {
+        serial.sendLine(1)
+    }
+    const chained = temperature ?? 0.0 ?? 1.0
+    if (chained > 10.0) {
+        serial.sendLine(1)
+    }
+    const direct = sensor.getTemperature() ?? 0.0
+    if (direct > 10.0) {
+        serial.sendLine(1)
+    }
+}
+
+const testOr = () => {
+    const temperature = sensor.getTemperature()
+    const fallback = temperature || 1.0
+    if (fallback > 10.0) {
+        serial.sendLine(1)
+    }
+    const zero = 0
+    const value = zero || 5
+    serial.sendLine(value)
+}
+
+const testAnd = () => {
+    const temperature = sensor.getTemperature()
+    const both = temperature && 1.0
+    if (both > 10.0) {
+        serial.sendLine(1)
+    }
+}
+
+const testCompound = () => {
+    const temperature = sensor.getTemperature()
+    const humidity = sensor.getHumidity()
+    if (temperature && humidity) {
+        serial.sendLine(1)
+    }
+    if (temperature || humidity) {
+        serial.sendLine(1)
+    }
+    serial.sendLine(temperature && humidity ? 1 : 0)
+    serial.sendLine(temperature || humidity ? 1 : 0)
+}
+
+const testNarrowing = () => {
+    const temperature = sensor.getTemperature()
+    if (temperature != null && temperature > 10.0) {
+        serial.sendLine(1)
+    }
+    if (temperature == null || temperature > 10.0) {
+        serial.sendLine(1)
+    }
+}
+
+const testNarrowedValue = () => {
+    const temperature = sensor.getTemperature()
+    if (temperature != null) {
+        const narrowedValue = temperature ?? 0.0
+        if (narrowedValue > 10.0) {
+            serial.sendLine(1)
+        }
+        const narrowedOr = temperature || 1.0
+        if (narrowedOr > 10.0) {
+            serial.sendLine(1)
+        }
+    }
+}
+
+const testCharacters = () => {
+    const label = "hello"
+    if (label) {
+        serial.sendLine(1)
+    }
+    const letter = 'a'
+    if (letter) {
+        serial.sendLine(1)
+    }
+}
+
+const testMoreTypes = () => {
+    const flag: boolean | null = null
+    if (flag) {
+        serial.sendLine(1)
+    }
+    const flagOr = flag || false
+    if (flagOr) {
+        serial.sendLine(1)
+    }
+    const flagNullish = flag ?? true
+    if (flagNullish) {
+        serial.sendLine(1)
+    }
+
+    const name: string | null = null
+    if (name) {
+        serial.sendLine(1)
+    }
+    const nameOr = name || "none"
+    serial.send(nameOr)
+    const nameNullish = name ?? "hi"
+    serial.send(nameNullish)
+
+    const letter: char | null = null
+    if (letter) {
+        serial.sendLine(1)
+    }
+
+    const pin: Pin | null = null
+    if (pin) {
+        serial.sendLine(1)
+    }
+    const port: Serial | null = null
+    if (port) {
+        serial.sendLine(1)
+    }
+    const buffer: u8[] | null = null
+    if (buffer) {
+        serial.sendLine(1)
+    }
+}
+
+const testNullableAssignments = () => {
+    let flag: boolean | null = null
+    flag = true
+    const count: i16 | null = 3
+    let reading: f32 | null = null
+    reading = 1.5
+    const label: string | null = "hi"
+    const letter: char | null = 'a'
+    serial.sendLine(count ?? 0)
+    if (flag) {
+        serial.sendLine(1)
+    }
+    if (reading) {
+        serial.sendLine(1)
+    }
+    serial.send(label ?? "none")
+    serial.sendLine(letter ?? '?')
+}
+
+const testDirectNullCheck = () => {
+    if (sensor.getTemperature() != null) {
+        serial.sendLine(1)
+    }
+    if (sensor.getHumidity() == null) {
+        serial.sendLine(0)
+    }
+}
+
+const testNullableCasts = () => {
+    const direct = sensor.getTemperature() as f32
+    if (direct > 10.0) {
+        serial.sendLine(1)
+    }
+    const humidity = sensor.getHumidity()
+    const fromVariable = humidity as f32
+    if (fromVariable > 10.0) {
+        serial.sendLine(1)
+    }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    testTruthiness()
+    testNullish()
+    testOr()
+    testAnd()
+    testCompound()
+    testNarrowing()
+    testNarrowedValue()
+    testCharacters()
+    testMoreTypes()
+    testNullableAssignments()
+    testDirectNullCheck()
+    testNullableCasts()
+}
+
+main()

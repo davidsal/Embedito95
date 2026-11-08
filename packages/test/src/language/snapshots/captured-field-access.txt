@@ -1,0 +1,31 @@
+// A closure's captured variables become private fields of its handle
+// struct. Reading or writing one from outside (`instance.field`) must emit
+// error.capturedFieldAccess; the closure's own methods use the captured
+// name as a bare identifier, and a public method or a declared data field
+// must not be flagged.
+// external READ of a captured field -> capturedFieldAccess error
+capturedFieldAccess: yes
+
+// external WRITE of a captured field -> capturedFieldAccess error
+capturedFieldAccess: yes
+
+// internal READ of a captured field (bare identifier) -> ok
+capturedFieldAccess: no
+
+// calling a public method -> ok
+capturedFieldAccess: no
+
+// external READ of a captured handle's subfield -> error on the captured field
+capturedFieldAccess: yes
+
+// internal READ of a captured handle's subfield -> ok
+capturedFieldAccess: no
+
+// external READ of a declared field of a data object -> ok
+capturedFieldAccess: no
+
+// captured name that is ALSO a declared field -> public, not flagged
+capturedFieldAccess: no
+
+// STATELESS closure has no captured fields -> external access is not flagged
+capturedFieldAccess: no

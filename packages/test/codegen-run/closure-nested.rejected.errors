@@ -1,0 +1,1 @@
+Closure 'paint' is nested inside property 'inner'; a closure returned by a factory must be a direct property of the returned object.

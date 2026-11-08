@@ -1,0 +1,13 @@
+// A local closure declared inside `main` cannot be lowered: only module-level
+// functions and the direct declarations of a recognized closure factory are
+// supported, so the checker must reject it before the codegen emits an invalid
+// initializer.
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const paint = () => {}
+    paint()
+}
+
+main()

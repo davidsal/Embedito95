@@ -1,0 +1,31 @@
+const x: i16 = val as i16
+
+const y: i16 = val as i16/32
+
+const z: i16 = (val as i16)/32
+
+const viaCast: f32 = ((a + b) as f32)/c
+
+const q: u8 = foo(val as u8)
+
+const w: i32 = a as i16 + b as u8
+
+const s: u32 = val as u32 *2+1
+
+const u: i8 = x * val as i8
+
+const r: i16 = 32000 as i16 %4
+
+total = total + (step as f32)
+
+if ((val as u16) >= 1000) {
+    const high: boolean = true
+}
+
+// casts used as binary operands are not wrapped in extra parentheses
+const cursorX: u16 = 0
+const CHAR_ADVANCE: u16 = 6
+const scale: u16 = 1
+cursorX = cursorX + (CHAR_ADVANCE * scale) as u16
+const divided: u16 = (CHAR_ADVANCE * scale) as u16 / scale as u16
+const sum: u16 = a as u16 + b as u16

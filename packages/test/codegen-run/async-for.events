@@ -1,0 +1,5 @@
+# `for` counter hoisted to a task field: two full HIGH/LOW pulses.
+digital 10 1
+digital 10 0
+digital 10 1
+digital 10 0

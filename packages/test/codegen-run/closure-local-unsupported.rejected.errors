@@ -1,0 +1,1 @@
+Local closure 'paint' is not supported here. Declare it at module level or return it directly as a property of a closure factory.

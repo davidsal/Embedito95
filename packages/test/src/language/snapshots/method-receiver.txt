@@ -1,0 +1,142 @@
+// LSP view of method calls on a handle receiver (hover types + diagnostics).
+// A receiver may be a name, a captured field, a nested field, a call result,
+// a parenthesized handle or a conditional; the checker resolves its type and
+// validates the method, so the editor reports the diagnostics before the
+// codegen runs. Types come from resolveProjectTypes (the same inference the
+// language server uses for hover); diagnostics come from the shared check().
+// an identifier receiver hovers as the handle type
+diagnostics:
+- none
+types:
+- counter => Counter
+
+// identifier receiver keeps the free method call and infers i16
+diagnostics:
+- none
+types:
+- result => i16
+
+// captured handle inside a closure calls the free method without diagnostics
+diagnostics:
+- none
+types:
+- result => i16
+
+// a nested field receiver hovers as the handle type
+diagnostics:
+- none
+types:
+- box => Box
+- box.counter => Counter
+
+// nested field receiver resolves the handle type and infers the method result
+diagnostics:
+- none
+types:
+- result => i16
+
+// call result receiver resolves the factory return type
+diagnostics:
+- none
+types:
+- result => i16
+- makeCounter(5) => Counter
+- makeCounter(5).value() => i16
+
+// a this field in a closure factory hovers as the captured handle type
+diagnostics:
+- none
+types:
+- screen => Screen
+- this.writer => Writer
+
+// unknown method on this field in a closure factory reports undefinedMethod
+diagnostics:
+- error error.undefinedMethod @ 16:25: 'this.writer.missing' is not a method of type 'Writer'
+types:
+- none
+
+// wrong argument count on this field in a closure factory reports wrongArgumentCount
+diagnostics:
+- error error.wrongArgumentCount @ 16:13: 'this.writer.send' expects 1 argument(s) but got 0
+types:
+- none
+
+// wrong argument type on this field in a closure factory reports argument type error
+diagnostics:
+- error error.argumentTypeMismatch @ 16:30: Argument 'value' expects type 'i16' but 'bad' is 'string'
+types:
+- none
+
+// method on a captured primitive this field reports undefinedMethod
+diagnostics:
+- warning error.preferConst @ 5:9: 'count' is declared with 'let' but is never reassigned. Prefer 'const'.
+- error error.undefinedMethod @ 8:24: 'this.count.value' is not a method of type 'i16'
+types:
+- none
+
+// unknown method on this field in a typed object literal reports undefinedMethod
+diagnostics:
+- error error.undefinedMethod @ 18:22: 'this.counter.missing' is not a method of type 'Counter'
+types:
+- none
+
+// parenthesized receiver resolves the handle type
+diagnostics:
+- none
+types:
+- result => i16
+
+// conditional receiver resolves when both branches share the type
+diagnostics:
+- none
+types:
+- result => i16
+
+// cast receiver resolves to the target handle type
+diagnostics:
+- none
+types:
+- result => i16
+
+// cast to a primitive receiver reports invalidReceiverCast before codegen
+diagnostics:
+- error error.invalidReceiverCast @ 12:13: Cannot call a method on a cast from 'Counter' to 'i16': the cast target must be a handle type that matches the source.
+types:
+- none
+
+// cast from an incompatible source reports invalidReceiverCast before codegen
+diagnostics:
+- error error.invalidReceiverCast @ 21:24: Cannot call a method on a cast from 'Other' to 'Counter': the cast target must be a handle type that matches the source.
+types:
+- none
+
+// cast to a handle without the method reports undefinedMethod before codegen
+diagnostics:
+- error error.undefinedMethod @ 21:47: '(makeOther() as Other).value' is not a method of type 'Other'
+types:
+- none
+
+// a primitive field receiver reports undefinedMethod instead of emitting C++
+diagnostics:
+- error error.undefinedMethod @ 15:22: 'box.count.value' is not a method of type 'i16'
+types:
+- none
+
+// unknown method on a nested field receiver reports undefinedMethod
+diagnostics:
+- error error.undefinedMethod @ 16:24: 'box.counter.missing' is not a method of type 'Counter'
+types:
+- none
+
+// unknown method on a call receiver reports undefinedMethod
+diagnostics:
+- error error.undefinedMethod @ 11:38: 'makeCounter().missing' is not a method of type 'Counter'
+types:
+- none
+
+// wrong argument count on a nested field receiver reports wrongArgumentCount
+diagnostics:
+- error error.wrongArgumentCount @ 16:12: 'box.accumulator.add' expects 1 argument(s) but got 0
+types:
+- none

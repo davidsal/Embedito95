@@ -1,0 +1,7 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "math",
+	"package": "@embedito95/math",
+	"version": "0.1.0"
+}

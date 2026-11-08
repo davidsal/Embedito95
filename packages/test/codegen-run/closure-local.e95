@@ -1,0 +1,42 @@
+import { HIGH, Pin, setDigital } from '@embedito95/gpio'
+
+// A factory returns a local closure by reference. The property key names the
+// method and the captured writer becomes a field of the shared handle, so each
+// screen keeps its OWN writer: painting the first screen must not use the
+// second one's state.
+type Writer = {
+    writeBytes: (bytes: u8[]) => void
+}
+
+type Screen = {
+    paint: () => void
+}
+
+const getScreen = (writer: Writer): Screen => {
+    const paint = () => {
+        writer.writeBytes([1])
+    }
+    return { paint: paint }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const firstWriter: Writer = {
+        writeBytes: (bytes: u8[]) => {
+            setDigital(Pin.10, HIGH)
+        }
+    }
+    const secondWriter: Writer = {
+        writeBytes: (bytes: u8[]) => {
+            setDigital(Pin.11, HIGH)
+        }
+    }
+    const firstScreen = getScreen(firstWriter)
+    const secondScreen = getScreen(secondWriter)
+    firstScreen.paint()
+    secondScreen.paint()
+}
+
+main()

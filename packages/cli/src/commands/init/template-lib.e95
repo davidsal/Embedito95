@@ -1,0 +1,3 @@
+export const myValue = 95
+
+export const myFunction = () => {}

@@ -1,0 +1,57 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// A method-only type (no data fields) is a callback record: its struct holds
+// function POINTERS. A STATELESS inline arrow captures no enclosing state, so it
+// lowers to a plain function (captureless lambda) whose address fills the slot.
+type Handler = {
+    onEvent: (value: i16) => void
+}
+
+// A method-only type with a NON-void method: the lambda needs an explicit return
+// type, otherwise C++ deduces the promoted `int` of `a + b` and the function
+// pointer conversion fails.
+type Adder = {
+    add: (a: i16, b: i16) => i16
+}
+
+// A callback record nested inside another object's field: the inline arrow is
+// rendered while boxing the nested literal as its own shared handle.
+type Outer = {
+    handler: Handler
+}
+
+const printValue = (value: i16) => {
+    serial.sendLine(value)
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    // Inline arrow using only its parameter and globals.
+    const inlineHandler: Handler = { onEvent: (value: i16) => { serial.sendLine(value + 1) } }
+    inlineHandler.onEvent(10)
+
+    // Inline arrow calling a named module-level function.
+    const delegating: Handler = { onEvent: (value: i16) => { printValue(value + 2) } }
+    delegating.onEvent(20)
+
+    // The slot is still a normal writable member.
+    inlineHandler.onEvent = printValue
+    inlineHandler.onEvent(30)
+
+    // Inline arrow with a return value.
+    const adder: Adder = { add: (a: i16, b: i16) => { return a + b } }
+    serial.sendLine(adder.add(2, 3))
+
+    // Inline arrow nested inside another object's field.
+    const outer: Outer = { handler: { onEvent: (value: i16) => { printValue(value + 4) } } }
+    outer.handler.onEvent(40)
+}
+
+main()

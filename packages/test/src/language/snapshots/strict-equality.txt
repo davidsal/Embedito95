@@ -1,0 +1,26 @@
+// Rejects strict equality operators (=== and !==) with a parse diagnostic.
+// The message points at == / != and states strict equality is not part of
+// e95; the rest of the expression is no longer dropped silently.
+// a === b in a variable initializer -> strictEquality
+diagnostics:
+- error error.strictEquality @ 3:13: The '===' operator is not part of e95: strict equality checks are not supported. Use '==' instead.
+
+// a !== b in a variable initializer -> strictEquality
+diagnostics:
+- error error.strictEquality @ 3:13: The '!==' operator is not part of e95: strict equality checks are not supported. Use '!=' instead.
+
+// a === b nested in if inside if -> strictEquality
+diagnostics:
+- error error.strictEquality @ 5:15: The '===' operator is not part of e95: strict equality checks are not supported. Use '==' instead.
+
+// == and != stay accepted
+diagnostics:
+- none
+
+// single = assignment stays accepted
+diagnostics:
+- none
+
+// === and !== inside strings and comments are ignored
+diagnostics:
+- none

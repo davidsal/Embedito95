@@ -1,0 +1,20 @@
+import { Pin, setMode, PinMode, setAnalog } from '@embedito95/gpio'
+
+// Trailing parameters with a default may be omitted at the call site; the
+// codegen fills them in (`add()` -> `add(1, 2)`).
+const add = (a: u8 = 1, b: u8 = 2): u8 => {
+    return (a + b) as u8
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setAnalog(Pin.3, add())
+    setAnalog(Pin.3, add(10))
+    setAnalog(Pin.3, add(10, 20))
+}
+
+const main = () => {
+    setup()
+}
+
+main()

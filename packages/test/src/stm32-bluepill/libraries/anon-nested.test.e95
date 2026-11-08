@@ -1,0 +1,40 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// An anonymous shape whose fields are themselves anonymous shapes (no `type`)
+// now round-trips: the field is stored as its own `Object<…>` handle inside the
+// parent's `Object<…>`, and reading a nested field crosses `.get()` at each
+// level.
+const makeRect = () => {
+    const origin = { x: 0, y: 0 }
+    return { origin: origin, w: 10, h: 20 }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const rect = makeRect()
+    // Copying the outer binding aliases the same tree (shared handles).
+    const copy = rect
+    rect.origin.x = 99
+    rect.origin.y = 88
+
+    serial.sendLine(rect.origin.x)
+    serial.sendLine(rect.origin.y)
+    serial.sendLine(copy.origin.x)
+    serial.sendLine(rect.w)
+    serial.sendLine(rect.h)
+
+    // A fresh call is an independent instance.
+    const other = makeRect()
+    other.origin.x = 1
+    serial.sendLine(other.origin.x)
+    serial.sendLine(rect.origin.x)
+}
+
+main()

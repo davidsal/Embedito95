@@ -1,0 +1,25 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { delay } from '@embedito95/time'
+
+const readSensor = async (): u8 => {
+    return 42
+}
+
+const blink = async () => {
+    const value = await readSensor()
+    setAnalog(Pin.3, value)
+    setDigital(Pin.10, HIGH)
+    await delay(50)
+    setDigital(Pin.10, LOW)
+}
+
+const setup = () => {
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    blink()
+}
+
+main()

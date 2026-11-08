@@ -1,0 +1,43 @@
+import {
+    getCapacity,
+    readEepromBlock,
+    readEepromByte,
+    updateEepromByte,
+    writeEepromBlock,
+    writeEepromByte,
+} from '@embedito95/eeprom'
+
+const CONFIGURATION_CELL: u16 = 0
+const CONFIGURATION_VALUE: u8 = 42
+const ALTERNATE_VALUE: u8 = 7
+const CONFIGURATION_LENGTH: u16 = 2
+const EMPTY_LENGTH: u16 = 0
+
+const setup = () => {
+    writeEepromByte(CONFIGURATION_CELL, CONFIGURATION_VALUE)
+}
+
+const main = () => {
+    setup()
+    updateEepromByte(CONFIGURATION_CELL, CONFIGURATION_VALUE)
+    if (readEepromByte(CONFIGURATION_CELL) == CONFIGURATION_VALUE) {
+        updateEepromByte(CONFIGURATION_CELL, ALTERNATE_VALUE)
+    }
+    writeEepromByte(getCapacity(), CONFIGURATION_VALUE)
+    writeEepromByte(getCapacity() - 1, ALTERNATE_VALUE)
+
+    // A multi-byte value is a byte sequence the caller lays out; integers use
+    // least-significant byte first.
+    const configuration: u8[] = [CONFIGURATION_VALUE, ALTERNATE_VALUE]
+    writeEepromBlock(CONFIGURATION_CELL, configuration)
+    const block: u8[] = readEepromBlock(CONFIGURATION_CELL, CONFIGURATION_LENGTH)
+    writeEepromBlock(getCapacity() - 1, block)
+
+    const empty: u8[] = readEepromBlock(CONFIGURATION_CELL, EMPTY_LENGTH)
+    writeEepromBlock(CONFIGURATION_CELL, empty)
+
+    const clipped: u8[] = readEepromBlock(getCapacity() - 1, CONFIGURATION_LENGTH)
+    writeEepromBlock(getCapacity(), clipped)
+}
+
+main()

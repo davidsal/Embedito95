@@ -1,0 +1,137 @@
+import { Pin } from '@embedito95/gpio'
+
+/**
+ * Number of bytes the receive buffer holds before it starts discarding the
+ * oldest received byte.
+ * @returns The receive buffer capacity in bytes
+ */
+export const getReceiveCapacity = (): u8 => {}
+
+/**
+ * Reports whether the hardware can generate the bit timing for a baud rate.
+ * @param baudRate - Communication speed in bits per second
+ * @returns True when the rate is inside the supported range
+ */
+export const isBaudRateSupported = (baudRate: u32): boolean => {}
+
+/**
+ * Reports whether the hardware can sample the pin (a pin-change interrupt on
+ * AVR, timer sampling on STM32).
+ * @param pin - Pin to query
+ * @returns True when the pin has a hardware sampling channel
+ */
+export const isReceivePin = (pin: Pin): boolean => {}
+
+/**
+ * Returns the pin-change interrupt group that watches `pin`. STM32 does not use
+ * pin-change groups because its timer samples the line instead.
+ * @param pin - Pin to query
+ * @returns The group number, or `0xFF` when the pin has no channel
+ */
+export const getPinChangeGroup = (pin: Pin): u8 => {}
+
+/**
+ * Returns the bit that selects `pin` inside its pin-change mask register.
+ * @param pin - Pin to query
+ * @returns The mask bit position, or `0xFF` when the pin has no channel
+ */
+export const getPinChangeBit = (pin: Pin): u8 => {}
+
+/**
+ * Configures the transmit and receive pins and stores their bit timing. The
+ * receive line is left idle until `startReceive` claims it. Opening another
+ * port leaves an active receiver untouched.
+ * @param transmitPin - Pin driven by the bit-banged transmitter
+ * @param receivePin - Pin sampled by the hardware receiver
+ * @param baudRate - Communication speed in bits per second
+ * @returns True when at least one pin was configured and the baud rate is
+ * supported
+ */
+export const openPort = (transmitPin: Pin, receivePin: Pin, baudRate: u32): boolean => {}
+
+/**
+ * Releases the transmit pin and stops the receiver when `receivePin` owns the
+ * receive line. Pins and receive state belonging to other handles are left
+ * untouched.
+ * @param transmitPin - Pin driven by this handle
+ * @param receivePin - Receive pin of this handle
+ */
+export const closePort = (transmitPin: Pin, receivePin: Pin) => {}
+
+/**
+ * Claims the receive line for `receivePin`. Any other pin that was listening
+ * stops receiving, and the receive buffer is cleared even when the same pin
+ * already owns the line.
+ * @param receivePin - Pin to sample
+ */
+export const startReceive = (receivePin: Pin) => {}
+
+/**
+ * Stops listening when `receivePin` owns the receive line. Listening from
+ * another pin is left untouched.
+ * @param receivePin - Pin that should stop being sampled
+ */
+export const stopReceive = (receivePin: Pin) => {}
+
+/**
+ * Reports whether `receivePin` currently owns the receive line.
+ * @param receivePin - Pin to query
+ * @returns True when the pin is being sampled
+ */
+export const isReceiving = (receivePin: Pin): boolean => {}
+
+/**
+ * Sends one byte on a transmit pin, least significant bit first, framed with
+ * one start bit and one stop bit. Timing is resolved per pin, so two handles
+ * with different baud rates can transmit independently.
+ * @param transmitPin - Pin driven by the bit-banged transmitter
+ * @param value - Byte to transmit
+ */
+export const sendByte = (transmitPin: Pin, value: u8) => {}
+
+/**
+ * Reports whether the receive buffer holds at least one byte.
+ * @returns True when a byte is waiting
+ */
+export const hasBufferedData = (): boolean => {}
+
+/**
+ * Removes and returns the oldest byte from the receive buffer.
+ * The result is only meaningful when `hasBufferedData` is true.
+ * @returns The oldest received byte
+ */
+export const readBufferedByte = (): u8 => {}
+
+/**
+ * Returns the oldest byte from the receive buffer without removing it.
+ * The result is only meaningful when `hasBufferedData` is true.
+ * @returns The oldest received byte
+ */
+export const peekBufferedByte = (): u8 => {}
+
+/**
+ * Reports whether the receive buffer discarded a byte because it was full.
+ * The flag is cleared when the receive line is claimed.
+ * @returns True when at least one byte was discarded
+ */
+export const hasReceiveOverflow = (): boolean => {}
+
+/**
+ * Stores one received byte in the ring buffer. When the buffer is full, the
+ * oldest byte is discarded first.
+ * @param value - Byte produced by the receiver
+ */
+export const storeReceivedByte = (value: u8) => {}
+
+/**
+ * Reads text up to the newline terminator or a one-second timeout.
+ * @returns The received text, empty when the timeout expires first
+ */
+export const readStreamLine = (): string => {}
+
+/**
+ * Reads the first signed decimal number in the stream, skipping leading
+ * non-numeric bytes.
+ * @returns The received value, or `0` when no digits arrive
+ */
+export const readStreamInteger = (): i32 => {}

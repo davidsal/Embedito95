@@ -1,0 +1,159 @@
+import { SPI, SpiBus, getSPI } from '@embedito95/spi'
+import { Pin, OUTPUT, LOW, HIGH, setMode, setDigital } from '@embedito95/gpio'
+
+const REG_DIGIT_0: u8 = 1
+const REG_DECODE_MODE: u8 = 9
+const REG_INTENSITY: u8 = 10
+const REG_SCAN_LIMIT: u8 = 11
+const REG_SHUTDOWN: u8 = 12
+const REG_DISPLAY_TEST: u8 = 15
+const DECODE_NONE: u8 = 0
+const SCAN_ALL: u8 = 7
+const SHUTDOWN_OFF: u8 = 1
+const DISPLAY_TEST_OFF: u8 = 0
+const DEFAULT_INTENSITY: u8 = 8
+const MATRIX_WIDTH: u8 = 8
+const MATRIX_HEIGHT: u8 = 8
+
+/**
+ * An 8x8 LED matrix driven by a MAX7219 controller.
+ */
+export type LedMatrix = {
+    /**
+     * Starts the controller and clears the matrix.
+     */
+    initialize: () => void
+    /**
+     * Turns every pixel off.
+     */
+    clear: () => void
+    /**
+     * Turns a single pixel on or off.
+     * The origin (0, 0) is the top-left pixel.
+     * @param x - Horizontal position (0-7), growing to the right
+     * @param y - Vertical position (0-7), growing downwards
+     * @param on - True to turn the pixel on, false to turn it off
+     */
+    setPixel: (x: u8, y: u8, on: boolean) => void
+    /**
+     * Writes an entire row in a single SPI transaction.
+     * @param row - Row index (0-7), 0 is the top row
+     * @param value - Row bits, most significant bit is the leftmost pixel
+     */
+    setRow: (row: u8, value: u8) => void
+    /**
+     * Draws an 8x8 image given as eight row bytes.
+     * @param bitmap - Eight row bytes, top row first, most significant bit is the leftmost pixel
+     */
+    drawImage: (bitmap: u8[]) => void
+    /**
+     * Sets the display brightness.
+     * @param intensity - Brightness level (0-15)
+     */
+    setIntensity: (intensity: u8) => void
+}
+
+const bitIsSet = (value: u8, bit: u8): boolean => {
+    let divided: u16 = value
+    for (let i: u8 = 0; i < bit; i += 1) {
+        divided = divided / 2
+    }
+    return (divided % 2) == 1
+}
+
+const pow2 = (exponent: u8): u8 => {
+    let value: u8 = 1
+    for (let i: u8 = 0; i < exponent; i += 1) {
+        value = value * 2
+    }
+    return value
+}
+
+/**
+ * Creates an 8x8 LED matrix bound to the given SPI interface and chip-select pin.
+ * @param spi - SPI interface the matrix is connected to
+ * @param cs - Chip-select (LOAD) pin
+ * @returns A configured LED matrix
+ */
+export const getMatrix = (spi: SPI, cs: Pin): LedMatrix => {
+    const bus: SpiBus = getSPI(spi)
+    const rows: u8[] = [0, 0, 0, 0, 0, 0, 0, 0]
+
+    const send = (address: u8, value: u8) => {
+        setDigital(cs, LOW)
+        bus.transfer(address)
+        bus.transfer(value)
+        setDigital(cs, HIGH)
+    }
+
+    const writeRow = (row: u8) => {
+        send(REG_DIGIT_0 + row, rows[row])
+    }
+
+    const writeRowValue = (row: u8, value: u8) => {
+        rows[row] = value
+        writeRow(row)
+    }
+
+    const setBit = (row: u8, bit: u8, on: boolean) => {
+        const mask: u8 = pow2(bit)
+        if (on) {
+            if (!bitIsSet(rows[row], bit)) {
+                rows[row] = rows[row] + mask
+                writeRow(row)
+            }
+        } else {
+            if (bitIsSet(rows[row], bit)) {
+                rows[row] = rows[row] - mask
+                writeRow(row)
+            }
+        }
+    }
+
+    return {
+        initialize: () => {
+            setMode(cs, OUTPUT)
+            setDigital(cs, HIGH)
+            bus.initialize()
+            send(REG_DISPLAY_TEST, DISPLAY_TEST_OFF)
+            send(REG_SHUTDOWN, SHUTDOWN_OFF)
+            send(REG_DECODE_MODE, DECODE_NONE)
+            send(REG_SCAN_LIMIT, SCAN_ALL)
+            send(REG_INTENSITY, DEFAULT_INTENSITY)
+            for (let row: u8 = 0; row < MATRIX_HEIGHT; row += 1) {
+                send(REG_DIGIT_0 + row, 0)
+            }
+        },
+        clear: () => {
+            for (let row: u8 = 0; row < MATRIX_HEIGHT; row += 1) {
+                rows[row] = 0
+                writeRow(row)
+            }
+        },
+        setPixel: (x: u8, y: u8, on: boolean) => {
+            if (x >= MATRIX_WIDTH) {
+                return
+            }
+            if (y >= MATRIX_HEIGHT) {
+                return
+            }
+            setBit(y, MATRIX_WIDTH - 1 - x, on)
+        },
+        setRow: (row: u8, value: u8) => {
+            if (row >= MATRIX_HEIGHT) {
+                return
+            }
+            writeRowValue(row, value)
+        },
+        drawImage: (bitmap: u8[]) => {
+            for (let row: u8 = 0; row < MATRIX_HEIGHT; row += 1) {
+                if (row < bitmap.length()) {
+                    writeRowValue(row, bitmap[row])
+                }
+            }
+        },
+        setIntensity: (intensity: u8) => {
+            send(REG_INTENSITY, intensity)
+        }
+    }
+}

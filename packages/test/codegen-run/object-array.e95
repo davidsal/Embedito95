@@ -1,0 +1,28 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A top-level array annotated with an object element type must box each inline
+// object literal as its own handle (Object<Point>(Point{...})), not emit a raw
+// brace list that cannot convert to Array<Object<Point>>.
+type Point = {
+    x: i16,
+    y: i16
+}
+
+const POINTS: Point[] = [
+    { x: 1, y: 2 },
+    { x: 3, y: 4 },
+    { x: 5, y: 6 }
+]
+
+const setup = () => {
+    setAnalog(Pin.3, POINTS.length())
+    setAnalog(Pin.4, POINTS[0].x)
+    setAnalog(Pin.5, POINTS[1].y)
+    setAnalog(Pin.6, POINTS[2].x)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

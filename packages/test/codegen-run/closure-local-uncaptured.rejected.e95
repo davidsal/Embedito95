@@ -1,0 +1,28 @@
+// A factory declaration that is not a local closure and is not captured by a
+// method would have its initializer dropped by the closure-factory lowering, so
+// the checker rejects it before the codegen. `readSensor` has an observable
+// effect (it drives a pin), which must never be silently skipped.
+import { HIGH, Pin, setDigital } from '@embedito95/gpio'
+
+type Screen = {
+    paint: () => void
+}
+
+const readSensor = (): i16 => {
+    setDigital(Pin.10, HIGH)
+    return 0
+}
+
+const getScreen = (): Screen => {
+    const reading: i16 = readSensor()
+    return { paint: () => {} }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    getScreen().paint()
+}
+
+main()

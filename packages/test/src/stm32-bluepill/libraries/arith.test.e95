@@ -1,0 +1,33 @@
+import { Pin, PinMode, setMode, setAnalog } from '@embedito95/gpio'
+
+const PWM_PIN = Pin.B9
+
+const fadeLed = () => {
+    let value: f32 = 0
+    let step: i16 = 1
+
+    while (true) {
+        setAnalog(PWM_PIN, (value as u16))
+        value = value + step
+        value = step + value
+        value = value - step
+
+        if (value >= 65535.0) {
+            value = 65535
+        }
+        if (value <= 0.0) {
+            value = 0
+        }
+    }
+}
+
+const setup = () => {
+    setMode(PWM_PIN, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    fadeLed()
+}
+
+main()

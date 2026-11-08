@@ -1,0 +1,37 @@
+// Hoists async locals with the type inferred by the checker instead of the
+// default i32: literals, constants, binary expressions, library method calls,
+// awaited user-function results and explicit annotations.
+import { sleep } from '@embedito95/async'
+import { SPI, getSPI } from '@embedito95/spi'
+
+const STEP_SIZE = 1
+const STEP_LIMIT = 10
+
+const readStep = async (): i16 => {
+    await sleep(1)
+    return STEP_SIZE
+}
+
+const animate = async () => {
+    let value = 0
+    let step = STEP_SIZE
+    let annotated: u8 = 0
+
+    while (value < STEP_LIMIT) {
+        const sum = value + step
+        const transferred = getSPI(SPI.1).transfer(0)
+        const awaited = await readStep()
+        value = value + step + sum + transferred + awaited
+        annotated = annotated + 1
+        await sleep(2)
+    }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    animate()
+}
+
+main()

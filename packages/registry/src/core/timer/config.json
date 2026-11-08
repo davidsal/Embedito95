@@ -1,0 +1,7 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "timer",
+	"package": "@embedito95/timer",
+	"version": "0.1.0"
+}

@@ -1,0 +1,17 @@
+// Methods of a closure compile to C++ free functions over the shared
+// `Object<T>` handle; there is no per-instance slot to overwrite (unlike TS),
+// so assigning to one must emit error.methodAssignment. A LOCAL CALLBACK
+// RECORD (0 fields, >=1 method) is the exception: its methods are
+// function-pointer members, so reassigning the slot is allowed. Assigning a
+// data-object FIELD, or a plain variable, must not error.
+// reassign a library closure method -> methodAssignment error
+methodAssignment: yes
+
+// reassign a local callback-record slot -> ok (function-pointer member)
+methodAssignment: no
+
+// assign a writable data-object field -> ok
+methodAssignment: no
+
+// reassign a plain variable -> ok (not a method)
+methodAssignment: no

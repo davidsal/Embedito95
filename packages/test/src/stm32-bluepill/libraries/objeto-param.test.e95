@@ -1,0 +1,54 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Response = {
+    type: i16
+    from: i16
+}
+
+// Case A: object-shape passed to a FREE FUNCTION — today goes by `Type &`.
+const parseResponse = (type: i16, data: Response): i16 => {
+    data = { type: type, from: type + 1 }
+    return data.type + data.from
+}
+
+type Box = {
+    value: i16
+}
+
+type Twiddler = {
+    twiddle: (b: Box) => i16
+}
+
+// Case B/C: object-shape passed to a METHOD / closure-class — today by value.
+const makeTwiddler = (): Twiddler => {
+    return {
+        twiddle: (b: Box): i16 => {
+            b = { value: 99 }
+            return b.value
+        }
+    }
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const r: Response = { type: 1, from: 2 }
+    const viaFree = parseResponse(5, r)
+    serial.sendLine(r.type)
+    serial.sendLine(r.from)
+    serial.sendLine(viaFree)
+
+    const box: Box = { value: 3 }
+    const tw = makeTwiddler()
+    const viaMethod = tw.twiddle(box)
+    serial.sendLine(box.value)
+    serial.sendLine(viaMethod)
+}
+
+main()

@@ -1,0 +1,213 @@
+import { Pin } from '@embedito95/gpio'
+import {
+    closePort,
+    getReceiveCapacity,
+    hasBufferedData,
+    hasReceiveOverflow,
+    isBaudRateSupported,
+    isReceiving,
+    openPort,
+    peekBufferedByte,
+    readBufferedByte,
+    readStreamInteger,
+    readStreamLine,
+    sendByte,
+    startReceive,
+    stopReceive
+} from '@embedito95/software-serial-hardware'
+
+const CARRIAGE_RETURN_BYTE: u8 = 13
+const LINE_FEED_BYTE: u8 = 10
+
+/**
+ * A serial port driven entirely by software: the receive line is sampled by the
+ * platform's hardware event (a pin-change interrupt on AVR, a timer interrupt on
+ * STM32) and the transmit line is bit-banged.
+ *
+ * Only one handle can receive at a time. Claiming the receive line with
+ * `startListening` stops the previous handle from receiving; the transmit line
+ * is independent and every handle can send.
+ */
+export type SoftwareSerialPort = {
+    /**
+     * Configures both pins, stores the bit timing and claims the receive line
+     * when the baud rate is supported. Calling it again reconfigures the same
+     * handle, including the receive timing; an unsupported baud rate leaves the
+     * receive line untouched. It must be called before `startListening`.
+     * @param baudRate - Communication speed in bits per second
+     */
+    initialize: (baudRate: u32) => void
+    /**
+     * Releases this handle's transmit pin and stops its receiver when it owns
+     * the receive line. Other handles keep their pins and receive state.
+     */
+    close: () => void
+    /**
+     * Returns immediately; transmission is blocking and has no output buffer.
+     */
+    flushOutput: () => void
+    /**
+     * Sends text byte by byte, least significant bit first.
+     * @param data - Text to transmit
+     */
+    send: (data: string) => void
+    /**
+     * Sends text followed by a carriage return and a line feed.
+     * @param data - Text to transmit
+     */
+    sendLine: (data: string) => void
+    /**
+     * Removes the oldest received byte.
+     * @returns The received byte, or null when the buffer is empty or this
+     * handle is not listening
+     */
+    read: () => u8 | null
+    /**
+     * Reads text up to the newline terminator or a one-second timeout.
+     * @returns The received text, empty when this handle is not listening or
+     * the timeout expires first
+     */
+    readLine: () => string
+    /**
+     * Reads the first signed decimal number in the stream, skipping leading
+     * non-numeric bytes.
+     * @returns The received value, or 0 when this handle is not listening or
+     * no digits arrive
+     */
+    readInteger: () => i32
+    /**
+     * Reports whether a received byte is waiting for this handle.
+     * @returns True when the handle is listening and the buffer is not empty
+     */
+    hasData: () => boolean
+    /**
+     * Claims the receive line for this handle. The previous listener stops
+     * receiving and the receive buffer is cleared. `initialize` must have
+     * configured this handle first; without it there is no bit timing and the
+     * call has no effect.
+     */
+    startListening: () => void
+    /**
+     * Stops listening when this handle owns the receive line.
+     */
+    stopListening: () => void
+    /**
+     * Reports whether this handle currently owns the receive line.
+     * @returns True when the hardware receiver feeds this handle
+     */
+    isListening: () => boolean
+    /**
+     * Reports whether a byte was discarded because the receive buffer was
+     * full. Reading the flag does not clear it; claiming the line does.
+     * @returns True when at least one byte was discarded
+     */
+    hasOverflowed: () => boolean
+    /**
+     * Returns the oldest received byte without removing it.
+     * @returns The received byte, or null when the buffer is empty or this
+     * handle is not listening
+     */
+    getNextByte: () => u8 | null
+}
+
+/**
+ * Number of bytes a receive buffer holds.
+ * @returns The receive buffer capacity in bytes
+ */
+export const getSoftwareSerialReceiveCapacity = (): u8 => {
+    return getReceiveCapacity()
+}
+
+/**
+ * Creates a software serial port bound to a transmit and a receive pin.
+ *
+ * The receive pin must have a hardware sampling channel (a pin-change interrupt
+ * on AVR, timer sampling on STM32); the transmit pin must be a digital output
+ * pin. Only one handle can listen at a time: calling
+ * `startListening` on one handle disables the receiver of the previous one.
+ * An invalid pin disables only the operation that uses it: an invalid receive
+ * pin leaves `startListening` without effect, while an invalid transmit pin
+ * leaves `send`/`sendLine` without effect. A handle with both pins invalid
+ * cannot initialize.
+ * @param transmitPin - Pin driven by the bit-banged transmitter
+ * @param receivePin - Pin sampled by the hardware receiver
+ * @returns A software serial handle bound to the two pins
+ */
+export const getSoftwareSerial = (transmitPin: Pin, receivePin: Pin): SoftwareSerialPort => {
+    return {
+        initialize: (baudRate: u32) => {
+            if (!isBaudRateSupported(baudRate)) {
+                return
+            }
+            if (!openPort(transmitPin, receivePin, baudRate)) {
+                return
+            }
+            startReceive(receivePin)
+        },
+        close: () => {
+            closePort(transmitPin, receivePin)
+        },
+        flushOutput: () => {
+        },
+        send: (data: string) => {
+            for (let index: u16 = 0; index < data.length(); index += 1) {
+                sendByte(transmitPin, (data[index] as u8))
+            }
+        },
+        sendLine: (data: string) => {
+            for (let index: u16 = 0; index < data.length(); index += 1) {
+                sendByte(transmitPin, (data[index] as u8))
+            }
+            sendByte(transmitPin, CARRIAGE_RETURN_BYTE)
+            sendByte(transmitPin, LINE_FEED_BYTE)
+        },
+        read: () => {
+            if (!isReceiving(receivePin)) {
+                return null
+            }
+            if (!hasBufferedData()) {
+                return null
+            }
+            return readBufferedByte()
+        },
+        readLine: () => {
+            if (!isReceiving(receivePin)) {
+                return ""
+            }
+            return readStreamLine()
+        },
+        readInteger: () => {
+            if (!isReceiving(receivePin)) {
+                return 0
+            }
+            return readStreamInteger()
+        },
+        hasData: () => {
+            if (!isReceiving(receivePin)) {
+                return false
+            }
+            return hasBufferedData()
+        },
+        startListening: () => {
+            startReceive(receivePin)
+        },
+        stopListening: () => {
+            stopReceive(receivePin)
+        },
+        isListening: () => {
+            return isReceiving(receivePin)
+        },
+        hasOverflowed: () => {
+            return hasReceiveOverflow()
+        },
+        getNextByte: () => {
+            if (!isReceiving(receivePin)) {
+                return null
+            }
+            if (!hasBufferedData()) {
+                return null
+            }
+            return peekBufferedByte()
+        }
+    }
+}

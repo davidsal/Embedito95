@@ -1,0 +1,42 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Numeric conversion and buffer copies must compile and run end to end: the
+// hand-written parsers stop at the first non-number, a digit-less text returns
+// zero, integer overflow saturates, and the array copies keep their documented
+// lengths (bytes without a terminator, characters with one).
+const setup = () => {
+    const signedText: string = "  -42abc"
+    setAnalog(Pin.2, signedText.parseInteger() == -42 ? 1 : 0)
+
+    const empty: string = ""
+    setAnalog(Pin.3, empty.parseInteger() == 0 ? 1 : 0)
+
+    const overflow: string = " 99999999999999999999"
+    setAnalog(Pin.4, overflow.parseInteger() == 2147483647 ? 1 : 0)
+
+    const exponent: string = " 2.5e-3"
+    const exponentValue = exponent.parseFloat64()
+    setAnalog(Pin.5, exponentValue > 0.0024 && exponentValue < 0.0026 ? 1 : 0)
+
+    const single: string = " 1.5"
+    setAnalog(Pin.6, single.parseFloat32() == 1.5 ? 1 : 0)
+
+    const text: string = "AB"
+    const bytes = text.toByteArray()
+    setAnalog(Pin.7, bytes.length())
+    setAnalog(Pin.8, bytes[0] == 65 ? 1 : 0)
+
+    const characters = text.toCharacterArray()
+    const emptyCharacters = empty.toCharacterArray()
+    setAnalog(Pin.9, characters.length())
+    setAnalog(Pin.10, characters[2] == emptyCharacters[0] ? 1 : 0)
+
+    text.reserveCapacity(2)
+    setAnalog(Pin.11, text.length())
+}
+
+const main = () => {
+    setup()
+}
+
+main()

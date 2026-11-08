@@ -1,0 +1,37 @@
+import { Serial, SerialPort, getSerial } from '@embedito95/serial'
+import { I2C, I2CBus, getI2C } from '@embedito95/i2c'
+
+const startPort = (p: SerialPort): void => {
+    p.initialize(9600)
+    return
+}
+
+const rebindPort = (p: SerialPort): void => {
+    const other = getSerial(Serial.1)
+    other.initialize(115200)
+    p = other
+    return
+}
+
+const useBus = (b: I2CBus): void => {
+    b.initialize()
+    return
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const serial = getSerial(Serial.1)
+    const serialAlias = serial
+    startPort(serial)
+    startPort(serialAlias)
+    rebindPort(serial)
+
+    const bus = getI2C(I2C.1)
+    const busAlias = bus
+    useBus(bus)
+    useBus(busAlias)
+}
+
+main()

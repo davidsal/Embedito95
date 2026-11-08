@@ -1,0 +1,24 @@
+import { SPI } from '@embedito95/spi'
+import { Pin } from '@embedito95/gpio'
+import { getMatrix } from '@embedito95/max7219'
+
+// Wiring (STM32 Blue Pill):
+//  - SPI_1: PA5 (SCK) / PA7 (MOSI)
+//  - CS (LOAD): PA4
+
+const matrix = getMatrix(SPI.1, Pin.A4)
+
+const setup = () => {
+    matrix.initialize()
+    matrix.setIntensity(8)
+}
+
+const main = () => {
+    setup()
+    matrix.clear()
+    matrix.setPixel(0, 0, true)
+    matrix.setPixel(3, 3, true)
+    matrix.setPixel(0, 0, false)
+}
+
+main()

@@ -1,0 +1,8 @@
+# Expression await (value read) then a bare sleep, three times: the child slots
+# are reused; each iteration writes the awaited value then drops the pin.
+analog 3 1
+digital 10 0
+analog 3 2
+digital 10 0
+analog 3 3
+digital 10 0

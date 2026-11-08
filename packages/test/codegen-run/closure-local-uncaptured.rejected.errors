@@ -1,0 +1,1 @@
+Local 'reading' of a closure factory is neither a local closure nor captured by a method, so its initializer would be dropped. Move it into a method or capture it.

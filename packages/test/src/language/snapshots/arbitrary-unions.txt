@@ -1,0 +1,116 @@
+// Arbitrary unions are restricted to core library signatures with a C++
+// backend (overload set). User code and portable libraries only accept
+// 'T | null'; the union itself is reported once at the type location.
+// user variable with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// user variable with T|null -> no union error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// user parameter with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// user return type with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// user type field with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// user parameter with T|null -> no union error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// user return type with T|null -> no union error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// null first in T|null -> no union error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// parameter with null first in T|null -> no union or unknown error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// return type with null first in T|null -> no union or unknown error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// portable library parameter with null first in T|null -> no unknown error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// union of three members including null -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// portable library variable with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// portable library parameter with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// portable library signature with T|null -> no union error
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// core library method signature with an arbitrary union -> allowed
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// core library parameter with an arbitrary union -> allowed
+arbitraryUnion: 0
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// core library variable with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0
+
+// core library type field with an arbitrary union -> arbitraryUnion error
+arbitraryUnion: 1
+assignmentTypeMismatch: 0
+unknownType: 0
+argumentTypeMismatch: 0

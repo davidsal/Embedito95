@@ -1,0 +1,31 @@
+/**
+ * Number of non-volatile cells installed on the target.
+ * @returns The number of addressable cells
+ */
+export const getCellCount = (): u16 => {}
+
+/**
+ * Reads one cell from non-volatile memory.
+ * Addresses outside the installed cell range read back as `0xFF`, the value of
+ * an unwritten cell.
+ * @param address - Zero-based cell address
+ * @returns The stored byte, or `0xFF` for an unwritten or out-of-range cell
+ */
+export const readCell = (address: u16): u8 => {}
+
+/**
+ * Writes one cell of non-volatile memory and blocks until the write completes.
+ * Writing an address outside the installed cell range has no effect.
+ * @param address - Zero-based cell address
+ * @param value - Byte to store
+ */
+export const writeCell = (address: u16, value: u8) => {}
+
+/**
+ * Stores one cell only when the new byte differs from the stored one.
+ * Skipping an unchanged value avoids the program/erase cycle and its wear on
+ * the cell. Writing an address outside the installed cell range has no effect.
+ * @param address - Zero-based cell address
+ * @param value - Byte to store when it differs from the current value
+ */
+export const updateCell = (address: u16, value: u8) => {}

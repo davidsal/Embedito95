@@ -1,0 +1,121 @@
+/**
+ * Available I2C buses
+ */
+export enum I2C {
+    // e95.postinstall.i2cEnum
+}
+
+/**
+ * Result of ending a write transaction.
+ * @member OK - The device acknowledged the address and every data byte
+ * @member DATA_TOO_LONG - More bytes were queued than the transaction buffer holds
+ * @member ADDRESS_NACK - The device did not acknowledge its address
+ * @member DATA_NACK - The device did not acknowledge a data byte
+ * @member OTHER - The bus reported an error that fits none of the other codes
+ */
+export enum I2CStatus {
+    OK,
+    DATA_TOO_LONG,
+    ADDRESS_NACK,
+    DATA_NACK,
+    OTHER
+}
+
+/**
+ * An I2C bus bound to an interface.
+ */
+export type I2CBus = {
+    /**
+     * Starts the I2C bus.
+     */
+    initialize: () => void
+    /**
+     * Sets the bus clock frequency in Hz.
+     * @param frequency - Bus clock frequency in Hz (e.g. 100000, 400000)
+     */
+    setClock: (frequency: u32) => void
+    /**
+     * Releases the bus and leaves it inactive. Any open write transaction is
+     * discarded.
+     */
+    close: () => void
+    /**
+     * Starts a write transaction to `address` and clears the write buffer.
+     * A transaction holds at most 32 bytes.
+     * @param address - 7-bit I2C device address
+     */
+    beginWrite: (address: u8) => void
+    /**
+     * Queues one byte for the transaction opened by `beginWrite`. Does nothing
+     * when no transaction is open or the write buffer is full.
+     * @param value - Byte to queue
+     */
+    sendByte: (value: u8) => void
+    /**
+     * Ends the open write transaction, sends the queued bytes and returns the
+     * result. Returns `OTHER` when no transaction is open.
+     * @returns The transaction result code
+     */
+    endWrite: () => I2CStatus
+    /**
+     * Starts a write transaction to `address`, queues `data` and ends it in a
+     * single call. Bytes beyond the transaction buffer are not sent.
+     * @param address - 7-bit I2C device address
+     * @param data - Bytes to write
+     */
+    write: (address: u8, data: u8[]) => void
+    /**
+     * Requests a sequence of bytes from the given device address and stores
+     * them in the bus receive buffer.
+     * @param address - 7-bit I2C device address
+     * @param quantity - Number of bytes to request
+     * @returns The number of bytes received
+     */
+    requestFrom: (address: u8, quantity: u8) => u8
+    /**
+     * Reads the next byte from the bus receive buffer.
+     * @returns The next received byte, or 0 when the buffer is empty
+     */
+    read: () => u8
+    /**
+     * Returns how many bytes are still available in the bus receive buffer.
+     * @returns The number of bytes available to read
+     */
+    available: () => u8
+    /**
+     * Configures the bus as a slave at `address` and starts listening for
+     * transactions from a master. Only one bus can listen as a slave at a
+     * time: the most recently configured bus owns the slave callbacks.
+     * @param address - 7-bit slave address (0..127)
+     * @range address 0 127
+     */
+    initializeSlave: (address: u8) => void
+    /**
+     * Registers the function invoked when a master writes bytes to the slave.
+     * The function takes no arguments and reads the received bytes with `read`
+     * and `available`. It must be a top-level function without captured state.
+     * @param handler - Function invoked when a write transaction arrives
+     */
+    onReceive: (handler) => void
+    /**
+     * Registers the function invoked when a master requests bytes from the
+     * slave. Inside it, call `sendResponse` to queue the bytes sent back. It
+     * must be a top-level function without captured state.
+     * @param handler - Function invoked when a read transaction arrives
+     */
+    onRequest: (handler) => void
+    /**
+     * Queues `data` as the response to the master that requested a read. It
+     * only has an effect while an `onRequest` handler runs; otherwise it does
+     * nothing. Bytes beyond the bus response buffer are not sent.
+     * @param data - Bytes to send back to the master
+     */
+    sendResponse: (data: u8[]) => void
+}
+
+/**
+ * Creates an I2C bus bound to the given interface.
+ * @param i2c - I2C interface to use
+ * @returns A configured I2C bus
+ */
+export const getI2C = (i2c: I2C): I2CBus => {}

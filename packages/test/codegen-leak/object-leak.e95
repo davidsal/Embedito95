@@ -1,0 +1,69 @@
+type Point = {
+    x: i16
+    y: i16
+}
+
+type Mid = {
+    id: i16
+    pt: Point
+    counts: i16[]
+}
+
+const bump = (p: Point, dx: i16) => {
+    p.x = p.x + dx
+}
+
+const rebind = (p: Point) => {
+    const fresh: Point = { x: 100, y: 200 }
+    p = fresh
+}
+
+const score = (t: Mid): i16 => {
+    return t.id + t.counts.length()
+}
+
+const mkPoint = (): Point => {
+    const q: Point = { x: 0, y: 0 }
+    return q
+}
+
+const mkMid = (): Mid => {
+    const p = mkPoint()
+    const arr: i16[] = [10, 20]
+    return { id: 1, pt: p, counts: arr }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    let last: i16 = 0
+    for (let i = 0; i < 100; i = i + 1) {
+        const m = mkMid()
+        m.pt.x = 1
+
+        let alias = m
+        alias.id = 7
+        alias.pt.y = 9
+
+        let copy = alias
+        bump(copy.pt, 5)
+        rebind(copy.pt)
+        copy.pt.x = 3
+
+        const s = mkMid()
+        copy = s
+        copy.id = 2
+
+        const t = mkMid()
+        const other = mkPoint()
+        t.pt = other
+        t.pt.x = 4
+
+        const u = mkMid()
+        last = score(u)
+        last = last + m.id
+    }
+}
+
+main()

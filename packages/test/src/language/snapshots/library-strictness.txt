@@ -1,0 +1,17 @@
+// Library type strictness (Issue 3).
+// unknownType must fire in library files for invalid types (u9), while
+// e95.postinstall.* placeholder params are allowed.
+// library variable annotated with u9 -> unknownType error
+unknownType: yes
+
+// library param typed e95.postinstall.pwmType placeholder -> ok
+unknownType: no
+
+// library function param annotated with u9 -> unknownType error
+unknownType: yes
+
+// library param with a valid primitive type -> ok
+unknownType: no
+
+// library variable with a valid primitive type -> ok
+unknownType: no

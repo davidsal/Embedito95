@@ -1,0 +1,11 @@
+const greet = (name: string, times: u8 = 1, loud: boolean = false): string => {
+    return name
+}
+
+const tick = async (milliseconds: u32 = 0): u32 => {
+    return milliseconds
+}
+
+const sum = (a: i32 = 1 + 2, b: i32 = 3): i32 => {
+    return a + b
+}

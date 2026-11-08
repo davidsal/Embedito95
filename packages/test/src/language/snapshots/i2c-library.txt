@@ -1,0 +1,126 @@
+// LSP view of the `i2c` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/i2c/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// read infers u8
+diagnostics:
+- none
+types:
+- receivedByte => u8
+
+// requestFrom and available infer u8
+diagnostics:
+- none
+types:
+- requested => u8
+- pending => u8
+
+// endWrite infers I2CStatus
+diagnostics:
+- none
+types:
+- status => I2CStatus
+
+// step transaction in nested conditionals produces no diagnostics
+diagnostics:
+- none
+types:
+- result => I2CStatus
+
+// beginWrite wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:25: 'bus.beginWrite' expects 1 argument(s) but got 0
+types:
+- badCount => void
+
+// wider integer argument warns on sendByte
+diagnostics:
+- warning error.argumentTypeMismatch @ 5:37: Argument 'value' expects type 'u8' but 'wideValue' is 'i32'
+types:
+- widened => void
+
+// non-numeric argument reported on beginWrite
+diagnostics:
+- error error.argumentTypeMismatch @ 3:39: Argument 'address' expects type 'u8' but 'sixty' is 'string'
+types:
+- badType => void
+
+// nested reads inside nested conditionals produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// wrong argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:25: 'bus.requestFrom' expects 2 argument(s) but got 1
+types:
+- badCount => u8
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 3:28: 'bus.somewhere' is not a method of type 'I2CBus'
+types:
+- missing => unresolved
+
+// wider integer argument warns on a u8 parameter
+diagnostics:
+- warning error.argumentTypeMismatch @ 4:44: Argument 'quantity' expects type 'u8' but 'wideQuantity' is 'i32'
+types:
+- widened => u8
+
+// non-numeric argument reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:40: Argument 'address' expects type 'u8' but 'sixty' is 'string'
+types:
+- badType => u8
+
+// slave handlers register without diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// slave address above the 7-bit range reported
+diagnostics:
+- error error.valueOutOfRange @ 4:25: Value '200' overflows type 'u8' (0..127) in 'address'
+types:
+- none
+
+// slave address above the 7-bit range inside nested conditionals reported
+diagnostics:
+- error error.valueOutOfRange @ 6:33: Value '200' overflows type 'u8' (0..127) in 'address'
+types:
+- none
+
+// inline handler with captured state reported
+diagnostics:
+- error error.callbackCapturesLocalState @ 6:25: Callback handler for 'handler' captures local state; register a top-level function instead.
+types:
+- none
+
+// inline stateless handler reported as not named
+diagnostics:
+- error error.callbackMustBeNamed @ 4:25: Callback handler for 'handler' must be a top-level function reference.
+types:
+- none
+
+// nested reads inside the slave handler produce no diagnostics
+diagnostics:
+- none
+types:
+- none
+
+// non-function handler identifier reported
+diagnostics:
+- error error.expectedFunction @ 5:19: 'notAHandler' must be a function
+types:
+- none
+
+// handler with parameters reported
+diagnostics:
+- error error.callbackHasParameters @ 6:19: Callback handler 'onSlaveReceive' must take no parameters.
+types:
+- none

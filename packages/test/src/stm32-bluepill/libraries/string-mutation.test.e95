@@ -1,0 +1,41 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// String mutators are copy-on-write: a copy shares storage until the first
+// write, then detaches, so mutating the alias leaves the original untouched.
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    let text: string = "  Hello  "
+    text.trimWhitespace()
+    serial.sendLine(text)
+
+    let alias = text
+    alias.toUpperCase()
+    serial.sendLine(text)
+    serial.sendLine(alias)
+
+    alias.setCharacter(0, 'J')
+    serial.sendLine(alias)
+
+    alias.appendText("!")
+    serial.sendLine(alias)
+
+    const replaced = alias.replaceText("LL", "ll")
+    serial.sendLine(replaced ? 1 : 0)
+    serial.sendLine(alias)
+
+    alias.removeRange(0, 1)
+    serial.sendLine(alias)
+
+    alias.toLowerCase()
+    serial.sendLine(alias)
+}
+
+main()

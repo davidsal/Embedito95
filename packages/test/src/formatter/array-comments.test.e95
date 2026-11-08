@@ -1,0 +1,8 @@
+const matrix: u8[][] = [
+    [0, 36, 36, 0], // centrada
+    [0, 0, 102, 0], // parpadeando
+    [0, 72, 72, 0], // derecha
+    [0, 18, 18, 0] // izquierda
+]
+
+const flat: u8[] = [1,2,3] // flat

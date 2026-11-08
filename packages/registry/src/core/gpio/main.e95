@@ -1,0 +1,132 @@
+/**
+ * Available pin modes
+ * @member INPUT - Set pin as input
+ * @member OUTPUT - Set pin as output
+ */
+export enum PinMode {
+    INPUT,
+    OUTPUT
+    // e95.postinstall.pinModeExtras
+}
+
+export const INPUT = PinMode.INPUT
+export const OUTPUT = PinMode.OUTPUT
+// e95.postinstall.pinModeReexports
+
+/**
+ * Available pins
+ */
+export enum Pin {
+    // e95.postinstall.pinEnum
+}
+
+/**
+ * Pin digital level
+ * @member LOW - Set pin to LOW
+ * @member HIGH - Set pin to HIGH
+ */
+export enum DigitalLevel {
+    LOW,
+    HIGH
+}
+
+export const LOW = DigitalLevel.LOW
+export const HIGH = DigitalLevel.HIGH
+
+/**
+ * Bit transmission order for the shift helpers
+ * @member MSB_FIRST - Transmit the most significant bit first
+ * @member LSB_FIRST - Transmit the least significant bit first
+ */
+export enum BitOrder {
+    MSB_FIRST,
+    LSB_FIRST
+}
+
+export const MSB_FIRST = BitOrder.MSB_FIRST
+export const LSB_FIRST = BitOrder.LSB_FIRST
+
+/**
+ * ADC voltage reference selection
+ * @member EXTERNAL - Reference taken from the AREF pin with the internal source off
+ * @member SUPPLY - Reference taken from the analog supply (AVCC / VDDA)
+ * @member INTERNAL - Reference taken from the internal bandgap source
+ */
+export enum VoltageReference {
+    EXTERNAL,
+    SUPPLY,
+    INTERNAL
+}
+
+/**
+ * The onboard LED
+ */
+export const LED_BUILTIN = Pin.LED_BUILTIN
+
+/**
+ * Sets the pin mode
+ * @param pin - Pin to change mode
+ * @param mode - Pin mode
+ */
+export const setMode = (pin: Pin, mode: PinMode) => {}
+
+/**
+ * Sets the pin digital level
+ * @param pin - Pin to set level
+ * @param level - LOW or HIGH
+ */
+export const setDigital = (pin: Pin, level: DigitalLevel) => {}
+
+/**
+ * Reads the pin digital level
+ * @param pin - Pin to read
+ * @returns LOW or HIGH
+ */
+export const getDigital = (pin: Pin): DigitalLevel => {}
+
+/**
+ * Writes a byte one bit at a time through a data pin, pulsing a clock pin
+ * once per bit. Configures both pins as outputs before transferring.
+ * @param dataPin - Pin that carries the bits
+ * @param clockPin - Pin pulsed once per bit
+ * @param bitOrder - Order in which the bits are transmitted (MSB_FIRST or LSB_FIRST)
+ * @param value - Byte to transmit
+ */
+export const writeShift = (dataPin: Pin, clockPin: Pin, bitOrder: BitOrder, value: u8) => {}
+
+/**
+ * Reads a byte one bit at a time from a data pin, pulsing a clock pin once per
+ * bit. Configures the clock pin as an output and the data pin as an input
+ * before reading.
+ * @param dataPin - Pin that carries the bits
+ * @param clockPin - Pin pulsed once per bit
+ * @param bitOrder - Order in which the bits are received (MSB_FIRST or LSB_FIRST)
+ * @returns The byte assembled from the data pin
+ */
+export const readShift = (dataPin: Pin, clockPin: Pin, bitOrder: BitOrder): u8 => {}
+
+/**
+ * Sets the pin analog value (PWM).
+ * Configures the PWM peripheral automatically on first use. On AVR, pins 9
+ * and 10 are driven by Timer1, which the servo library also uses; on STM32 the
+ * PWM pins belong to TIM2, TIM3 and TIM4, which the timer and tone APIs can
+ * reprogram. Configuring a counter that another consumer owns stops that
+ * consumer's output.
+ * @param pin - Pin to set value
+ * @param value - Analog value (0-e95.postinstall.pwmMax)
+ */
+export const setAnalog = (pin: Pin, value: e95.postinstall.pwmType) => {}
+
+/**
+ * Reads the pin analog value.
+ * Configures the ADC peripheral automatically on first use.
+ * @param pin - Pin to read
+ * @returns Analog value (0-e95.postinstall.adcMax)
+ */
+export const getAnalog = (pin: Pin): e95.postinstall.adcType => {}
+
+/**
+ * Selects the voltage reference used by ADC reads.
+ * @param reference - Voltage reference source
+ */
+export const setReference = (reference: VoltageReference) => {}

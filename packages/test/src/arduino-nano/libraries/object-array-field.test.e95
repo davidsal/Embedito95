@@ -1,0 +1,51 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// Slice 2 of "data-objects with array/nested-object fields": a named object type
+// whose field is an ARRAY (of scalars, or of another named object handle) is now
+// a shared handle. The array lives as a `core_array::Array<...>` member inside
+// the `Object<T>` body and is freed in cascade.
+
+type Point = {
+    x: i16
+    y: i16
+}
+
+type Pack = {
+    name: string
+    counts: i16[]
+    coords: Point[]
+}
+
+const first = (p: Pack) => {
+    serial.sendLine(p.coords[0].x)
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const a: Pack = { name: "p", counts: [1, 2, 3], coords: [{ x: 4, y: 5 }, { x: 6, y: 7 }] }
+    serial.sendLine(a.counts[0])
+    serial.sendLine(a.coords[0].x)
+    serial.sendLine(a.coords[1].y)
+
+    a.counts[0] = a.counts[0] + 10
+    serial.sendLine(a.counts[0])
+
+    // Alias shares the arrays inside the shared body.
+    let b = a
+    b.coords[0].x = 99
+    serial.sendLine(a.coords[0].x)
+    serial.sendLine(b.coords[0].x)
+
+    first(a)
+    serial.sendLine(a.coords[0].x)
+    serial.sendLine(a.name)
+}
+
+main()

@@ -1,0 +1,56 @@
+// LSP view of the `ssd1306` library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real libraries/ssd1306/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// The installed AVR view is injected at the postinstall markers, so the
+// SPI cases use D10 as chip select and D9 as data/command.
+// getDisplayI2C infers Ssd1306Display
+diagnostics:
+- none
+types:
+- display => Ssd1306Display
+
+// getDisplaySPI infers Ssd1306Display
+diagnostics:
+- none
+types:
+- display => Ssd1306Display
+
+// both factories share the Ssd1306Display type
+diagnostics:
+- none
+types:
+- i2cDisplay => Ssd1306Display
+
+// an SPI display accepts the same text calls as an I2C one
+diagnostics:
+- none
+types:
+- spiText => Ssd1306Display
+
+// nested display configuration produces no diagnostics
+diagnostics:
+- none
+types:
+- nested => u8
+
+// wrong SPI argument count reported
+diagnostics:
+- error error.wrongArgumentCount @ 5:5: 'getDisplaySPI' expects 3 argument(s) but got 2
+types:
+- none
+
+// non-pin chip select reported
+diagnostics:
+- error error.argumentTypeMismatch @ 3:51: Argument 'cs' expects type 'Pin' but literal 5 is 'u8'
+- error error.argumentTypeMismatch @ 3:54: Argument 'dc' expects type 'Pin' but literal 6 is 'u8'
+types:
+- badChipSelect => Ssd1306Display
+
+// unknown method reported and left unresolved
+diagnostics:
+- error error.undefinedMethod @ 4:32: 'display.scroll' is not a method of type 'Ssd1306Display'
+types:
+- missing => unresolved

@@ -1,0 +1,20 @@
+// A method-only type (methods, no data fields) is a callback record: its
+// value struct holds function POINTERS. An inline method is allowed when it
+// captures no enclosing state (it lowers to a captureless function); a method
+// that captures a local would need a closure and must emit
+// error.methodOnlyObjectLiteral. Referencing a named function, adding a data
+// field, or building the object with a factory must not error.
+// method-only type built from a STATELESS inline literal -> ok (captureless function)
+methodOnlyObjectLiteral: no
+
+// method-only type built from a CAPTURING inline literal -> methodOnlyObjectLiteral error
+methodOnlyObjectLiteral: yes
+
+// method-only type built from named function references -> ok (callback record)
+methodOnlyObjectLiteral: no
+
+// type WITH a field plus an inline method literal -> ok (shared handle)
+methodOnlyObjectLiteral: no
+
+// method-only type built by a FACTORY with inline methods -> ok (closure)
+methodOnlyObjectLiteral: no

@@ -1,0 +1,7 @@
+# The while, for and do-while `else` branches assign null, so those results must
+# be null (pins high), not the option payload 7. The loop that never assigns
+# keeps 7 (pin low).
+digital 10 1
+digital 11 1
+digital 12 1
+digital 13 0

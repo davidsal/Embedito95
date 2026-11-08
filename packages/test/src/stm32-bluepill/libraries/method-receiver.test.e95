@@ -1,0 +1,107 @@
+// A handle stored in a field or used directly still calls its methods as free
+// functions over the handle: `counter.value()` -> `value(counter)`, including
+// when the receiver is a nested field, a call result, a parenthesized handle or
+// a conditional. The method mutates the shared state, not a copy.
+
+type Counter = {
+    value: () => i16
+    increment: () => void
+}
+
+const makeCounter = (start: i16): Counter => {
+    let current: i16 = start
+    return {
+        value: () => {
+            return current
+        },
+        increment: () => {
+            current = current + 1
+        }
+    }
+}
+
+type Reader = {
+    read: () => i16
+    bump: () => void
+}
+
+const makeReader = (counter: Counter): Reader => {
+    return {
+        read: () => {
+            return counter.value()
+        },
+        bump: () => {
+            counter.increment()
+        }
+    }
+}
+
+type Box = {
+    counter: Counter
+}
+
+type Screen = {
+    paint: () => void
+}
+
+const makeScreen = (writer: Counter): Screen => {
+    return {
+        paint: () => {
+            this.writer.increment()
+        }
+    }
+}
+
+const readIdentifier = (counter: Counter): i16 => {
+    return counter.value()
+}
+
+const readCall = (): i16 => {
+    return makeCounter(5).value()
+}
+
+const readParen = (counter: Counter): i16 => {
+    return (counter).value()
+}
+
+const readBox = (box: Box): i16 => {
+    return box.counter.value()
+}
+
+const readChosen = (first: Counter, second: Counter, flag: boolean): i16 => {
+    return (flag ? first : second).value()
+}
+
+const readCast = (): i16 => {
+    return (makeCounter(9) as Counter).value()
+}
+
+// The cast receiver starts the block so a leading parenthesis cannot be parsed
+// as a call on the previous statement.
+const incrementCast = (counter: Counter) => {
+    (counter as Counter).increment()
+}
+
+const setup = () => {
+    const counter: Counter = makeCounter(3)
+    const reader: Reader = makeReader(counter)
+    const box: Box = { counter: makeCounter(7) }
+    const screen: Screen = makeScreen(counter)
+    box.counter.increment()
+    screen.paint()
+    incrementCast(counter)
+    readIdentifier(counter)
+    readCall()
+    readParen(counter)
+    readBox(box)
+    readChosen(counter, box.counter, true)
+    readCast()
+    reader.read()
+    reader.bump()
+}
+
+const main = () => {
+    setup()
+}
+
+main()

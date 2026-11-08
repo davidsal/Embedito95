@@ -1,0 +1,27 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+type Point = {
+    x: i16
+    y: i16
+}
+
+// Numeric-only data object as a global const: must be a shared handle at file
+// scope (`Object<Point>`) so field reads dereference it (`origin.get().x`) and
+// assigning/copying it aliases. (String/global consts are out of scope: the
+// flash `F("...")` initializer is illegal at global scope on AVR.)
+const origin: Point = { x: 0, y: 0 }
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    const p = origin
+    serial.sendLine(origin.x)
+    serial.sendLine(p.y)
+}
+
+main()

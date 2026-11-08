@@ -1,0 +1,310 @@
+/**
+ * Re-maps an integer from one range to another.
+ * The ratio is truncated toward zero, like integer division in C/C++.
+ * @param value - Input value to remap.
+ * @param sourceMinimum - Lower bound of the input range.
+ * @param sourceMaximum - Upper bound of the input range.
+ * @param targetMinimum - Lower bound of the output range.
+ * @param targetMaximum - Upper bound of the output range.
+ * @returns The remapped integer value.
+ */
+export const interpolateRange = (value: i32, sourceMinimum: i32, sourceMaximum: i32, targetMinimum: i32, targetMaximum: i32): i32 => {}
+
+/**
+ * Re-maps a floating-point value from one range to another.
+ * @param value - Input value to remap.
+ * @param sourceMinimum - Lower bound of the input range.
+ * @param sourceMaximum - Upper bound of the input range.
+ * @param targetMinimum - Lower bound of the output range.
+ * @param targetMaximum - Upper bound of the output range.
+ * @returns The remapped floating-point value.
+ */
+export const interpolateRangeFloat = (value: f32, sourceMinimum: f32, sourceMaximum: f32, targetMinimum: f32, targetMaximum: f32): f32 => {}
+
+/**
+ * Limits an integer to the inclusive [minimum, maximum] range.
+ * @param value - Value to limit.
+ * @param minimum - Lower bound returned for smaller values.
+ * @param maximum - Upper bound returned for larger values.
+ * @returns The value clamped to the given bounds.
+ */
+export const clamp = (value: i32, minimum: i32, maximum: i32): i32 => {}
+
+/**
+ * Limits a floating-point value to the inclusive [minimum, maximum] range.
+ * @param value - Value to limit.
+ * @param minimum - Lower bound returned for smaller values.
+ * @param maximum - Upper bound returned for larger values.
+ * @returns The value clamped to the given bounds.
+ */
+export const clampFloat = (value: f32, minimum: f32, maximum: f32): f32 => {}
+
+/**
+ * Raises a base to the given exponent.
+ * @param base - Base of the power.
+ * @param exponent - Exponent to raise the base to.
+ * @returns base raised to exponent.
+ */
+export const power = (base: f32, exponent: f32): f32 => {}
+
+/**
+ * Returns the square root of a value.
+ * @param value - Non-negative value to take the square root of.
+ * @returns The square root of value.
+ */
+export const squareRoot = (value: f32): f32 => {}
+
+/**
+ * Returns a value multiplied by itself.
+ * @param value - Value to square.
+ * @returns value multiplied by value.
+ */
+export const square = (value: f32): f32 => {}
+
+/**
+ * Returns the natural logarithm (base e) of a value.
+ * Zero follows the C library domain rules and yields negative infinity;
+ * negative values yield NaN.
+ * @param value - Positive value whose logarithm is requested.
+ * @returns The natural logarithm of value.
+ */
+export const naturalLog = (value: f32): f32 => {}
+
+/**
+ * Returns the base-10 logarithm of a value.
+ * Zero follows the C library domain rules and yields negative infinity;
+ * negative values yield NaN.
+ * @param value - Positive value whose logarithm is requested.
+ * @returns The base-10 logarithm of value.
+ */
+export const logarithm10 = (value: f32): f32 => {}
+
+/**
+ * Returns e raised to the given power.
+ * Values above the f32 range follow the C library rules and yield positive
+ * infinity.
+ * @param value - Exponent to raise e to.
+ * @returns e raised to value.
+ */
+export const exponential = (value: f32): f32 => {}
+
+/**
+ * Returns the absolute value of an integer.
+ * @param value - Value whose magnitude is requested.
+ * @returns The magnitude of value.
+ */
+export const absolute = (value: i32): i32 => {}
+
+/**
+ * Returns the absolute value of a floating-point number.
+ * @param value - Value whose magnitude is requested.
+ * @returns The magnitude of value.
+ */
+export const absoluteFloat = (value: f32): f32 => {}
+
+/**
+ * Returns the smaller of two integers.
+ * @param left - First value to compare.
+ * @param right - Second value to compare.
+ * @returns The smaller value.
+ */
+export const minimum = (left: i32, right: i32): i32 => {}
+
+/**
+ * Returns the smaller of two floating-point numbers.
+ * @param left - First value to compare.
+ * @param right - Second value to compare.
+ * @returns The smaller value.
+ */
+export const minimumFloat = (left: f32, right: f32): f32 => {}
+
+/**
+ * Returns the larger of two integers.
+ * @param left - First value to compare.
+ * @param right - Second value to compare.
+ * @returns The larger value.
+ */
+export const maximum = (left: i32, right: i32): i32 => {}
+
+/**
+ * Returns the larger of two floating-point numbers.
+ * @param left - First value to compare.
+ * @param right - Second value to compare.
+ * @returns The larger value.
+ */
+export const maximumFloat = (left: f32, right: f32): f32 => {}
+
+/**
+ * Rounds a value down to the nearest whole number.
+ * @param value - Value to round down.
+ * @returns The largest whole number not greater than value.
+ */
+export const roundDown = (value: f32): f32 => {}
+
+/**
+ * Rounds a value up to the nearest whole number.
+ * @param value - Value to round up.
+ * @returns The smallest whole number not less than value.
+ */
+export const roundUp = (value: f32): f32 => {}
+
+/**
+ * Rounds a value to the nearest whole number, halfway away from zero.
+ * @param value - Value to round.
+ * @returns The nearest whole number to value.
+ */
+export const roundNearest = (value: f32): f32 => {}
+
+/**
+ * Returns the remainder of dividing value by divisor.
+ * The result keeps the sign of value, like C fmod. A zero divisor yields NaN.
+ * @param value - Dividend being divided.
+ * @param divisor - Divisor to divide by.
+ * @returns The signed remainder of value divided by divisor.
+ */
+export const remainderFloat = (value: f32, divisor: f32): f32 => {}
+
+/**
+ * Discards the fractional part of a value, rounding toward zero.
+ * @param value - Value to truncate.
+ * @returns The whole-number part of value.
+ */
+export const truncate = (value: f32): f32 => {}
+
+/**
+ * Returns a pseudo-random integer in the [minimum, maximum) interval.
+ * @param minimum - Inclusive lower bound.
+ * @param maximum - Exclusive upper bound.
+ * @returns A pseudo-random integer in the requested interval.
+ */
+export const randomInteger = (minimum: i32, maximum: i32): i32 => {}
+
+/**
+ * Seeds the pseudo-random number generator.
+ * @param seed - Seed used to initialize the generator.
+ */
+export const seedRandom = (seed: u32) => {}
+
+/**
+ * Reads a single bit of an unsigned value.
+ * The "Value" suffix keeps the name distinct from user-defined bit helpers
+ * that would otherwise collide with the auto-imported core library.
+ * @param value - Value to read the bit from.
+ * @param bitIndex - Zero-based index of the bit.
+ * @returns True when the bit is set.
+ */
+export const readBitValue = (value: u32, bitIndex: u8): boolean => {}
+
+/**
+ * Writes a single bit of an unsigned value.
+ * @param value - Value to update.
+ * @param bitIndex - Zero-based index of the bit.
+ * @param bitValue - True to set the bit, false to clear it.
+ * @returns The updated value.
+ */
+export const writeBitValue = (value: u32, bitIndex: u8, bitValue: boolean): u32 => {}
+
+/**
+ * Sets a single bit of an unsigned value.
+ * @param value - Value to update.
+ * @param bitIndex - Zero-based index of the bit.
+ * @returns The value with the bit set.
+ */
+export const setBitValue = (value: u32, bitIndex: u8): u32 => {}
+
+/**
+ * Clears a single bit of an unsigned value.
+ * @param value - Value to update.
+ * @param bitIndex - Zero-based index of the bit.
+ * @returns The value with the bit cleared.
+ */
+export const clearBitValue = (value: u32, bitIndex: u8): u32 => {}
+
+/**
+ * Returns the least significant byte of an unsigned value (bits 0-7).
+ * @param value - Value to read the byte from.
+ * @returns The low byte of value.
+ */
+export const lowByteValue = (value: u32): u8 => {}
+
+/**
+ * Returns the second byte of an unsigned value (bits 8-15).
+ * @param value - Value to read the byte from.
+ * @returns The high byte of value.
+ */
+export const highByteValue = (value: u32): u8 => {}
+
+/**
+ * Returns an unsigned value with only the requested bit set.
+ * A u32 has 32 bits, so indices 32 and above return 0.
+ * @param bitIndex - Zero-based index of the bit to set.
+ * @returns A mask with the bit set, or 0 when the index is out of range.
+ */
+export const bitMask = (bitIndex: u8): u32 => {}
+
+/**
+ * Returns the sine of an angle in radians.
+ * @param radians - Angle in radians.
+ * @returns The sine of the angle.
+ */
+export const sine = (radians: f32): f32 => {}
+
+/**
+ * Returns the cosine of an angle in radians.
+ * @param radians - Angle in radians.
+ * @returns The cosine of the angle.
+ */
+export const cosine = (radians: f32): f32 => {}
+
+/**
+ * Returns the tangent of an angle in radians.
+ * @param radians - Angle in radians.
+ * @returns The tangent of the angle.
+ */
+export const tangent = (radians: f32): f32 => {}
+
+/**
+ * Returns the angle in radians whose sine is the given value.
+ * Values outside the [-1, 1] domain follow the C library rules and yield NaN.
+ * @param value - Sine value to invert.
+ * @returns The angle in radians, or NaN outside the domain.
+ */
+export const arcSine = (value: f32): f32 => {}
+
+/**
+ * Returns the angle in radians whose cosine is the given value.
+ * Values outside the [-1, 1] domain follow the C library rules and yield NaN.
+ * @param value - Cosine value to invert.
+ * @returns The angle in radians, or NaN outside the domain.
+ */
+export const arcCosine = (value: f32): f32 => {}
+
+/**
+ * Returns the angle in radians whose tangent is the given value.
+ * @param value - Tangent value to invert.
+ * @returns The angle in radians.
+ */
+export const arcTangent = (value: f32): f32 => {}
+
+/**
+ * Returns the angle in radians of the vector (x, y), keeping the quadrant.
+ * A zero x with a zero y follows the C library rules and yields 0.
+ * @param y - Vertical component.
+ * @param x - Horizontal component.
+ * @returns The angle in radians in the (-pi, pi] range.
+ */
+export const arcTangent2 = (y: f32, x: f32): f32 => {}
+
+/**
+ * Converts an angle from degrees to radians.
+ * @param degrees - Angle in degrees.
+ * @returns The angle expressed in radians.
+ */
+export const toRadians = (degrees: f32): f32 => {}
+
+/**
+ * Converts an angle from radians to degrees.
+ * @param radians - Angle in radians.
+ * @returns The angle expressed in degrees.
+ */
+export const toDegrees = (radians: f32): f32 => {}

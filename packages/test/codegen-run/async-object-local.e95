@@ -1,0 +1,39 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// A local bound to an object handle returned by a local synchronous function
+// must be hoisted into the async task with its real object type (not `i32`),
+// survive an await, and still be usable as a handle (field reads and passing it
+// to another function).
+type Point = {
+    x: i32,
+    y: i32
+}
+
+const makePoint = (value: i32): Point => {
+    return { x: value, y: value + 1 }
+}
+
+const emitPoint = (point: Point) => {
+    setAnalog(Pin.4, point.y)
+}
+
+const run = async () => {
+    let value: i32 = 0
+    while (value < 3) {
+        const point = makePoint(value)
+        setAnalog(Pin.3, point.x)
+        await sleep()
+        emitPoint(point)
+        value = value + 1
+    }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

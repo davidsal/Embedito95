@@ -1,0 +1,93 @@
+// Read-only string API (index access, slicing, search, prefix/suffix and
+// equality). Types come from the shared STRING_METHODS table; diagnostics
+// come from the same check() the language server runs, including nested
+// blocks so arity/type reporting is verified where it is easy to miss.
+// read-only string methods infer their declared return types
+diagnostics:
+- none
+types:
+- character => char
+- slice => string
+- found => i16
+- lastFound => i16
+- prefix => boolean
+- suffix => boolean
+- equal => boolean
+- equalIgnoringCase => boolean
+
+// string method calls chain through their return type
+diagnostics:
+- none
+types:
+- chained => boolean
+- character => char
+- text.getSlice(0, 2).hasPrefix("He") => boolean
+- text.getSlice(0, 2).getCharacter(0) => char
+
+// string method calls inside nested if blocks produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => boolean
+
+// wrong argument count on a string method reports the arity
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'text.getSlice' expects 2 argument(s) but got 1
+types:
+- badCount => string
+
+// wrong argument count inside a nested if reports the arity
+diagnostics:
+- error error.wrongArgumentCount @ 4:20: 'text.getCharacter' expects 1 argument(s) but got 0
+types:
+- nested => char
+
+// non-string search argument reports a type mismatch
+diagnostics:
+- error error.argumentTypeMismatch @ 2:47: Argument 'from' expects type 'u16' but 'start' is 'string'
+types:
+- badType => i16
+
+// unknown string method reports undefinedMethod
+diagnostics:
+- error error.undefinedMethod @ 2:29: 'text.trim' is not a method of type 'string'
+types:
+- unknown => unresolved
+
+// conversion and buffer methods infer their declared return types
+diagnostics:
+- none
+types:
+- integer => i32
+- float32Value => f32
+- float64Value => f64
+- bytes => u8[]
+- characters => char[]
+- afterReserve => u16
+
+// array methods chain through the conversion return types
+diagnostics:
+- none
+types:
+- byteLength => u16
+- terminator => char
+- text.toByteArray().length() => u16
+- text.toCharacterArray()[1] => char
+
+// conversion methods inside nested if blocks produce no diagnostics
+diagnostics:
+- none
+types:
+- nested => i32
+
+// wrong argument count on reserveCapacity reports the arity
+diagnostics:
+- error error.wrongArgumentCount @ 2:25: 'text.reserveCapacity' expects 1 argument(s) but got 0
+types:
+- reserved => void
+
+// non-u16 capacity argument reports a type mismatch
+diagnostics:
+- error error.argumentTypeMismatch @ 2:46: Argument 'minimumCapacity' expects type 'u16' but 'large' is 'string'
+types:
+- reserved => void

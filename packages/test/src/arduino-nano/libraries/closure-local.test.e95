@@ -1,0 +1,81 @@
+type Writer = {
+    write: (value: i16) => void
+}
+
+type Screen = {
+    paint: () => void
+}
+
+// A local closure returned by reference through an object literal property. The
+// property key names the public method and the captured writer becomes a field
+// of the shared handle, so the state is per object and not a copy.
+const getScreen = (writer: Writer): Screen => {
+    const paint = () => {
+        writer.write(1)
+    }
+    return { paint: paint }
+}
+
+type MappedScreen = {
+    paint: () => void
+}
+
+// The public method name comes from the property key, not from the local
+// closure name, so `doPaint` is emitted as `paint`.
+const getMappedScreen = (writer: Writer): MappedScreen => {
+    const doPaint = () => {
+        writer.write(2)
+    }
+    return { paint: doPaint }
+}
+
+type CollisionScreen = {
+    paint: () => void
+}
+
+// The local closure shares its name with the returned method. The private helper
+// is renamed deterministically so the public method does not recurse into
+// itself and no symbol is defined twice.
+const getCollisionScreen = (writer: Writer): CollisionScreen => {
+    const paint = () => {
+        writer.write(3)
+    }
+    return { paint: () => { paint() } }
+}
+
+type StatelessScreen = {
+    paint: () => void
+}
+
+// No captured state: the local closure lowers to a callback record (function
+// pointer, no Object<T> fields).
+const getStatelessScreen = (): StatelessScreen => {
+    const paint = () => {}
+    return { paint: paint }
+}
+
+type PrivateScreen = {
+    paint: () => void
+}
+
+// A local closure used only inside the factory stays a private helper.
+const getPrivateScreen = (writer: Writer): PrivateScreen => {
+    const notify = () => {
+        writer.write(4)
+    }
+    return { paint: () => { notify() } }
+}
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const writer: Writer = { write: (value: i16) => {} }
+    getScreen(writer).paint()
+    getMappedScreen(writer).paint()
+    getCollisionScreen(writer).paint()
+    getStatelessScreen().paint()
+    getPrivateScreen(writer).paint()
+}
+
+main()

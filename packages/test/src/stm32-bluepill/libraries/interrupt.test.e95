@@ -1,0 +1,29 @@
+import { Pin } from '@embedito95/gpio'
+import {
+    InterruptMode,
+    attachPinInterrupt,
+    detachPinInterrupt,
+    getInterruptNumber,
+    enableInterrupts,
+    disableInterrupts
+} from '@embedito95/interrupt'
+
+// STM32 Blue Pill: external interrupts use the EXTI lines selected through
+// AFIO_EXTICR. This program exercises attach, query, detach and the global
+// interrupt gate, and is compiled for ARM by the runtime checks.
+
+const onEdge = () => {}
+
+const setup = () => {
+    attachPinInterrupt(Pin.B6, onEdge, InterruptMode.FALLING)
+    enableInterrupts()
+}
+
+const main = () => {
+    setup()
+    const channel: u8 = getInterruptNumber(Pin.B6)
+    detachPinInterrupt(Pin.B6)
+    disableInterrupts()
+}
+
+main()
