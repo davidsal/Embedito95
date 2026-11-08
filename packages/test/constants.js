@@ -128,6 +128,7 @@ export const BUILD_COMMAND = "build";
 export const UPDATE_SNAPSHOTS_FLAG = "--update";
 export const WRITE_FLAG = "--write";
 export const SNAPSHOT_TEMP_DIRECTORY_PREFIX = "embedito95-test-";
+export const CLI_PROJECT_TEMP_DIRECTORY_PREFIX = "embedito95-cli-project-";
 export const COMPILE_TEMP_DIRECTORY_PREFIX = "embedito95-compile-";
 export const COMPILE_CONCURRENCY_ENVIRONMENT_KEY =
 	"E95_TEST_COMPILE_CONCURRENCY";
@@ -194,6 +195,7 @@ export const COMPILE_SIZES_SNAPSHOT_STATUS = {
 };
 
 export const ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP = "async-local-types";
+export const CLI_PROJECT_UNIT_CHECKS_GROUP = "cli-project";
 export const MONITOR_STATE_UNIT_CHECKS_GROUP = "monitor-state";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";
 export const CLOSURE_FACTORY_UNIT_CHECKS_GROUP = "closure-factory";

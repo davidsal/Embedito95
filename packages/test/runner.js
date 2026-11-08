@@ -10,9 +10,11 @@ import {
 	listTestDirectory,
 	validatePlatformTestParity,
 } from "./case-discovery.js";
+import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
 import {
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
+	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
@@ -208,6 +210,10 @@ export const run = async () => {
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);
 	collectMismatches(asyncLocalResults, mismatches);
+
+	const cliProjectResults = await runCliProjectChecks();
+	reportUnitChecks(CLI_PROJECT_UNIT_CHECKS_GROUP, cliProjectResults);
+	collectMismatches(cliProjectResults, mismatches);
 
 	const closureFactoryResults = runClosureFactoryChecks();
 	reportUnitChecks(CLOSURE_FACTORY_UNIT_CHECKS_GROUP, closureFactoryResults);
