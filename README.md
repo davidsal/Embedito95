@@ -211,6 +211,12 @@ Generated files live under `build/<project>/`:
 To run Embedito95 locally (compiler, CLI, language server and tests), follow
 the [development guide](docs/development.md).
 
+## Contributing
+
+External pull requests are not accepted. Bug reports, ideas and board reports
+are welcome as [issues](https://github.com/davidsal/Embedito95/issues). See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Roadmap
 
 Planned work lives in the public backlog. See the
