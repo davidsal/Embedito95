@@ -3,6 +3,21 @@
 What Embedito95 should support next. Each item describes the expected behavior,
 not an implementation plan. The list is not ordered by priority.
 
+## Module import aliases
+
+Projects with several modules currently import each other with relative paths
+such as `../../helpers`, which break when files move and become hard to read as
+the project grows. Aliases should resolve from the project root:
+
+```e95
+import { format } from '@helpers/format'
+import { config } from '@src/config'
+```
+
+Aliases should be declared in the project `config.json`, work for application
+modules and libraries where it makes sense, and errors should name the alias
+that failed to resolve.
+
 ## Self-referencing objects
 
 Objects should be able to reference themselves directly, such as `a.next = a` or
