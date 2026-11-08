@@ -4,16 +4,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeErrorLine, writeLine } from "./console.js";
+import { PACKAGE_FILE } from "./constants.js";
 
 const MINIMUM_NODE_MAJOR = 22;
 const PACKAGE_DIRECTORY = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE = JSON.parse(
-	readFileSync(join(PACKAGE_DIRECTORY, "package.json"), "utf8"),
+	readFileSync(join(PACKAGE_DIRECTORY, PACKAGE_FILE), "utf8"),
 );
 
 const COMMANDS = [
 	"init",
 	"install",
+	"libraries",
 	"build",
 	"compile",
 	"upload",
@@ -26,7 +28,16 @@ const COMMANDS = [
 const USAGE = `Usage: embedito95 <command> [options]
 
 Commands:
-  ${COMMANDS.join("\n  ")}
+  init [--library]   Create a project, or a library inside one
+  install [library]  Reinstall libraries, or add one from the registry
+  libraries          List core, built-in and installed libraries
+  build              Generate C++ from the .e95 sources
+  compile            Compile the firmware for the target board
+  upload             Upload the compiled firmware
+  flash              build + compile + upload
+  monitor            Open the serial monitor
+  doctor             Check the toolchain
+  install-vs-code    Install the editor extension
 
 Options:
   -h, --help     Show this help

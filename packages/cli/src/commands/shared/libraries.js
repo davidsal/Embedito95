@@ -9,6 +9,7 @@ import {
 	UTF8,
 } from "embedito95-core";
 import { strategies } from "embedito95-registry/strategies";
+import { PACKAGE_PREFIX } from "../../constants.js";
 
 const REGISTRY_SOURCE_DIRECTORY = dirname(
 	dirname(fileURLToPath(import.meta.resolve("embedito95-registry/strategies"))),
@@ -20,6 +21,66 @@ export const getLibrarySourceDirectory = () => {
 
 export const getClientLibrarySourceDirectory = () => {
 	return join(REGISTRY_SOURCE_DIRECTORY, LIBRARIES_DIRECTORY_NAME);
+};
+
+const readRegistryLibrary = (sourceDirectory, entry) => {
+	const configurationPath = join(sourceDirectory, entry, CONFIG_FILE);
+
+	if (!existsSync(configurationPath)) {
+		return null;
+	}
+
+	const configuration = JSON.parse(readFileSync(configurationPath, UTF8));
+
+	return {
+		directoryName: entry,
+		packageName: configuration.package,
+		version: configuration.version,
+	};
+};
+
+const listLibrariesFrom = (sourceDirectory) => {
+	if (!existsSync(sourceDirectory)) {
+		return [];
+	}
+
+	return readdirSync(sourceDirectory)
+		.map((entry) => {
+			return readRegistryLibrary(sourceDirectory, entry);
+		})
+		.filter(Boolean);
+};
+
+export const listRegistryLibraries = () => {
+	return listLibrariesFrom(getClientLibrarySourceDirectory());
+};
+
+export const listCoreLibraries = () => {
+	return listLibrariesFrom(getLibrarySourceDirectory());
+};
+
+const getLibraryQueryNames = (library) => {
+	return [
+		library.directoryName,
+		library.packageName,
+		`${PACKAGE_PREFIX}${library.directoryName}`,
+	];
+};
+
+const matchesLibraryQuery = (library, normalizedQuery) => {
+	return getLibraryQueryNames(library).some((name) => {
+		return name.toLowerCase() === normalizedQuery;
+	});
+};
+
+export const findRegistryLibrary = (query) => {
+	const normalizedQuery = query.trim().toLowerCase();
+
+	return (
+		listRegistryLibraries().find((library) => {
+			return matchesLibraryQuery(library, normalizedQuery);
+		}) ?? null
+	);
 };
 
 const installLibrariesFrom = async ({

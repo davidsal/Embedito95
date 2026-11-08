@@ -17,11 +17,19 @@ import {
 import { platforms } from "embedito95-registry/platforms";
 import { cyan, red, write, writeErrorLine, yellow } from "../console.js";
 import { loadProjectConfiguration } from "./shared/config.js";
-import { copyClientLibraries, copyLibraries } from "./shared/libraries.js";
+import {
+	copyClientLibraries,
+	copyLibraries,
+	findRegistryLibrary,
+	listRegistryLibraries,
+} from "./shared/libraries.js";
 import { getCurrentWorkingDirectory } from "./shared/paths.js";
 import { confirm } from "./shared/prompt.js";
 
 const CURRENT_WORKING_DIRECTORY = getCurrentWorkingDirectory();
+const REQUESTED_LIBRARY_ARGUMENT_INDEX = 3;
+const LIBRARY_QUERY = process.argv[REQUESTED_LIBRARY_ARGUMENT_INDEX] ?? null;
+const AVAILABLE_LIBRARIES_LABEL = "  Available libraries: ";
 const CONFIGURATION_PATH = join(CURRENT_WORKING_DIRECTORY, CONFIG_FILE);
 const LIBRARIES_DIRECTORY = join(
 	CURRENT_WORKING_DIRECTORY,
@@ -130,8 +138,43 @@ const resolvePlatform = (configuration) => {
 	return selectedPlatform;
 };
 
+const listAvailableLibraryNames = () => {
+	return listRegistryLibraries()
+		.map((library) => {
+			return library.directoryName;
+		})
+		.join(", ");
+};
+
+const reportUnknownLibrary = (query) => {
+	writeErrorLine(`${red("✖")} Unknown library "${query}"`);
+	writeErrorLine(`${AVAILABLE_LIBRARIES_LABEL}${listAvailableLibraryNames()}`);
+};
+
+const registerRequestedLibrary = (configuration) => {
+	if (!LIBRARY_QUERY) {
+		return null;
+	}
+
+	const library = findRegistryLibrary(LIBRARY_QUERY);
+
+	if (!library) {
+		reportUnknownLibrary(LIBRARY_QUERY);
+		process.exit(1);
+	}
+
+	configuration.libraries = {
+		...(configuration.libraries ?? {}),
+		[library.packageName]: library.version,
+	};
+
+	return library;
+};
+
 export const run = async () => {
 	const configuration = readConfiguration();
+
+	const requestedLibrary = registerRequestedLibrary(configuration);
 
 	await removeUnregisteredLibraries(configuration);
 
@@ -158,5 +201,13 @@ export const run = async () => {
 		`${JSON.stringify(configuration, null, JSON_INDENTATION)}\n`,
 		UTF8,
 	);
+
+	if (requestedLibrary) {
+		write(
+			`${cyan("✔")} Library ${requestedLibrary.directoryName} installed: 🚀 Gotta blast!\n`,
+		);
+		return;
+	}
+
 	write(`${cyan("✔")} Libraries reinstalled: 🚀 Gotta blast!\n`);
 };
