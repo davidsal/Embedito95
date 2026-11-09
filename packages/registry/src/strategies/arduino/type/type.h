@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+_e95_replace_f64Include
 using u64 = uint64_t;
 using i8 = int8_t;
 using i16 = int16_t;

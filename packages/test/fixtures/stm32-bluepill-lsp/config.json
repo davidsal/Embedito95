@@ -1,0 +1,8 @@
+{
+	"name": "stm32-bluepill-lsp",
+	"type": "project",
+	"embedito95Version": "embedito95@0.1.0",
+	"platform": "stm32-bluepill",
+	"core": {},
+	"libraries": {}
+}

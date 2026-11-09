@@ -24,7 +24,7 @@ struct u128 {
 	operator i64() const { return (i64)lo; }
 	operator u64() const { return lo; }
 	operator f32() const;
-	operator double() const;
+	operator f64() const;
 };
 
 struct i128 {
@@ -51,7 +51,7 @@ struct i128 {
 	operator i64() const { return (i64)value.lo; }
 	operator u64() const { return value.lo; }
 	operator f32() const;
-	operator double() const;
+	operator f64() const;
 };
 
 // u128 operators

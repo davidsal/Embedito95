@@ -25,6 +25,7 @@ template<typename T> struct nullable {
 	T value;
 };
 
+_e95_replace_f64Include
 #include <core_array.h>
 #include <core_int128.h>
 #include <core_string.h>

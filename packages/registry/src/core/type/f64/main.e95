@@ -1,0 +1,9 @@
+// The `f64` sub-library backs the 64-bit floating point type on targets whose
+// compiler `double` is narrower than 64 bits. It has no callable API: programs
+// use `f64` as a native language type without importing it.
+//
+// Under the hood it generates `core_f64.h`/`core_f64.cpp`, which implement
+// IEEE-754 binary64 by software: the raw 64-bit pattern is stored and all
+// arithmetic (`+`, `-`, `*`, `/`), comparisons and integer/`f32` conversions are
+// performed on the bits. Platforms with a native 64-bit `double` do not emit
+// this library and `f64` stays an alias of the compiler `double`.

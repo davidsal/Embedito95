@@ -3,7 +3,7 @@
 #include <core_type.h>
 
 f32 combine(f32 a, f32 b) {
-	return (a * 2.0) + b;
+	return (a * 2.0f) + b;
 }
 
 void setup() {

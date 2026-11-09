@@ -38,6 +38,48 @@ const scanDigits = (source, position, column) => {
 	return { value, position, column };
 };
 
+const isExponentMarker = (character) => {
+	return character === "e" || character === "E";
+};
+
+const scanExponent = (source, position, column) => {
+	if (!isExponentMarker(source[position])) {
+		return { value: "", position, column };
+	}
+	let currentPosition = position + 1;
+	let currentColumn = column + 1;
+	const sign = source[currentPosition];
+	if (sign === "+" || sign === "-") {
+		currentPosition++;
+		currentColumn++;
+	}
+	if (!/[0-9]/.test(source[currentPosition])) {
+		return { value: "", position, column };
+	}
+	let value = source.slice(position, currentPosition);
+	while (
+		currentPosition < source.length &&
+		/[0-9]/.test(source[currentPosition])
+	) {
+		value += source[currentPosition];
+		currentPosition++;
+		currentColumn++;
+	}
+	return { value, position: currentPosition, column: currentColumn };
+};
+
+const scanNumberBody = (source, position, column) => {
+	const digits = scanDigits(source, position, column);
+	const exponent = scanExponent(source, digits.position, digits.column);
+	return {
+		value: `${digits.value}${exponent.value}`,
+		hasExponent: exponent.value.length > 0,
+		digitsPosition: digits.position,
+		position: exponent.position,
+		column: exponent.column,
+	};
+};
+
 export const makeToken = (type, value, line, column) => {
 	return {
 		type,
@@ -195,7 +237,7 @@ export const scanNegativeNumber = (source, position, line, column, tokens) => {
 		return null;
 	}
 	const startColumn = column;
-	const result = scanDigits(source, position + 1, column + 1);
+	const result = scanNumberBody(source, position + 1, column + 1);
 	tokens.push(
 		makeToken(TOKEN_TYPE.number, `-${result.value}`, line, startColumn),
 	);
@@ -283,15 +325,16 @@ export const scanNumber = (source, position, line, column, tokens) => {
 		return null;
 	}
 	const startColumn = column;
-	const digits = scanDigits(source, position, column);
+	const body = scanNumberBody(source, position, column);
 
 	if (
-		digits.position < source.length &&
-		isIdentifierStart(source[digits.position])
+		!body.hasExponent &&
+		body.digitsPosition < source.length &&
+		isIdentifierStart(source[body.digitsPosition])
 	) {
-		let value = digits.value;
-		let currentPosition = digits.position;
-		let currentColumn = digits.column;
+		let value = body.value;
+		let currentPosition = body.digitsPosition;
+		let currentColumn = body.column;
 		while (
 			currentPosition < source.length &&
 			isIdentifierContinue(source[currentPosition])
@@ -308,11 +351,11 @@ export const scanNumber = (source, position, line, column, tokens) => {
 			stop: false,
 		};
 	}
-	tokens.push(makeToken(TOKEN_TYPE.number, digits.value, line, startColumn));
+	tokens.push(makeToken(TOKEN_TYPE.number, body.value, line, startColumn));
 	return {
-		position: digits.position,
+		position: body.position,
 		line,
-		column: digits.column,
+		column: body.column,
 		stop: false,
 	};
 };

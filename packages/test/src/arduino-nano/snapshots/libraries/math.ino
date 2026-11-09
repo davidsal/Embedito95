@@ -51,7 +51,7 @@ f32 testFloatMath() {
 }
 
 f32 testLogarithms() {
-	const f32 natural = core_math::naturalLog(2.7182817);
+	const f32 natural = core_math::naturalLog(2.7182817f);
 	const f32 decimal = core_math::logarithm10(100.0f);
 	const f32 raised = core_math::exponential(1.0f);
 	return (natural + decimal) + raised;

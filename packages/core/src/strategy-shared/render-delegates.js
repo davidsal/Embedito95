@@ -13,6 +13,7 @@ import { isFloatType } from "./c-types.js";
 import { castOperand } from "./cast.js";
 import { renderCondition, renderLogicalValue } from "./condition-render.js";
 import { renderExpression } from "./expression.js";
+import { formatFloat64Literal } from "./float-format.js";
 import {
 	expressionDataType,
 	makeThisFieldResolver,
@@ -27,10 +28,16 @@ export const renderLiteral = (node, context) => {
 		return `nullable<u8>{ true, 0 }`;
 	}
 	if (typeof value === "boolean") {
+		if (context?.floatContext === DATA_TYPE.f64 && context?.float64Software) {
+			return `(f64)(${value ? "true" : "false"})`;
+		}
 		return value ? "true" : "false";
 	}
 	if (typeof value === "string") {
 		if (node.quote === "'") {
+			if (context?.floatContext === DATA_TYPE.f64 && context?.float64Software) {
+				return `(f64)('${value}')`;
+			}
 			return `'${value}'`;
 		}
 		return context.renderStringLiteral(value);
@@ -41,12 +48,25 @@ export const renderLiteral = (node, context) => {
 				return `${String(value)}.0f`;
 			}
 			if (context?.floatContext === DATA_TYPE.f64) {
-				return `${String(value)}.0`;
+				return formatFloat64Literal(value, context.float64Software);
 			}
 			return raw ?? String(value);
 		}
 		const text = raw ?? String(value);
-		return resolveLiteralDataType(node) === DATA_TYPE.f32 ? `${text}f` : text;
+		if (context?.floatContext === DATA_TYPE.f32) {
+			return `${text}f`;
+		}
+		if (context?.floatContext === DATA_TYPE.f64) {
+			return context.float64Software ? formatFloat64Literal(value, true) : text;
+		}
+		const literalType = resolveLiteralDataType(node);
+		if (literalType === DATA_TYPE.f32) {
+			return `${text}f`;
+		}
+		if (literalType === DATA_TYPE.f64 && context?.float64Software) {
+			return formatFloat64Literal(value, true);
+		}
+		return text;
 	}
 	return raw ?? String(value);
 };

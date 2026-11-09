@@ -87,7 +87,7 @@ static void _e95_divmod128(
 		remainder.lo |= _e95_shiftRight(dividend, bit).lo & 1;
 		if (divisor <= remainder) {
 			remainder = remainder - divisor;
-			if (bit >= U64_BIT_COUNT) {
+			if (bit >= (i8)U64_BIT_COUNT) {
 				quotient.hi |= 1ULL << (bit - U64_BIT_COUNT);
 			} else {
 				quotient.lo |= 1ULL << bit;
@@ -100,34 +100,39 @@ static boolean _e95_isNegative(i128 a) {
 	return (a.value.hi >> (U64_BIT_COUNT - 1)) != 0;
 }
 
-const double TWO_64 = 18446744073709551616.0;
-
-static double _e95_u128ToDouble(u128 value) {
-	return (double)value.hi * TWO_64 + (double)value.lo;
+// 2^64 is an exact power of two in native binary64 and in the 32-bit `double`
+// of AVR, but it does not fit in `unsigned long long`; keeping the value as a
+// floating literal avoids the truncation to zero on AVR/ARM targets.
+static f64 _e95_twoTo64() {
+	return (f64)18446744073709551616.0;
 }
 
-static double _e95_i128ToDouble(i128 value) {
+static f64 _e95_u128ToFloat64(u128 value) {
+	return (f64)value.hi * _e95_twoTo64() + (f64)value.lo;
+}
+
+static f64 _e95_i128ToFloat64(i128 value) {
 	if (_e95_isNegative(value)) {
 		u128 magnitude = _e95_negateU128(value.value);
-		return -((double)magnitude.hi * TWO_64 + (double)magnitude.lo);
+		return -((f64)magnitude.hi * _e95_twoTo64() + (f64)magnitude.lo);
 	}
-	return (double)value.value.hi * TWO_64 + (double)value.value.lo;
+	return (f64)value.value.hi * _e95_twoTo64() + (f64)value.value.lo;
 }
 
 u128::operator f32() const {
-	return (f32)_e95_u128ToDouble(*this);
+	return (f32)_e95_u128ToFloat64(*this);
 }
 
-u128::operator double() const {
-	return _e95_u128ToDouble(*this);
+u128::operator f64() const {
+	return _e95_u128ToFloat64(*this);
 }
 
 i128::operator f32() const {
-	return (f32)_e95_i128ToDouble(*this);
+	return (f32)_e95_i128ToFloat64(*this);
 }
 
-i128::operator double() const {
-	return _e95_i128ToDouble(*this);
+i128::operator f64() const {
+	return _e95_i128ToFloat64(*this);
 }
 
 u128 operator+(u128 a, u128 b) {

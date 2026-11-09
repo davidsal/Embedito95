@@ -142,7 +142,7 @@ export const renderTypedObjectLiteral = (node, typeName, context, lines) => {
 			const entry = resolveOptionalEntry(definition.type, context);
 			const value = hasValue
 				? providedValues[fieldName]
-				: renderOptionalZero(entry);
+				: renderOptionalZero(entry, context.float64Software);
 			values.push(
 				`${optionalName(entry.ctype)}{ ${hasValue ? "false" : "true"}, ${value} }`,
 			);

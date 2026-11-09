@@ -223,6 +223,7 @@ export const run = async () => {
 		usedLibraries,
 		strategy.name,
 		CURRENT_WORKING_DIRECTORY,
+		platform,
 	);
 
 	const buildDirectory = prepareBuildDirectory(projectName);

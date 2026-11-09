@@ -26,6 +26,7 @@ import {
 	renderFoldedValue,
 	resolveMemberReceiverType,
 } from "./expression.js";
+import { formatFloat64Literal } from "./float-format.js";
 import { renderTypedObjectLiteral } from "./object-literal-render.js";
 import {
 	renderOptionalNull,
@@ -38,6 +39,13 @@ import {
 	makeThisFieldResolver,
 	makeThisMethodResolver,
 } from "./type-resolve.js";
+
+const renderDefaultInitializer = (variableType, context) => {
+	if (variableType === DATA_TYPE.f64 && context.float64Software) {
+		return formatFloat64Literal(0, true);
+	}
+	return "0";
+};
 
 const resolveObjectAssignmentHandleTarget = (
 	targetType,
@@ -72,7 +80,11 @@ const renderNullableStoredValue = (
 		rhsType &&
 		!isNullableType(rhsType);
 	return wrapsNonNullValue
-		? renderOptionalWrap(resolveOptionalEntry(targetType, context), stored)
+		? renderOptionalWrap(
+				resolveOptionalEntry(targetType, context),
+				stored,
+				context.float64Software,
+			)
 		: null;
 };
 
@@ -144,7 +156,10 @@ export const renderVariableDeclaration = (node, context, lines) => {
 		: null;
 	const nullInit =
 		isNullLiteralNode(declaration?.init) && isNullableType(variableType)
-			? renderOptionalNull(resolveOptionalEntry(variableType, context))
+			? renderOptionalNull(
+					resolveOptionalEntry(variableType, context),
+					context.float64Software,
+				)
 			: null;
 	const objectStorageFields = isObjectShapeType(variableType)
 		? (decodeObjectShape(variableType) ?? null)
@@ -159,9 +174,13 @@ export const renderVariableDeclaration = (node, context, lines) => {
 			? typedObjectLiteralInit
 			: declaration?.init
 				? foldedValue !== null
-					? renderFoldedValue(foldedValue, variableType)
+					? renderFoldedValue(
+							foldedValue,
+							variableType,
+							context.float64Software,
+						)
 					: renderGroupedExpression(declaration.init, context, lines)
-				: "0");
+				: renderDefaultInitializer(variableType, context));
 	const handleWrappedInit =
 		typedObjectLiteralInit !== null && context.isObjectHandle?.(variableType)
 			? `${context.toCType(variableType)}(${context.objectStorageCType(variableType)}${typedObjectLiteralInit})`
@@ -211,7 +230,7 @@ export const renderForInit = (node, context, lines) => {
 		const variableType = memberEnum ?? resolvedType;
 		const renderedInit = declaration?.init
 			? renderGroupedExpression(declaration.init, context, lines)
-			: "0";
+			: renderDefaultInitializer(variableType, context);
 		const rhsType = declaration?.init
 			? expressionDataType(
 					declaration.init,
@@ -272,12 +291,12 @@ const renderNullableAssignmentValue = (node, stored, rhsType, context) => {
 	}
 	const entry = resolveOptionalEntry(targetType, context);
 	if (isNullLiteralNode(node.right)) {
-		return renderOptionalNull(entry);
+		return renderOptionalNull(entry, context.float64Software);
 	}
 	if (!rhsType || isNullableType(rhsType)) {
 		return null;
 	}
-	return renderOptionalWrap(entry, stored);
+	return renderOptionalWrap(entry, stored, context.float64Software);
 };
 
 // Renders `target <op> value` using the declared type of the target. A plain

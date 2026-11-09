@@ -21,6 +21,8 @@ import {
 	WORD_TYPES,
 } from "./types.js";
 
+const FLOAT_EXPONENT_PATTERN = /[eE]/;
+
 export const resolveWordDataType = (wordSize) => {
 	return wordSize >= 32 ? DATA_TYPE.i32 : DATA_TYPE.i16;
 };
@@ -118,6 +120,13 @@ export const resolveLiteralDataType = (node) => {
 	}
 	if (node.quote === QUOTE_DOUBLE) {
 		return DATA_TYPE.string;
+	}
+	if (
+		typeof node.value === "number" &&
+		typeof node.raw === "string" &&
+		FLOAT_EXPONENT_PATTERN.test(node.raw)
+	) {
+		return resolveFloatType(node.value);
 	}
 	if (
 		typeof node.value === "number" &&
