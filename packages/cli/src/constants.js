@@ -14,6 +14,9 @@ export const DOCS_VERSION_FILE = "VERSION";
 export const EXCLUDED_DOC_FILES = new Set(["development.md"]);
 export const AGENTS_FILE_NAME = "AGENTS.md";
 
+// Process
+export const BROKEN_PIPE_ERROR_CODE = "EPIPE";
+
 // Build
 export const LIB_PREFIX = "lib_";
 export const INTERMEDIATE_DIRECTORY_NAME = "intermediate";

@@ -5,7 +5,23 @@ import {
 	isTruncationWarning,
 	SEVERITY,
 } from "embedito95-core";
-import { CSI, HIDE_CURSOR, SHOW_CURSOR } from "./constants.js";
+import {
+	BROKEN_PIPE_ERROR_CODE,
+	CSI,
+	HIDE_CURSOR,
+	SHOW_CURSOR,
+} from "./constants.js";
+
+const exitOnBrokenPipe = (error) => {
+	if (error.code === BROKEN_PIPE_ERROR_CODE) {
+		process.exit(0);
+	}
+
+	throw error;
+};
+
+stdout.on("error", exitOnBrokenPipe);
+stderr.on("error", exitOnBrokenPipe);
 
 const makeStyle = (openCode, closeCode, stream) => {
 	return (text) => {
