@@ -42,5 +42,9 @@
 	"dependencies": {
 		"embedito95-core": "workspace:*",
 		"embedito95-registry": "workspace:*"
-	}
+	},
+	"bundledDependencies": [
+		"embedito95-core",
+		"embedito95-registry"
+	]
 }

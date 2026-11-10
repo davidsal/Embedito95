@@ -2,6 +2,7 @@
   "packages": [
     "packages/*"
   ],
+  "nodeLinker": "hoisted",
   "allowBuilds": {
     "esbuild": true,
     "@vscode/vsce-sign": true,
