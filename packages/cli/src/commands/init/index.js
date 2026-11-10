@@ -20,18 +20,20 @@ import {
 	GITIGNORE_CONTENT,
 	HEADER_BORDER_PADDING,
 	HEADER_BOX_WIDTH,
-	PACKAGE_FILE,
 	PACKAGE_PREFIX,
 	TEMPLATE_LIBRARY_FILE,
 	TEMPLATE_PROJECT_FILE,
+	VERSION_PREFIX,
 } from "../../constants.js";
+import { CLI_VERSION } from "../shared/cli-package.js";
 import { copyLibraries } from "../shared/libraries.js";
-import { CLI_DIRECTORY, getCurrentWorkingDirectory } from "../shared/paths.js";
+import { getCurrentWorkingDirectory } from "../shared/paths.js";
 import { input, select } from "../shared/prompt.js";
 import {
 	ensurePlatformRequirements,
 	isAnyUnsatisfied,
 } from "../shared/requirements.js";
+import { resolveProjectToolchainVersion } from "../shared/version.js";
 import { buildAgentsDocument } from "./agents-template.js";
 import { copyProjectDocumentation } from "./project-docs.js";
 
@@ -42,9 +44,6 @@ const ENVIRONMENT_OK_MESSAGE = "Toolchain ready";
 const ENVIRONMENT_NOT_READY_MESSAGE = "Toolchain not ready";
 const ENVIRONMENT_MISSING_MESSAGE =
 	"Some requirements are missing. Run 'doctor' to fix them";
-const CLI_PACKAGE = JSON.parse(
-	readFileSync(join(CLI_DIRECTORY, PACKAGE_FILE), UTF8),
-);
 
 const isNameValid = (name) => {
 	return /^[a-zA-Z0-9_-]+$/.test(name);
@@ -102,7 +101,7 @@ const runEnvironmentCheck = async ({ platform }) => {
 };
 
 const makeHeader = () => {
-	const left = `v${CLI_PACKAGE.version}`;
+	const left = `v${CLI_VERSION}`;
 	const right = "GT ♥";
 	const padding =
 		HEADER_BOX_WIDTH - left.length - right.length - HEADER_BORDER_PADDING;
@@ -139,11 +138,16 @@ const resolveProjectPath = (projectName, projectRoot) => {
 	return join(CURRENT_WORKING_DIRECTORY, projectName);
 };
 
-export const buildConfiguration = (projectName, platformName, isLibrary) => {
+export const buildConfiguration = (
+	projectName,
+	platformName,
+	isLibrary,
+	toolchainVersion = CLI_VERSION,
+) => {
 	const configuration = {
 		name: projectName,
 		type: isLibrary ? LIBRARY_PROJECT_TYPE : PROJECT_TYPE,
-		embedito95Version: `embedito95@${CLI_PACKAGE.version}`,
+		embedito95Version: `${VERSION_PREFIX}${toolchainVersion}`,
 	};
 
 	if (isLibrary) {
@@ -226,7 +230,7 @@ const writeScaffoldFiles = (
 		buildAgentsDocument({ platform }),
 		UTF8,
 	);
-	copyProjectDocumentation(projectPath, CLI_PACKAGE.version);
+	copyProjectDocumentation(projectPath, CLI_VERSION);
 };
 
 export const run = async () => {
@@ -249,10 +253,15 @@ export const run = async () => {
 	const environmentReady = platform
 		? await runEnvironmentCheck({ platform })
 		: true;
+	const toolchainVersion = resolveProjectToolchainVersion({
+		isLibrary: IS_LIBRARY,
+		projectRoot,
+	});
 	const configuration = buildConfiguration(
 		projectName,
 		platformName,
 		IS_LIBRARY,
+		toolchainVersion,
 	);
 
 	mkdirSync(projectPath, { recursive: true });

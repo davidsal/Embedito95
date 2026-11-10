@@ -9,6 +9,7 @@ import {
 	shared,
 	UTF8,
 } from "embedito95-core";
+import { CLI_VERSION } from "../cli/src/commands/shared/cli-package.js";
 
 const PACKAGE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(PACKAGE_DIRECTORY, "../..");
@@ -124,7 +125,7 @@ export const GITIGNORE_CONTENT = `${BUILD_DIRECTORY_NAME}\n${CORE_LIBRARIES_DIRE
 export const TEST_ENTRY_SUFFIX_PATTERN = /\.test\.e95$/;
 export const ENTRY_SUFFIX_PATTERN = /\.e95$/;
 
-export const EMBEDITO95_PROJECT_VERSION = "embedito95@0.1.0";
+export const EMBEDITO95_PROJECT_VERSION = `embedito95@${CLI_VERSION}`;
 export const NODE_EXECUTABLE = "node";
 export const INSTALL_COMMAND = "install";
 export const BUILD_COMMAND = "build";

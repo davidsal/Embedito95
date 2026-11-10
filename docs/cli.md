@@ -214,7 +214,7 @@ always matches the CLI version. Add `--verbose` to see the raw editor output.
 | --- | --- |
 | `name` | Project name, also used for the `build/<name>/` folder. |
 | `type` | `project` or `library`. |
-| `embedito95Version` | Toolchain version that created the project. `docs/` matches it. |
+| `embedito95Version` | Toolchain version the project is pinned to. `docs/` matches it, and the CLI delegates to it when it differs from the running version. |
 | `platform` | Target board. |
 | `core` | Package names of the core libraries installed for that platform. Maintained by the CLI. |
 | `libraries` | Package names of the libraries to install from the registry. Edit this to add or remove. |
@@ -222,3 +222,49 @@ always matches the CLI version. Add `--verbose` to see the raw editor output.
 `core` and `libraries` are lists of package names, not versions: the library
 version is fixed by `embedito95Version`, so libraries are not versioned
 separately.
+
+## Toolchain version delegation
+
+When you run a command inside a project, the CLI reads `embedito95Version` from
+`config.json` and compares it with the version that is running. If they match,
+the project has no `config.json`, or `config.json` has no valid
+`embedito95Version`, the command runs normally and prints nothing extra.
+
+If they differ, the CLI prints one line to `stderr` and re-runs the pinned
+version with the same arguments:
+
+```text
+Using embedito95-cli@1.0.0 (project pin)
+```
+
+Internally it runs `npx --yes embedito95-cli@1.0.0 <your arguments>` (through
+`cmd.exe /c` on Windows) with inherited stdio and forwards the child exit code. The first delegation may
+download the pinned version; `npx` caches it, so later runs do not need the
+network. In a monorepo, run each command from the project you want: every
+`config.json` delegates to its own `embedito95Version`.
+
+If the pinned version cannot start at all (the `npx` process cannot be spawned),
+the CLI exits with an error instead of silently running the wrong version, and
+prints the manual command:
+
+```text
+Could not start embedito95-cli@1.0.0 for this project. Run 'npx embedito95-cli@1.0.0 build' manually, or pass --force to use the running CLI.
+```
+
+If `npx` does start but fails (for example the version is unpublished, or the
+network is unavailable with no cache), its `stderr` and exit code are forwarded
+unchanged.
+
+A child process started this way sets `EMBEDITO95_DELEGATED=1` so it never
+delegates again.
+
+To run the current CLI deliberately, pass `--force` or set
+`EMBEDITO95_SKIP_VERSION_CHECK=1`:
+
+```sh
+npx embedito95-cli build --force
+EMBEDITO95_SKIP_VERSION_CHECK=1 npx embedito95-cli build
+```
+
+`--force` is consumed by the CLI and never reaches the command or the delegated
+invocation.
