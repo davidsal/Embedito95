@@ -6,7 +6,7 @@
   "scripts": {
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "changeset publish",
+    "release": "pnpm --filter embedito95-cli publish",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome check",
     "lint:fix": "biome check --write",
