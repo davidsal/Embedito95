@@ -1,5 +1,11 @@
 # embedito95-cli
 
+## 1.0.2
+
+### Patch Changes
+
+- 9d1ee2e: Resolve workspace protocols in bundled manifests so upgrading the CLI no longer fails with `EUNSUPPORTEDPROTOCOL`.
+
 ## 1.0.1
 
 ### Patch Changes
