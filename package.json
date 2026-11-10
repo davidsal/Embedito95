@@ -4,6 +4,10 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish",
+    "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "format": "biome format --write",
@@ -14,7 +18,7 @@
     "test:runtime": "pnpm run --filter @embedito95/test test:runtime",
     "test:run": "pnpm run --filter @embedito95/test test:run",
     "docs:sync": "node packages/cli/scripts/sync-docs.js",
-    "prepare": "node packages/cli/scripts/sync-docs.js",
+    "prepare": "node packages/cli/scripts/sync-docs.js && git config core.hooksPath .githooks || true",
     "embedito95-cli": "node packages/cli/src/cli.js",
     "lsp:install": "pnpm run --filter @embedito95/lsp build && node packages/lsp-vscode/build.mjs && cd packages/lsp-vscode && echo y | npx vsce package --allow-missing-repository --no-dependencies && code --install-extension embedito95-*.vsix"
   },
@@ -23,6 +27,7 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.4"
+    "@biomejs/biome": "^2.5.4",
+    "@changesets/cli": "^3.0.3"
   }
 }
