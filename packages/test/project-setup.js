@@ -22,7 +22,6 @@ import { listEntryFiles, listSubdirectories } from "./case-discovery.js";
 import {
 	BUILD_COMMAND,
 	CLI_PATH,
-	DEFAULT_LIBRARY_VERSION,
 	EMBEDITO95_PROJECT_VERSION,
 	GITIGNORE_CONTENT,
 	GITIGNORE_FILE,
@@ -44,11 +43,11 @@ export const listLibraryNames = () => {
 };
 
 const copyLibraries = async (projectDirectory, platform) => {
-	const configurationLibraries = {};
+	const configurationLibraries = [];
 	const enumStyle = strategies[platform.strategy]?.enumStyle;
 
 	for (const libraryName of listLibraryNames()) {
-		const { packageName, packageVersion } = await installLibrary({
+		const { packageName } = await installLibrary({
 			sourceDirectory: REGISTRY_LIBRARIES_DIRECTORY,
 			libraryName,
 			projectPath: projectDirectory,
@@ -56,8 +55,8 @@ const copyLibraries = async (projectDirectory, platform) => {
 			enumStyle,
 		});
 
-		if (packageName && packageVersion) {
-			configurationLibraries[packageName] = packageVersion;
+		if (packageName) {
+			configurationLibraries.push(packageName);
 		}
 	}
 
@@ -89,7 +88,7 @@ const listProjectLibraries = () => {
 		);
 	});
 
-	const projectLibraries = {};
+	const projectLibraries = [];
 	for (const libraryName of clientLibraryNames) {
 		const configurationPath = join(
 			REGISTRY_CLIENT_LIBRARIES_DIRECTORY,
@@ -100,8 +99,7 @@ const listProjectLibraries = () => {
 			readFileSync(configurationPath, UTF8),
 		);
 		if (libraryConfiguration.package) {
-			projectLibraries[libraryConfiguration.package] =
-				libraryConfiguration.version ?? DEFAULT_LIBRARY_VERSION;
+			projectLibraries.push(libraryConfiguration.package);
 		}
 	}
 
@@ -111,7 +109,7 @@ const listProjectLibraries = () => {
 const writeProjectConfiguration = (
 	projectDirectory,
 	platformName,
-	libraryVersions,
+	corePackageNames,
 	projectLibraries,
 ) => {
 	const configuration = {
@@ -119,7 +117,7 @@ const writeProjectConfiguration = (
 		type: PROJECT_TYPE,
 		embedito95Version: EMBEDITO95_PROJECT_VERSION,
 		platform: platformName,
-		core: libraryVersions,
+		core: corePackageNames,
 		libraries: projectLibraries,
 	};
 
@@ -143,13 +141,13 @@ export const createProject = async (temporaryDirectory, platformName) => {
 		pathToFileURL(join(REGISTRY_PLATFORMS_DIRECTORY, `${platformName}.js`))
 	);
 	const platform = platformModule.platform;
-	const libraryVersions = await copyLibraries(projectDirectory, platform);
+	const corePackageNames = await copyLibraries(projectDirectory, platform);
 	const projectLibraries = listProjectLibraries();
 
 	writeProjectConfiguration(
 		projectDirectory,
 		platformName,
-		libraryVersions,
+		corePackageNames,
 		projectLibraries,
 	);
 

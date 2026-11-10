@@ -180,7 +180,6 @@ export const installLibrary = async ({
 		readFileSync(join(libraryDirectory, CONFIG_FILE), UTF8),
 	);
 	const packageName = libraryConfiguration.package;
-	const packageVersion = libraryConfiguration.version;
 
 	const projectLibraryPath = join(
 		projectPath,
@@ -224,7 +223,7 @@ export const installLibrary = async ({
 		});
 	}
 
-	return { packageName, packageVersion };
+	return { packageName };
 };
 
 const loadConfigPlatform = async (projectDir) => {

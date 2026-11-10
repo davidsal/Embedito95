@@ -1,3 +1,4 @@
+export { appendPackageName, readPackageNames } from "./configuration.js";
 export {
 	findEnclosingProjectRoot,
 	installLibrary,

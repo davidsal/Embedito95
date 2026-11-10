@@ -7,11 +7,13 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
+	appendPackageName,
 	CONFIG_FILE,
 	CORE_LIBRARIES_DIRECTORY_NAME,
 	JSON_INDENTATION,
 	LIBRARIES_DIRECTORY_NAME,
 	PROJECT_TYPE,
+	readPackageNames,
 	UTF8,
 } from "embedito95-core";
 import { platforms } from "embedito95-registry/platforms";
@@ -61,7 +63,7 @@ const listUnregisteredLibraries = (configuration) => {
 	}
 
 	const projectLibraryPackages = new Set(
-		Object.keys(configuration.libraries ?? {}),
+		readPackageNames(configuration.libraries),
 	);
 	const unregisteredLibraries = [];
 
@@ -93,6 +95,9 @@ const readConfiguration = () => {
 		writeErrorLine(`${red("✖")} Cannot install libraries: not a project`);
 		process.exit(1);
 	}
+
+	configuration.core = readPackageNames(configuration.core);
+	configuration.libraries = readPackageNames(configuration.libraries);
 
 	return configuration;
 };
@@ -163,10 +168,10 @@ const registerRequestedLibrary = (configuration) => {
 		process.exit(1);
 	}
 
-	configuration.libraries = {
-		...(configuration.libraries ?? {}),
-		[library.packageName]: library.version,
-	};
+	configuration.libraries = appendPackageName(
+		configuration.libraries,
+		library.packageName,
+	);
 
 	return library;
 };
@@ -182,7 +187,7 @@ export const run = async () => {
 
 	const selectedPlatform = resolvePlatform(configuration);
 
-	configuration.core = {};
+	configuration.core = [];
 
 	await copyLibraries(
 		CURRENT_WORKING_DIRECTORY,

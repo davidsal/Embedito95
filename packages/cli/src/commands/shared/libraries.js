@@ -2,10 +2,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	appendPackageName,
 	CONFIG_FILE,
 	CORE_LIBRARIES_DIRECTORY_NAME,
 	installLibrary,
 	LIBRARIES_DIRECTORY_NAME,
+	readPackageNames,
 	UTF8,
 } from "embedito95-core";
 import { strategies } from "embedito95-registry/strategies";
@@ -35,7 +37,6 @@ const readRegistryLibrary = (sourceDirectory, entry) => {
 	return {
 		directoryName: entry,
 		packageName: configuration.package,
-		version: configuration.version,
 	};
 };
 
@@ -91,10 +92,10 @@ const installLibrariesFrom = async ({
 	destinationDirectoryName,
 	registeredPackages = null,
 }) => {
-	const installedLibraries = {};
+	const installedPackages = [];
 
 	if (!existsSync(sourceDirectory)) {
-		return installedLibraries;
+		return installedPackages;
 	}
 
 	for (const entry of readdirSync(sourceDirectory)) {
@@ -114,7 +115,7 @@ const installLibrariesFrom = async ({
 			}
 		}
 
-		const { packageName, packageVersion } = await installLibrary({
+		const { packageName } = await installLibrary({
 			sourceDirectory,
 			libraryName: entry,
 			projectPath,
@@ -123,12 +124,12 @@ const installLibrariesFrom = async ({
 			destinationDirectoryName,
 		});
 
-		if (packageName && packageVersion) {
-			installedLibraries[packageName] = packageVersion;
+		if (packageName) {
+			installedPackages.push(packageName);
 		}
 	}
 
-	return installedLibraries;
+	return installedPackages;
 };
 
 export const copyLibraries = async (
@@ -136,7 +137,7 @@ export const copyLibraries = async (
 	configuration,
 	selectedPlatform,
 ) => {
-	const installedLibraries = await installLibrariesFrom({
+	const installedPackages = await installLibrariesFrom({
 		sourceDirectory: getLibrarySourceDirectory(),
 		projectPath,
 		platform: selectedPlatform,
@@ -144,10 +145,10 @@ export const copyLibraries = async (
 		destinationDirectoryName: CORE_LIBRARIES_DIRECTORY_NAME,
 	});
 
-	for (const [packageName, packageVersion] of Object.entries(
-		installedLibraries,
-	)) {
-		configuration.core[packageName] = packageVersion;
+	configuration.core = readPackageNames(configuration.core);
+
+	for (const packageName of installedPackages) {
+		configuration.core = appendPackageName(configuration.core, packageName);
 	}
 };
 
@@ -156,11 +157,9 @@ export const copyClientLibraries = async (
 	configuration,
 	selectedPlatform,
 ) => {
-	const registeredPackages = new Set(
-		Object.keys(configuration.libraries ?? {}),
-	);
+	const registeredPackages = new Set(readPackageNames(configuration.libraries));
 
-	const installedLibraries = await installLibrariesFrom({
+	const installedPackages = await installLibrariesFrom({
 		sourceDirectory: getClientLibrarySourceDirectory(),
 		projectPath,
 		platform: selectedPlatform,
@@ -169,9 +168,12 @@ export const copyClientLibraries = async (
 		registeredPackages,
 	});
 
-	for (const [packageName, packageVersion] of Object.entries(
-		installedLibraries,
-	)) {
-		configuration.libraries[packageName] = packageVersion;
+	configuration.libraries = readPackageNames(configuration.libraries);
+
+	for (const packageName of installedPackages) {
+		configuration.libraries = appendPackageName(
+			configuration.libraries,
+			packageName,
+		);
 	}
 };

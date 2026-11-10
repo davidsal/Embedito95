@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { UTF8 } from "embedito95-core";
 import {
+	DOCS_DIRECTORIES,
 	LINT_FIX_SCRIPT_NAME,
 	LINT_SCRIPT_NAME,
 	ROOT_PACKAGE_FILE,
@@ -26,6 +28,44 @@ const scriptRewritesFiles = (scripts, scriptName) => {
 	return scripts[scriptName].includes(WRITE_FLAG);
 };
 
+// Docs must show `core` and `libraries` as lists of package names. A JSON
+// object such as `"core": { ... }` means libraries are versioned separately
+// again, which T-011 removed.
+const OBJECT_CONFIGURATION_PATTERN = /"(?:core|libraries)"\s*:\s*\{/;
+const MARKDOWN_EXTENSION = ".md";
+
+const findObjectConfigurationMatches = (filePath) => {
+	const lines = readFileSync(filePath, UTF8).split("\n");
+
+	return lines.flatMap((line, lineIndex) => {
+		if (!OBJECT_CONFIGURATION_PATTERN.test(line)) {
+			return [];
+		}
+		return [`${filePath}:${lineIndex + 1}`];
+	});
+};
+
+const collectDocObjectConfigurationMatches = () => {
+	const matches = [];
+
+	for (const docsDirectory of DOCS_DIRECTORIES) {
+		if (!existsSync(docsDirectory)) {
+			continue;
+		}
+
+		for (const fileName of readdirSync(docsDirectory)) {
+			if (!fileName.endsWith(MARKDOWN_EXTENSION)) {
+				continue;
+			}
+			matches.push(
+				...findObjectConfigurationMatches(join(docsDirectory, fileName)),
+			);
+		}
+	}
+
+	return matches;
+};
+
 export const runLintPolicyChecks = () => {
 	const scripts = readRootPackageScripts();
 
@@ -41,6 +81,11 @@ export const runLintPolicyChecks = () => {
 			isScriptDefined(scripts, LINT_FIX_SCRIPT_NAME) &&
 				scriptRewritesFiles(scripts, LINT_FIX_SCRIPT_NAME),
 			true,
+		),
+		expectEqual(
+			"docs list core and libraries as package-name arrays without a version map",
+			collectDocObjectConfigurationMatches().join("\n"),
+			"",
 		),
 	];
 };

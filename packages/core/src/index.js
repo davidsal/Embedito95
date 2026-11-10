@@ -72,6 +72,7 @@ export { tokenize } from "./lexer/index.js";
 export { formatDiagnosticMessage } from "./messages.js";
 export { parse } from "./parser/index.js";
 export {
+	appendPackageName,
 	collectLibraryEnumInfo,
 	collectLibraryModuleInfo,
 	excludeLibrary,
@@ -81,6 +82,7 @@ export {
 	loadProjectEngine,
 	loadProjectLibraries,
 	mergeModuleLibraries,
+	readPackageNames,
 } from "./project/index.js";
 export * as shared from "./strategy-shared/index.js";
 export {

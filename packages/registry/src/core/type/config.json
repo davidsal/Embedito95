@@ -1,8 +1,6 @@
 {
 	"type": "library",
-	"embedito95Version": "embedito95@0.1.0",
 	"name": "type",
 	"package": "@embedito95/type",
-	"version": "0.1.0",
 	"autoImport": true
 }

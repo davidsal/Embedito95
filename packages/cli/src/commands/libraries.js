@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONFIG_FILE, UTF8 } from "embedito95-core";
+import { CONFIG_FILE, readPackageNames, UTF8 } from "embedito95-core";
 import { writeLine } from "../console.js";
 import {
 	listCoreLibraries,
@@ -21,7 +21,7 @@ const readInstalledPackages = () => {
 
 	try {
 		const configuration = JSON.parse(readFileSync(CONFIGURATION_PATH, UTF8));
-		return new Set(Object.keys(configuration.libraries ?? {}));
+		return new Set(readPackageNames(configuration.libraries));
 	} catch {
 		return new Set();
 	}

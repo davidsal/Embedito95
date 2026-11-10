@@ -1,7 +1,5 @@
 {
 	"type": "library",
-	"embedito95Version": "embedito95@0.1.0",
 	"name": "spi",
-	"package": "@embedito95/spi",
-	"version": "0.1.0"
+	"package": "@embedito95/spi"
 }

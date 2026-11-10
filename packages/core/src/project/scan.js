@@ -9,6 +9,7 @@ import {
 } from "../constants.js";
 import { tokenize } from "../lexer/index.js";
 import { parse } from "../parser/index.js";
+import { readPackageNames } from "./configuration.js";
 import { processLibraryAST, sanitizeNamespace } from "./libraries.js";
 
 const emptyLibrariesResult = () => {
@@ -68,7 +69,7 @@ const loadLibraryModule = ({
 	const libraryConfig = JSON.parse(readFileSync(libraryConfigPath, UTF8));
 	const packageName = libraryConfig.package;
 
-	if (!packageName || !libraryConfigs[packageName]) {
+	if (!packageName || !libraryConfigs.has(packageName)) {
 		return;
 	}
 
@@ -119,14 +120,15 @@ export const loadProjectLibraries = (projectDir, options = {}) => {
 		? JSON.parse(readFileSync(configPath, UTF8))
 		: null;
 
+	const corePackageNames = readPackageNames(config?.core);
+	const registeredPackageNames = readPackageNames(config?.libraries);
 	const libraryConfigs =
 		explicitLibraryConfigs ??
-		(config ? { ...(config.core ?? {}), ...(config.libraries ?? {}) } : {});
+		new Set([...corePackageNames, ...registeredPackageNames]);
 	const projectLibraryPackages =
-		explicitProjectLibraryPackages ??
-		new Set(Object.keys(config?.libraries ?? {}));
+		explicitProjectLibraryPackages ?? new Set(registeredPackageNames);
 
-	if (!libraryConfigs || typeof libraryConfigs !== "object") {
+	if (!(libraryConfigs instanceof Set)) {
 		return emptyLibrariesResult();
 	}
 

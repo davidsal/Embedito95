@@ -57,8 +57,9 @@ npx embedito95-cli init --library
 
 It asks for a library name and creates `libraries/<name>/` with:
 
-- `config.json` — `"type": "library"`, package `embedito95-<name>` and version
-  `0.1.0`.
+- `config.json` — `"type": "library"` and package `embedito95-<name>`.
+  `embedito95Version` is the compatibility anchor: libraries are not versioned
+  separately.
 - `<platform>.e95` — the entry file for the project's platform (for example
   `arduino-nano.e95`).
 

@@ -1,7 +1,5 @@
 {
 	"type": "library",
-	"embedito95Version": "embedito95@0.1.0",
 	"name": "canvas",
-	"package": "@embedito95/canvas",
-	"version": "0.1.0"
+	"package": "@embedito95/canvas"
 }
