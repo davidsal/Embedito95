@@ -97,9 +97,7 @@ Delete its entry from `libraries` in `config.json` and reinstall:
 
 ```json
 {
-  "libraries": {
-    "@embedito95/dht22": "0.1.0"
-  }
+  "libraries": ["@embedito95/dht22"]
 }
 ```
 
@@ -206,12 +204,8 @@ bundled inside. Add `--verbose` to see the raw editor output.
   "type": "project",
   "embedito95Version": "embedito95@0.1.6",
   "platform": "arduino-nano",
-  "core": {
-    "@embedito95/gpio": "0.1.0"
-  },
-  "libraries": {
-    "@embedito95/dht22": "0.1.0"
-  }
+  "core": ["@embedito95/gpio"],
+  "libraries": ["@embedito95/dht22"]
 }
 ```
 
@@ -221,5 +215,9 @@ bundled inside. Add `--verbose` to see the raw editor output.
 | `type` | `project` or `library`. |
 | `embedito95Version` | Toolchain version that created the project. `docs/` matches it. |
 | `platform` | Target board. |
-| `core` | Core libraries installed for that platform. Maintained by the CLI. |
-| `libraries` | Libraries to install from the registry. Edit this to add or remove. |
+| `core` | Package names of the core libraries installed for that platform. Maintained by the CLI. |
+| `libraries` | Package names of the libraries to install from the registry. Edit this to add or remove. |
+
+`core` and `libraries` are lists of package names, not versions: the library
+version is fixed by `embedito95Version`, so libraries are not versioned
+separately.

@@ -59,6 +59,10 @@ export const CORE_TEMPLATES_FILE = join(
 );
 export const CLI_PATH = join(PROJECT_ROOT, "packages/cli/src/cli.js");
 export const ROOT_PACKAGE_FILE = join(PROJECT_ROOT, "package.json");
+export const DOCS_DIRECTORIES = [
+	join(PROJECT_ROOT, "docs"),
+	join(PROJECT_ROOT, "packages/cli/docs"),
+];
 export const TEST_SOURCES_DIRECTORY = join(PACKAGE_DIRECTORY, "src");
 
 export const LANGUAGE_DIRECTORY_NAME = "language";
@@ -121,7 +125,6 @@ export const TEST_ENTRY_SUFFIX_PATTERN = /\.test\.e95$/;
 export const ENTRY_SUFFIX_PATTERN = /\.e95$/;
 
 export const EMBEDITO95_PROJECT_VERSION = "embedito95@0.1.0";
-export const DEFAULT_LIBRARY_VERSION = "0.1.0";
 export const NODE_EXECUTABLE = "node";
 export const INSTALL_COMMAND = "install";
 export const BUILD_COMMAND = "build";

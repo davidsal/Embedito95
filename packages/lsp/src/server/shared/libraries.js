@@ -20,7 +20,6 @@ export const escapeRegex = (string) => {
 };
 
 const PLATFORMS_DIRECTORY_NAME = "platforms";
-const DEFAULT_VERSION = "0.1.0";
 
 export const listLibraryDirectories = (baseDirectory) => {
 	const directories = [];
@@ -125,13 +124,13 @@ export const getLibrariesDirectory = (documentDirectory) => {
 	};
 };
 
-const collectRegistryLibraryConfigs = (registryBase) => {
-	const coreConfigs = {};
-	const clientConfigs = {};
+const collectRegistryLibraryPackages = (registryBase) => {
+	const corePackages = new Set();
+	const clientPackages = new Set();
 
-	for (const [directoryName, targetConfigs] of [
-		[CORE_LIBRARIES_DIRECTORY_NAME, coreConfigs],
-		[LIBRARIES_DIRECTORY_NAME, clientConfigs],
+	for (const [directoryName, targetPackages] of [
+		[CORE_LIBRARIES_DIRECTORY_NAME, corePackages],
+		[LIBRARIES_DIRECTORY_NAME, clientPackages],
 	]) {
 		const directory = join(registryBase, directoryName);
 
@@ -149,12 +148,12 @@ const collectRegistryLibraryConfigs = (registryBase) => {
 			const config = JSON.parse(readFileSync(configPath, UTF8));
 
 			if (config.package) {
-				targetConfigs[config.package] = config.version ?? DEFAULT_VERSION;
+				targetPackages.add(config.package);
 			}
 		}
 	}
 
-	return { coreConfigs, clientConfigs };
+	return { corePackages, clientPackages };
 };
 
 const loadLibrariesFromContext = (documentDirectory) => {
@@ -162,13 +161,13 @@ const loadLibrariesFromContext = (documentDirectory) => {
 		getLibrariesDirectory(documentDirectory);
 
 	if (registryBase) {
-		const { coreConfigs, clientConfigs } =
-			collectRegistryLibraryConfigs(registryBase);
+		const { corePackages, clientPackages } =
+			collectRegistryLibraryPackages(registryBase);
 
 		return loadProjectLibraries(registryBase, {
 			libraryDirectories: listLibraryDirectories(registryBase),
-			libraryConfigs: { ...coreConfigs, ...clientConfigs },
-			projectLibraryPackages: new Set(Object.keys(clientConfigs)),
+			libraryConfigs: new Set([...corePackages, ...clientPackages]),
+			projectLibraryPackages: new Set(clientPackages),
 		});
 	}
 

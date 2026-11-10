@@ -1,7 +1,5 @@
 {
 	"type": "library",
-	"embedito95Version": "embedito95@0.1.0",
 	"name": "servo_hardware",
-	"package": "@embedito95/servo-hardware",
-	"version": "0.1.0"
+	"package": "@embedito95/servo-hardware"
 }

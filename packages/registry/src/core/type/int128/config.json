@@ -1,8 +1,6 @@
 {
 	"type": "library",
-	"embedito95Version": "embedito95@0.1.0",
 	"name": "int128",
 	"package": "@embedito95/int128",
-	"version": "0.1.0",
 	"autoImport": true
 }

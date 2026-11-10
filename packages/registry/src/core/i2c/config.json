@@ -1,7 +1,5 @@
 {
 	"type": "library",
-	"embedito95Version": "embedito95@0.1.0",
 	"name": "i2c",
-	"package": "@embedito95/i2c",
-	"version": "0.1.0"
+	"package": "@embedito95/i2c"
 }

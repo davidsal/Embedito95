@@ -11,10 +11,14 @@ import {
 } from "embedito95-core";
 import { onCompletion } from "../lsp/src/server/completions/index.js";
 import { onHover } from "../lsp/src/server/hover/index.js";
+import { loadLibrariesFromContext } from "../lsp/src/server/shared/libraries.js";
+import { REGISTRY_LIBRARIES_DIRECTORY } from "./constants.js";
 import { expectEqual } from "./reporting.js";
 import { REPOSITORY_ROOT, TESTERS_DIRECTORY } from "./runner-harness.js";
 
 const DOCUMENT_URI = "file:///tmp/embedito95-lsp-hover/main.e95";
+const MATH_LIBRARY_FUNCTION_NAME = "arcSine";
+const MATH_LIBRARY_PACKAGE_NAME = "@embedito95/math";
 // A document URI inside the registry lets the hover load the real core library
 // exports (it resolves the registry base from the document path), so the math
 // signature and doc comment under test are the ones the editor shows.
@@ -460,6 +464,25 @@ const checkLibraryMathBitHelperHover = async () => {
 	);
 };
 
+const checkRegistryLibrariesWithoutVersion = () => {
+	const libraries = loadLibrariesFromContext(REGISTRY_LIBRARIES_DIRECTORY);
+	const mathFunctions =
+		libraries.libraryFunctions[MATH_LIBRARY_PACKAGE_NAME] ?? {};
+
+	return [
+		expectEqual(
+			"LSP loads a registry library whose config has no version",
+			libraries.knownLibraries.has(MATH_LIBRARY_PACKAGE_NAME),
+			true,
+		),
+		expectEqual(
+			"LSP exposes functions for a registry library whose config has no version",
+			Object.hasOwn(mathFunctions, MATH_LIBRARY_FUNCTION_NAME),
+			true,
+		),
+	];
+};
+
 const checkAsyncLocalVariableHover = async () => {
 	const hover = await hoverInDocument(
 		ASYNC_AVR_DOCUMENT_URI,
@@ -502,5 +525,6 @@ export const runLspHoverChecks = async () => {
 		checkStringMethodNestedNoFalsePositives(),
 		await checkLibraryMathFunctionHover(),
 		await checkLibraryMathBitHelperHover(),
+		...checkRegistryLibrariesWithoutVersion(),
 	];
 };

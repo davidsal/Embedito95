@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	appendPackageName,
 	CONFIG_FILE,
 	findEnclosingProjectRoot,
 	JSON_INDENTATION,
@@ -9,6 +10,7 @@ import {
 	LIBRARY_PROJECT_TYPE,
 	MAIN_FILE,
 	PROJECT_TYPE,
+	readPackageNames,
 	UTF8,
 } from "embedito95-core";
 import { supportedPlatforms } from "embedito95-registry/platforms";
@@ -18,7 +20,6 @@ import {
 	GITIGNORE_CONTENT,
 	HEADER_BORDER_PADDING,
 	HEADER_BOX_WIDTH,
-	INITIAL_VERSION,
 	PACKAGE_FILE,
 	PACKAGE_PREFIX,
 	TEMPLATE_LIBRARY_FILE,
@@ -138,19 +139,19 @@ const resolveProjectPath = (projectName, projectRoot) => {
 	return join(CURRENT_WORKING_DIRECTORY, projectName);
 };
 
-const buildConfiguration = (projectName, platformName) => {
+export const buildConfiguration = (projectName, platformName, isLibrary) => {
 	const configuration = {
 		name: projectName,
-		type: IS_LIBRARY ? LIBRARY_PROJECT_TYPE : PROJECT_TYPE,
+		type: isLibrary ? LIBRARY_PROJECT_TYPE : PROJECT_TYPE,
 		embedito95Version: `embedito95@${CLI_PACKAGE.version}`,
 	};
 
-	if (IS_LIBRARY) {
+	if (isLibrary) {
 		configuration.package = `${PACKAGE_PREFIX}${projectName}`;
-		configuration.version = INITIAL_VERSION;
 	} else {
 		configuration.platform = platformName;
-		configuration.core = {};
+		configuration.core = [];
+		configuration.libraries = [];
 	}
 
 	return configuration;
@@ -167,10 +168,10 @@ const registerLibraryInParentProject = (configuration, projectRoot) => {
 	);
 	const projectPlatform = projectConfiguration.platform ?? null;
 
-	projectConfiguration.libraries = {
-		...(projectConfiguration.libraries ?? {}),
-		[configuration.package]: configuration.version,
-	};
+	projectConfiguration.libraries = appendPackageName(
+		readPackageNames(projectConfiguration.libraries),
+		configuration.package,
+	);
 	writeFileSync(
 		projectConfigPath,
 		`${JSON.stringify(projectConfiguration, null, JSON_INDENTATION)}\n`,
@@ -248,7 +249,11 @@ export const run = async () => {
 	const environmentReady = platform
 		? await runEnvironmentCheck({ platform })
 		: true;
-	const configuration = buildConfiguration(projectName, platformName);
+	const configuration = buildConfiguration(
+		projectName,
+		platformName,
+		IS_LIBRARY,
+	);
 
 	mkdirSync(projectPath, { recursive: true });
 
