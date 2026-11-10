@@ -35,7 +35,8 @@
 		"node": ">=22"
 	},
 	"scripts": {
-		"prepack": "node scripts/sync-docs.js && node scripts/build-extension.js"
+		"prepack": "node scripts/sync-docs.js && node scripts/resolve-bundled-dependencies.js && node scripts/build-extension.js",
+		"postpack": "node scripts/resolve-bundled-dependencies.js --restore"
 	},
 	"publishConfig": {
 		"access": "public"

@@ -8,3 +8,4 @@ packages/test/testers/
 .e95state.json
 packages/cli/docs/
 packages/cli/assets/
+packages/cli/.bundled-dependencies-backup.json
