@@ -1,0 +1,6 @@
+#!/bin/sh
+# Block the push when a workspace package changed without a changeset.
+# Create one with `pnpm changeset` and commit it before pushing.
+# Bypass (emergencies only): `git push --no-verify`.
+
+pnpm changeset status --since=origin/main
