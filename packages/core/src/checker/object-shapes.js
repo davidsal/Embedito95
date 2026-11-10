@@ -1,4 +1,5 @@
 import { OBJECT_SHAPE_PREFIX } from "../constants.js";
+import { resolveAsyncTaskFieldType } from "./async-task-type.js";
 
 export const encodeObjectShape = (fields) => {
 	return `${OBJECT_SHAPE_PREFIX}{${Object.entries(fields)
@@ -98,6 +99,14 @@ const getObjectFieldDefinition = (objectType, fieldName, objectTypes) => {
 };
 
 export const resolveObjectFieldType = (objectType, fieldName, objectTypes) => {
+	const asyncTaskFieldType = resolveAsyncTaskFieldType(
+		objectType,
+		fieldName,
+		objectTypes,
+	);
+	if (asyncTaskFieldType) {
+		return asyncTaskFieldType;
+	}
 	return (
 		getObjectFieldDefinition(objectType, fieldName, objectTypes)?.type ?? null
 	);

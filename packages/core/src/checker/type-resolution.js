@@ -9,6 +9,7 @@ import {
 	QUOTE_SINGLE,
 } from "../constants.js";
 import { parseArrayType } from "./arrays.js";
+import { stripTypeArguments } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import {
 	FLOAT32_SIGNIFICANT_DIGITS,
@@ -228,6 +229,7 @@ export const typeIsKnown = (
 		}
 		base = arrayType.elementType;
 	}
+	base = stripTypeArguments(base);
 	return (
 		DATA_TYPES.has(base) ||
 		base === OBJECT_TYPE ||

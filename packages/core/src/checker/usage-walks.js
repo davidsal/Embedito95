@@ -1,5 +1,6 @@
 import { AST_NODE, ERROR_CODE, SEVERITY } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { stripTypeArguments } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import { getRootName } from "./types.js";
 import { walk } from "./walk.js";
@@ -16,6 +17,7 @@ const collectTypeNames = (name, target) => {
 		while (base.endsWith("[]")) {
 			base = base.slice(0, -2).trim();
 		}
+		base = stripTypeArguments(base);
 		if (base && !base.includes(".")) {
 			target.add(base);
 		}

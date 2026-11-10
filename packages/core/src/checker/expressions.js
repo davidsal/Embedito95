@@ -10,6 +10,7 @@ import {
 	parseArrayElementType,
 	parseArrayType,
 } from "./arrays.js";
+import { unwrapAsyncTaskType } from "./async-task-type.js";
 import {
 	inferObjectFields,
 	resolveSelfFieldForType,
@@ -406,7 +407,7 @@ export const resolveExpressionType = (
 			: operandType;
 	}
 	if (node.type === AST_NODE.awaitExpression) {
-		return resolveExpressionChild(node.argument, context);
+		return unwrapAsyncTaskType(resolveExpressionChild(node.argument, context));
 	}
 	if (node.type === AST_NODE.binaryExpression) {
 		if (COMPARISON_OPERATORS.has(node.operator)) {

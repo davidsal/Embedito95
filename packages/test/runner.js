@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { UTF8 } from "embedito95-core";
 import { runAsyncLocalChecks } from "./async-locals-checks.js";
+import { runAsyncTaskTypeChecks } from "./async-task-type-checks.js";
 import {
 	listCategories,
 	listEntryFiles,
@@ -14,6 +15,7 @@ import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
 import {
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
+	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
@@ -210,6 +212,10 @@ export const run = async () => {
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);
 	collectMismatches(asyncLocalResults, mismatches);
+
+	const asyncTaskTypeResults = runAsyncTaskTypeChecks();
+	reportUnitChecks(ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP, asyncTaskTypeResults);
+	collectMismatches(asyncTaskTypeResults, mismatches);
 
 	const cliProjectResults = await runCliProjectChecks();
 	reportUnitChecks(CLI_PROJECT_UNIT_CHECKS_GROUP, cliProjectResults);

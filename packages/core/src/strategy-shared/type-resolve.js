@@ -13,6 +13,7 @@ import {
 	resolveLogicalResultType,
 	resolveNegationType,
 	resolveStringMethod,
+	unwrapAsyncTaskType,
 } from "../checker/index.js";
 import {
 	evaluateBinaryNumber,
@@ -236,7 +237,7 @@ const resolveExpressionType = (node, context) => {
 		case AST_NODE.unaryExpression:
 			return resolveUnaryDataType(node, context);
 		case AST_NODE.awaitExpression:
-			return resolveExpressionType(node.argument, context);
+			return unwrapAsyncTaskType(resolveExpressionType(node.argument, context));
 		case AST_NODE.binaryExpression:
 			return resolveBinaryDataType(node, context);
 		case AST_NODE.conditionalExpression:

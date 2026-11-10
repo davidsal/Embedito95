@@ -9,7 +9,7 @@ const blink = async () => {
     const value = await readSensor()
     setAnalog(Pin.3, value)
     setDigital(Pin.10, HIGH)
-    await delay(50)
+    delay(50)
     setDigital(Pin.10, LOW)
 }
 

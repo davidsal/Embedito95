@@ -41,6 +41,10 @@ const DIAG_MESSAGES = {
 		"'{name}' can only be called inside an 'async' function",
 	[ERROR_CODE.missingAwait]:
 		"'{name}' is async and must be awaited with 'await'",
+	[ERROR_CODE.invalidAwaitTarget]:
+		"'await' can only be used with an 'AsyncTask' value, got '{type}'",
+	[ERROR_CODE.typeArgumentsNotAllowed]:
+		"Type parameters are not supported on '{type}': only 'AsyncTask' accepts type arguments",
 	[ERROR_CODE.invalidCharacter]: "Invalid character '{character}'",
 	[ERROR_CODE.invalidCharLiteral]:
 		"Char literal (single quotes) must contain exactly one character, got {count}",
@@ -48,6 +52,8 @@ const DIAG_MESSAGES = {
 	[ERROR_CODE.duplicateDeclaration]:
 		"Cannot redeclare block-scoped variable '{name}'",
 	[ERROR_CODE.undefinedMethod]: "'{name}' is not a method of type '{typeName}'",
+	[ERROR_CODE.invalidMemberAccess]:
+		"Cannot access member '{name}' on type '{type}': '{type}' has no members.",
 	[ERROR_CODE.invalidReceiverCast]:
 		"Cannot call a method on a cast from '{source}' to '{target}': the cast target must be a handle type that matches the source.",
 	[ERROR_CODE.exportNotAllowed]: "'export' is only allowed in library files",

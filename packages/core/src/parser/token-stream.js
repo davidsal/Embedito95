@@ -240,6 +240,9 @@ export const isArrowFunctionParameters = (context) => {
 						TOKEN_TYPE.rightBracket,
 						TOKEN_TYPE.number,
 						TOKEN_TYPE.keyword,
+						TOKEN_TYPE.lessThan,
+						TOKEN_TYPE.greaterThan,
+						TOKEN_TYPE.comma,
 					]);
 					while (
 						nextPosition < context.tokens.length &&

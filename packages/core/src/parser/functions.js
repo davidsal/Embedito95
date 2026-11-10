@@ -37,7 +37,13 @@ const parseFunctionReturnType = (context) => {
 	if (!parsed) {
 		return null;
 	}
-	return { name: parsed.name, loc: parsed.loc };
+	const singleMember =
+		parsed.memberNodes.length === 1 ? parsed.memberNodes[0] : null;
+	return {
+		name: parsed.name,
+		loc: parsed.loc,
+		typeArguments: singleMember?.typeArguments ?? null,
+	};
 };
 
 const makeEmptyFunctionExpression = (context, async, params, returnType) => {
