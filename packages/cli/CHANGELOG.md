@@ -1,5 +1,11 @@
 # embedito95-cli
 
+## 1.0.1
+
+### Patch Changes
+
+- bf982a1: Bundle the VS Code extension in the CLI package and tie its version to the CLI.
+
 ## 1.0.0
 
 ### Major Changes
