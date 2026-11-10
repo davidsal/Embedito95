@@ -23,6 +23,7 @@ import {
 import { buildAgentsDocument } from "../cli/src/commands/init/agents-template.js";
 import { buildConfiguration } from "../cli/src/commands/init/index.js";
 import { copyProjectDocumentation } from "../cli/src/commands/init/project-docs.js";
+import { CLI_VERSION } from "../cli/src/commands/shared/cli-package.js";
 import { copyDocumentation } from "../cli/src/commands/shared/docs.js";
 import {
 	findRegistryLibrary,
@@ -30,6 +31,31 @@ import {
 	listRegistryLibraries,
 } from "../cli/src/commands/shared/libraries.js";
 import {
+	consumeForceFlag,
+	delegateToProjectVersion,
+	formatDelegationFailure,
+	formatDelegationNotice,
+	resolveProjectToolchainVersion,
+	resolveVersionAction,
+	VERSION_ACTION,
+} from "../cli/src/commands/shared/version.js";
+import {
+	CLI_PACKAGE_NAME,
+	DELEGATED_ENVIRONMENT_KEY,
+	DELEGATED_ENVIRONMENT_VALUE,
+	FORCE_FLAG,
+	INHERITED_STDIO,
+	NPX_COMMAND,
+	NPX_YES_FLAG,
+	SKIP_VERSION_CHECK_ENVIRONMENT_KEY,
+	SKIP_VERSION_CHECK_ENVIRONMENT_VALUE,
+	VERSION_PREFIX,
+	WINDOWS_COMMAND_INTERPRETER,
+	WINDOWS_COMMAND_INTERPRETER_RUN_FLAG,
+	WINDOWS_PLATFORM,
+} from "../cli/src/constants.js";
+import {
+	BUILD_COMMAND,
 	CLI_PATH,
 	CLI_PROJECT_TEMP_DIRECTORY_PREFIX,
 	EMBEDITO95_PROJECT_VERSION,
@@ -68,6 +94,27 @@ const PROJECT_NAME = "cli-project-checks";
 const PROJECT_PLATFORM = "arduino-nano";
 const TYPESCRIPT_MIGRATION_HEADING = "## Coming from TypeScript";
 const UNKNOWN_LIBRARY_NAME = "not-a-real-library";
+const INHERITED_PROJECT_VERSION_NUMBER = "1.0.0";
+const INHERITED_PROJECT_VERSION = `${VERSION_PREFIX}${INHERITED_PROJECT_VERSION_NUMBER}`;
+const MISMATCH_PROJECT_VERSION_NUMBER = "999.0.0";
+const MISMATCH_PROJECT_VERSION = `${VERSION_PREFIX}${MISMATCH_PROJECT_VERSION_NUMBER}`;
+const INVALID_PREFIX_PROJECT_VERSION = "1.2.3";
+const INVALID_TYPE_PROJECT_VERSION = 123;
+const VERSION_MATCH_DIRECTORY_NAME = "version-match-project";
+const VERSION_MISMATCH_DIRECTORY_NAME = "version-mismatch-project";
+const VERSION_MISSING_DIRECTORY_NAME = "version-missing-project";
+const VERSION_NO_CONFIG_DIRECTORY_NAME = "version-no-config-project";
+const VERSION_ESCAPE_DIRECTORY_NAME = "version-escape-project";
+const VERSION_FORCE_DIRECTORY_NAME = "version-force-project";
+const VERSION_DELEGATED_DIRECTORY_NAME = "version-delegated-project";
+const VERSION_INVALID_PREFIX_DIRECTORY_NAME = "version-invalid-prefix-project";
+const VERSION_INVALID_TYPE_DIRECTORY_NAME = "version-invalid-type-project";
+const VERSION_PARENT_DIRECTORY_NAME = "version-parent-project";
+const DELEGATION_ARGUMENT = "--verbose";
+const DELEGATED_EXIT_CODE = 7;
+const DELEGATED_FAILURE_EXIT_CODE = 1;
+const DELEGATION_BUILD_ARGUMENTS = [BUILD_COMMAND, DELEGATION_ARGUMENT];
+const POSIX_TEST_PLATFORM = "linux";
 const ARDUINO_NANO_PLATFORM = {
 	name: PROJECT_PLATFORM,
 	displayName: ARDUINO_NANO_DISPLAY_NAME,
@@ -79,23 +126,34 @@ const readJson = (path) => {
 	return JSON.parse(readFileSync(path, UTF8));
 };
 
-const runCliCommand = async (projectDirectory, ...args) => {
+const runCliCommandWithEnvironment = async (
+	projectDirectory,
+	environment,
+	...args
+) => {
 	return runProcess(NODE_EXECUTABLE, [CLI_PATH, ...args], {
 		cwd: projectDirectory,
-		env: { ...process.env, INIT_CWD: projectDirectory },
+		env: { ...process.env, INIT_CWD: projectDirectory, ...environment },
 		encoding: UTF8,
 	});
 };
 
-const writeMinimalProject = (projectDirectory) => {
+const runCliCommand = async (projectDirectory, ...args) => {
+	return runCliCommandWithEnvironment(projectDirectory, {}, ...args);
+};
+
+const writeMinimalProject = (
+	projectDirectory,
+	version = EMBEDITO95_PROJECT_VERSION,
+) => {
 	mkdirSync(projectDirectory, { recursive: true });
 	const configuration = {
 		name: PROJECT_NAME,
 		type: PROJECT_TYPE,
-		embedito95Version: EMBEDITO95_PROJECT_VERSION,
 		platform: PROJECT_PLATFORM,
 		core: [],
 		libraries: [],
+		...(version === null ? {} : { embedito95Version: version }),
 	};
 	writeFileSync(
 		join(projectDirectory, CONFIG_FILE),
@@ -508,6 +566,397 @@ const checkInstallLibraryCommand = async (temporaryDirectory) => {
 	];
 };
 
+const createVersionProject = (temporaryDirectory, directoryName, version) => {
+	const projectDirectory = join(temporaryDirectory, directoryName);
+	writeMinimalProject(projectDirectory, version);
+	return projectDirectory;
+};
+
+const resolveAction = (projectDirectory, options = {}) => {
+	return resolveVersionAction({
+		workingDirectory: projectDirectory,
+		runningVersion: CLI_VERSION,
+		...options,
+	});
+};
+
+class SpawnRecorder {
+	constructor(result) {
+		this.result = result;
+		this.calls = [];
+	}
+
+	record(command, commandArguments, spawnOptions) {
+		this.calls.push({ command, commandArguments, spawnOptions });
+		return this.result;
+	}
+}
+
+const throwSpawn = () => {
+	throw new Error("spawn failed");
+};
+
+const ignoreMessage = () => {};
+
+const checkVersionDecision = (temporaryDirectory) => {
+	const matchProject = createVersionProject(
+		temporaryDirectory,
+		VERSION_MATCH_DIRECTORY_NAME,
+		EMBEDITO95_PROJECT_VERSION,
+	);
+	const mismatchProject = createVersionProject(
+		temporaryDirectory,
+		VERSION_MISMATCH_DIRECTORY_NAME,
+		MISMATCH_PROJECT_VERSION,
+	);
+	const missingProject = createVersionProject(
+		temporaryDirectory,
+		VERSION_MISSING_DIRECTORY_NAME,
+		null,
+	);
+	const invalidPrefixProject = createVersionProject(
+		temporaryDirectory,
+		VERSION_INVALID_PREFIX_DIRECTORY_NAME,
+		INVALID_PREFIX_PROJECT_VERSION,
+	);
+	const invalidTypeProject = createVersionProject(
+		temporaryDirectory,
+		VERSION_INVALID_TYPE_DIRECTORY_NAME,
+		INVALID_TYPE_PROJECT_VERSION,
+	);
+	createVersionProject(
+		temporaryDirectory,
+		VERSION_ESCAPE_DIRECTORY_NAME,
+		MISMATCH_PROJECT_VERSION,
+	);
+	createVersionProject(
+		temporaryDirectory,
+		VERSION_FORCE_DIRECTORY_NAME,
+		MISMATCH_PROJECT_VERSION,
+	);
+	createVersionProject(
+		temporaryDirectory,
+		VERSION_DELEGATED_DIRECTORY_NAME,
+		MISMATCH_PROJECT_VERSION,
+	);
+
+	const noConfigDirectory = join(
+		temporaryDirectory,
+		VERSION_NO_CONFIG_DIRECTORY_NAME,
+	);
+	mkdirSync(noConfigDirectory, { recursive: true });
+
+	const mismatchAction = resolveAction(mismatchProject);
+	const skippedAction = resolveAction(mismatchProject, {
+		environment: {
+			[SKIP_VERSION_CHECK_ENVIRONMENT_KEY]:
+				SKIP_VERSION_CHECK_ENVIRONMENT_VALUE,
+		},
+	});
+	const delegatedAction = resolveAction(mismatchProject, {
+		environment: { [DELEGATED_ENVIRONMENT_KEY]: DELEGATED_ENVIRONMENT_VALUE },
+	});
+
+	return [
+		expectEqual(
+			"matching project versions run the current CLI",
+			resolveAction(matchProject).type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"differing project versions delegate",
+			mismatchAction.type,
+			VERSION_ACTION.delegate,
+		),
+		expectEqual(
+			"delegation pins the project version",
+			mismatchAction.projectVersion,
+			MISMATCH_PROJECT_VERSION_NUMBER,
+		),
+		expectEqual(
+			"missing project version runs the current CLI",
+			resolveAction(missingProject).type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"missing config runs the current CLI",
+			resolveAction(noConfigDirectory).type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"invalid version prefix runs the current CLI",
+			resolveAction(invalidPrefixProject).type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"non-string project version runs the current CLI",
+			resolveAction(invalidTypeProject).type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"force runs the current CLI",
+			resolveAction(mismatchProject, { force: true }).type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"skip environment variable runs the current CLI",
+			skippedAction.type,
+			VERSION_ACTION.run,
+		),
+		expectEqual(
+			"delegated child does not delegate again",
+			delegatedAction.type,
+			VERSION_ACTION.run,
+		),
+	];
+};
+
+const buildExpectedDelegatedArguments = () => {
+	return [
+		NPX_YES_FLAG,
+		`${CLI_PACKAGE_NAME}@${MISMATCH_PROJECT_VERSION_NUMBER}`,
+		...DELEGATION_BUILD_ARGUMENTS,
+	].join(" ");
+};
+
+const checkDelegationExecution = () => {
+	const recorder = new SpawnRecorder({ status: DELEGATED_EXIT_CODE });
+	const messages = [];
+	const exitCode = delegateToProjectVersion({
+		projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+		commandArguments: DELEGATION_BUILD_ARGUMENTS,
+		environment: { KEEP: "1" },
+		platform: POSIX_TEST_PLATFORM,
+		spawn: recorder.record.bind(recorder),
+		writeMessage: messages.push.bind(messages),
+	});
+	const call = recorder.calls[0];
+
+	return [
+		expectEqual(
+			"delegation returns the child exit code",
+			exitCode,
+			DELEGATED_EXIT_CODE,
+		),
+		expectEqual("delegation runs npx", call?.command, NPX_COMMAND),
+		expectEqual(
+			"delegation forwards the command arguments",
+			call?.commandArguments.join(" "),
+			buildExpectedDelegatedArguments(),
+		),
+		expectEqual(
+			"delegation inherits stdio",
+			call?.spawnOptions.stdio,
+			INHERITED_STDIO,
+		),
+		expectEqual(
+			"delegation keeps the environment",
+			call?.spawnOptions.env.KEEP,
+			"1",
+		),
+		expectEqual(
+			"delegation marks the child process",
+			call?.spawnOptions.env[DELEGATED_ENVIRONMENT_KEY],
+			DELEGATED_ENVIRONMENT_VALUE,
+		),
+		expectEqual(
+			"delegation prints one notice line",
+			messages.join("\n"),
+			formatDelegationNotice({
+				projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+			}),
+		),
+	];
+};
+
+const checkDelegationFailure = () => {
+	const startFailureRecorder = new SpawnRecorder({
+		status: null,
+		error: new Error("ENOENT"),
+	});
+	const startFailureMessages = [];
+	const startFailureExitCode = delegateToProjectVersion({
+		projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+		commandArguments: DELEGATION_BUILD_ARGUMENTS,
+		spawn: startFailureRecorder.record.bind(startFailureRecorder),
+		writeMessage: startFailureMessages.push.bind(startFailureMessages),
+	});
+	const throwMessages = [];
+	const throwExitCode = delegateToProjectVersion({
+		projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+		commandArguments: DELEGATION_BUILD_ARGUMENTS,
+		spawn: throwSpawn,
+		writeMessage: throwMessages.push.bind(throwMessages),
+	});
+	const expectedFailure = formatDelegationFailure({
+		projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+		commandArguments: DELEGATION_BUILD_ARGUMENTS,
+	});
+
+	return [
+		expectEqual(
+			"failed delegation returns a failure exit code",
+			startFailureExitCode,
+			DELEGATED_FAILURE_EXIT_CODE,
+		),
+		expectEqual(
+			"failed delegation reports the manual command",
+			startFailureMessages[1],
+			expectedFailure,
+		),
+		expectEqual(
+			"manual command names the pinned CLI",
+			expectedFailure.includes(
+				`${NPX_COMMAND} ${CLI_PACKAGE_NAME}@${MISMATCH_PROJECT_VERSION_NUMBER}`,
+			),
+			true,
+		),
+		expectEqual(
+			"manual command mentions the force flag",
+			expectedFailure.includes(FORCE_FLAG),
+			true,
+		),
+		expectEqual(
+			"thrown spawn failures return a failure exit code",
+			throwExitCode,
+			DELEGATED_FAILURE_EXIT_CODE,
+		),
+		expectEqual(
+			"thrown spawn failures report the manual command",
+			throwMessages[1],
+			expectedFailure,
+		),
+	];
+};
+
+const checkDelegationPlatformCommand = () => {
+	const windowsRecorder = new SpawnRecorder({ status: DELEGATED_EXIT_CODE });
+	const posixRecorder = new SpawnRecorder({ status: DELEGATED_EXIT_CODE });
+
+	delegateToProjectVersion({
+		projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+		commandArguments: DELEGATION_BUILD_ARGUMENTS,
+		platform: WINDOWS_PLATFORM,
+		spawn: windowsRecorder.record.bind(windowsRecorder),
+		writeMessage: ignoreMessage,
+	});
+	delegateToProjectVersion({
+		projectVersion: MISMATCH_PROJECT_VERSION_NUMBER,
+		commandArguments: DELEGATION_BUILD_ARGUMENTS,
+		platform: POSIX_TEST_PLATFORM,
+		spawn: posixRecorder.record.bind(posixRecorder),
+		writeMessage: ignoreMessage,
+	});
+
+	const windowsCall = windowsRecorder.calls[0];
+	const posixCall = posixRecorder.calls[0];
+	const expectedArguments = [
+		NPX_YES_FLAG,
+		`${CLI_PACKAGE_NAME}@${MISMATCH_PROJECT_VERSION_NUMBER}`,
+		...DELEGATION_BUILD_ARGUMENTS,
+	];
+
+	return [
+		expectEqual(
+			"windows delegation uses the command interpreter",
+			windowsCall?.command,
+			WINDOWS_COMMAND_INTERPRETER,
+		),
+		expectEqual(
+			"windows delegation runs npx through the run flag",
+			windowsCall?.commandArguments.join(" "),
+			[
+				WINDOWS_COMMAND_INTERPRETER_RUN_FLAG,
+				NPX_COMMAND,
+				...expectedArguments,
+			].join(" "),
+		),
+		expectEqual(
+			"posix delegation runs npx directly",
+			posixCall?.command,
+			NPX_COMMAND,
+		),
+		expectEqual(
+			"posix delegation forwards arguments without an interpreter",
+			posixCall?.commandArguments.join(" "),
+			expectedArguments.join(" "),
+		),
+	];
+};
+
+const checkForceFlagConsumption = () => {
+	const withForce = consumeForceFlag([
+		BUILD_COMMAND,
+		FORCE_FLAG,
+		DELEGATION_ARGUMENT,
+	]);
+	const withoutForce = consumeForceFlag([BUILD_COMMAND, DELEGATION_ARGUMENT]);
+
+	return [
+		expectEqual("force flag is detected", withForce.force, true),
+		expectEqual(
+			"force flag is not forwarded to commands",
+			withForce.commandArguments.join(" "),
+			`${BUILD_COMMAND} ${DELEGATION_ARGUMENT}`,
+		),
+		expectEqual("absent force flag stays false", withoutForce.force, false),
+		expectEqual(
+			"command arguments are preserved without force",
+			withoutForce.commandArguments.join(" "),
+			`${BUILD_COMMAND} ${DELEGATION_ARGUMENT}`,
+		),
+	];
+};
+
+const checkToolchainVersionInheritance = (temporaryDirectory) => {
+	const parentDirectory = join(
+		temporaryDirectory,
+		VERSION_PARENT_DIRECTORY_NAME,
+	);
+	writeMinimalProject(parentDirectory, INHERITED_PROJECT_VERSION);
+	const inheritedVersion = resolveProjectToolchainVersion({
+		isLibrary: true,
+		projectRoot: parentDirectory,
+	});
+	const standaloneVersion = resolveProjectToolchainVersion({
+		isLibrary: true,
+		projectRoot: null,
+	});
+	const projectVersion = resolveProjectToolchainVersion({
+		isLibrary: false,
+		projectRoot: parentDirectory,
+	});
+	const libraryConfiguration = buildConfiguration(
+		INIT_LIBRARY_NAME,
+		null,
+		true,
+		inheritedVersion,
+	);
+
+	return [
+		expectEqual(
+			"init --library inherits the parent project version",
+			inheritedVersion,
+			INHERITED_PROJECT_VERSION_NUMBER,
+		),
+		expectEqual(
+			"standalone libraries fall back to the CLI version",
+			standaloneVersion,
+			CLI_VERSION,
+		),
+		expectEqual(
+			"project init keeps the CLI version",
+			projectVersion,
+			CLI_VERSION,
+		),
+		expectEqual(
+			"inherited library config keeps the parent version",
+			libraryConfiguration.embedito95Version,
+			INHERITED_PROJECT_VERSION,
+		),
+	];
+};
+
 export const runCliProjectChecks = async () => {
 	const temporaryDirectory = mkdtempSync(
 		join(tmpdir(), CLI_PROJECT_TEMP_DIRECTORY_PREFIX),
@@ -525,6 +974,12 @@ export const runCliProjectChecks = async () => {
 				join(temporaryDirectory, DOCS_PROJECT_DIRECTORY_NAME),
 			),
 			...checkMissingDocsSource(temporaryDirectory),
+			...checkToolchainVersionInheritance(temporaryDirectory),
+			...checkVersionDecision(temporaryDirectory),
+			...checkDelegationExecution(),
+			...checkDelegationFailure(),
+			...checkDelegationPlatformCommand(),
+			...checkForceFlagConsumption(),
 			...(await checkInstallLibraryCommand(temporaryDirectory)),
 		];
 	} finally {

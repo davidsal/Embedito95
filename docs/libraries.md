@@ -59,7 +59,10 @@ It asks for a library name and creates `libraries/<name>/` with:
 
 - `config.json` — `"type": "library"` and package `embedito95-<name>`.
   `embedito95Version` is the compatibility anchor: libraries are not versioned
-  separately.
+  separately. It is inherited from the parent project's `config.json`, so a
+  library keeps targeting the version the project is pinned to even when a
+  different CLI version creates it. A standalone library (with no enclosing
+  project) falls back to the version of the CLI that created it.
 - `<platform>.e95` — the entry file for the project's platform (for example
   `arduino-nano.e95`).
 

@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CLI_VERSION } from "./commands/shared/cli-package.js";
+import { getCurrentWorkingDirectory } from "./commands/shared/paths.js";
+import {
+	consumeForceFlag,
+	delegateToProjectVersion,
+	resolveVersionAction,
+	VERSION_ACTION,
+} from "./commands/shared/version.js";
 import { writeErrorLine, writeLine } from "./console.js";
-import { PACKAGE_FILE } from "./constants.js";
 
 const MINIMUM_NODE_MAJOR = 22;
-const PACKAGE_DIRECTORY = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PACKAGE = JSON.parse(
-	readFileSync(join(PACKAGE_DIRECTORY, PACKAGE_FILE), "utf8"),
-);
 
 const COMMANDS = [
 	"init",
@@ -67,8 +70,34 @@ const checkNodeVersion = () => {
 	}
 };
 
+const applyVersionPolicy = ({ commandArguments, force }) => {
+	const action = resolveVersionAction({
+		workingDirectory: getCurrentWorkingDirectory(),
+		runningVersion: CLI_VERSION,
+		force,
+	});
+
+	if (action.type !== VERSION_ACTION.delegate) {
+		return;
+	}
+
+	process.exit(
+		delegateToProjectVersion({
+			projectVersion: action.projectVersion,
+			commandArguments,
+		}),
+	);
+};
+
+const rebuildProcessArguments = (commandArguments) => {
+	return [process.argv[0], process.argv[1], ...commandArguments];
+};
+
 const main = async () => {
 	checkNodeVersion();
+
+	const consumedArguments = consumeForceFlag(process.argv.slice(2));
+	process.argv = rebuildProcessArguments(consumedArguments.commandArguments);
 
 	const command =
 		process.argv[2] === "--install-vs-code"
@@ -81,7 +110,7 @@ const main = async () => {
 	}
 
 	if (command === "-v" || command === "--version") {
-		writeLine(PACKAGE.version);
+		writeLine(CLI_VERSION);
 		return;
 	}
 
@@ -94,6 +123,11 @@ const main = async () => {
 		writeErrorLine(`embedito95: command not found "${command}"`);
 		process.exit(1);
 	}
+
+	applyVersionPolicy({
+		commandArguments: consumedArguments.commandArguments,
+		force: consumedArguments.force,
+	});
 
 	try {
 		const commandModule = await import(resolveCommandPath(command));

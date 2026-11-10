@@ -13,6 +13,22 @@ export const DOCS_VERSION_FILE = "VERSION";
 export const EXCLUDED_DOC_FILES = new Set(["development.md"]);
 export const AGENTS_FILE_NAME = "AGENTS.md";
 
+// Project version
+export const VERSION_PREFIX = "embedito95@";
+export const SKIP_VERSION_CHECK_ENVIRONMENT_KEY =
+	"EMBEDITO95_SKIP_VERSION_CHECK";
+export const SKIP_VERSION_CHECK_ENVIRONMENT_VALUE = "1";
+export const FORCE_FLAG = "--force";
+export const CLI_PACKAGE_NAME = "embedito95-cli";
+export const NPX_COMMAND = "npx";
+export const NPX_YES_FLAG = "--yes";
+export const DELEGATED_ENVIRONMENT_KEY = "EMBEDITO95_DELEGATED";
+export const DELEGATED_ENVIRONMENT_VALUE = "1";
+export const INHERITED_STDIO = "inherit";
+export const WINDOWS_PLATFORM = "win32";
+export const WINDOWS_COMMAND_INTERPRETER = "cmd.exe";
+export const WINDOWS_COMMAND_INTERPRETER_RUN_FLAG = "/c";
+
 // Process
 export const BROKEN_PIPE_ERROR_CODE = "EPIPE";
 
