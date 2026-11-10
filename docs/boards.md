@@ -8,9 +8,9 @@ not in function names.
 
 | Board | Platform id | MCU | Architecture | Clock | Memory | Logic | Runtime |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Arduino Nano | `arduino-nano` | ATmega328P | AVR | 16 MHz | 32 KB flash / 2 KB SRAM / 1 KB EEPROM | 5 V | 16-bit, no `f64`, PROGMEM |
-| Arduino Uno | `arduino-uno` | ATmega328P | AVR | 16 MHz | 32 KB flash / 2 KB SRAM / 1 KB EEPROM | 5 V | 16-bit, no `f64`, PROGMEM |
-| STM32 Blue Pill | `stm32-bluepill` | STM32F103C8T6 | ARM Cortex-M3 | 72 MHz | 64 KB flash / 20 KB SRAM / no EEPROM | 3.3 V | 32-bit, `f64`, no PROGMEM |
+| Arduino Nano | `arduino-nano` | ATmega328P | AVR | 16 MHz | 32 KB flash / 2 KB SRAM / 1 KB EEPROM | 5 V | 16-bit, portable `f64`, PROGMEM |
+| Arduino Uno | `arduino-uno` | ATmega328P | AVR | 16 MHz | 32 KB flash / 2 KB SRAM / 1 KB EEPROM | 5 V | 16-bit, portable `f64`, PROGMEM |
+| STM32 Blue Pill | `stm32-bluepill` | STM32F103C8T6 | ARM Cortex-M3 | 72 MHz | 64 KB flash / 20 KB SRAM / no EEPROM | 3.3 V | 32-bit, native `f64`, no PROGMEM |
 
 ## Peripherals
 

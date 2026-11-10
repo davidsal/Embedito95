@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | `i8`–`i128`, `u8`–`u128` | value | fixed-width signed/unsigned; 128-bit is software |
 | `f32` | value | single precision |
-| `f64` | value | double precision; STM32 only, not AVR |
+| `f64` | value | double precision; native on STM32, portable software on AVR |
 | `boolean` | value | `true` or `false` |
 | `char` | value | one byte, single quotes (`'a'`) |
 | `string` | heap handle | dynamic text, double quotes (`"hi"`), copy-on-write |
@@ -14,7 +14,9 @@
 | `T \| null` | same as `T` | the only union |
 | `void` | — | no return value |
 
-- `f64` is only available on 32-bit targets such as the STM32 Blue Pill.
+- `f64` is native on 32-bit targets such as the STM32 Blue Pill. On AVR it uses
+  a portable IEEE-754 software implementation: same operations and precision,
+  more flash usage and slower math. `f32` remains the recommended default there.
 - `i128` and `u128` use a portable software implementation, since the MCUs do
   not have native 128-bit registers.
 - `T[]` grows dynamically. `T[N]` parses, but `N` does not reserve storage yet;
@@ -45,6 +47,9 @@ const name: string | null = null
 
 - A float is used as the result only when it is requested: with a float literal
   (`1.5`), a float operand or an explicit `f32`/`f64` target.
+- Number literals accept an exponent: `1e3`, `2E6`, `1.5e-3` and `-4e2` are
+  valid. The sign belongs to the exponent, and an exponent without digits is a
+  syntax error.
 - Pure integer arithmetic stays integer, including division: `5 / 2` is `2`.
 - Storing an integer result in a float variable converts it with a warning, not
   an error.

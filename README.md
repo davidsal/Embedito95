@@ -9,10 +9,11 @@ verify.
 ## Why Embedito95
 
 Embedito95 targets basic or old single-core hardware without an FPU. Cooperative
-tasks and no `f64`/`double` by default let a simple MCU run many concurrent
-tasks, reducing cost and e-waste. It builds with the platform's native toolchain
-(no VM or extra bootloader), and its layered compiler and libraries are open to
-new architectures beyond AVR and ARM Cortex-M.
+tasks and `f32` as the default float (with an optional portable `f64`) let a
+simple MCU run many concurrent tasks, reducing cost and e-waste. It builds with
+the platform's native toolchain (no VM or extra bootloader), and its layered
+compiler and libraries are open to new architectures beyond AVR and ARM
+Cortex-M.
 
 ## About the author
 

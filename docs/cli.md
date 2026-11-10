@@ -202,7 +202,7 @@ bundled inside. Add `--verbose` to see the raw editor output.
 {
   "name": "my-project",
   "type": "project",
-  "embedito95Version": "embedito95@0.1.6",
+  "embedito95Version": "embedito95@1.0.0",
   "platform": "arduino-nano",
   "core": ["@embedito95/gpio"],
   "libraries": ["@embedito95/dht22"]

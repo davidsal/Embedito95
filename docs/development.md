@@ -24,6 +24,10 @@ pnpm run test:run      # Executable codegen scenarios
 pnpm run test:snapshot # Regenerate snapshots
 ```
 
+The workspace uses the `hoisted` node linker (`pnpm-workspace.yaml`). The CLI
+package needs it to bundle `embedito95-core` and `embedito95-registry` inside
+its published tarball, so keep that setting when changing the install setup.
+
 ## VS Code extension
 
 To use the tools from the editor, install the VS Code extension:
