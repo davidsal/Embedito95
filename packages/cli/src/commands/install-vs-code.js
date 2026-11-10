@@ -5,11 +5,13 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { cyan, red, writeLine, yellow } from "../console.js";
+import { CLI_DIRECTORY } from "./shared/paths.js";
 
 const REPOSITORY = "davidsal/Embedito95";
 const RELEASES_API = `https://api.github.com/repos/${REPOSITORY}/releases`;
 const FALLBACK_VSIX_URL = `https://github.com/${REPOSITORY}/releases/latest/download/embedito95-lsp.vsix`;
 const VSIX_FILE_NAME = "embedito95-lsp.vsix";
+const BUNDLED_VSIX_PATH = join(CLI_DIRECTORY, "assets", VSIX_FILE_NAME);
 const USER_AGENT = "embedito95-cli";
 const EDITOR_COMMANDS = ["code", "cursor", "codium"];
 const WINDOWS_EDITOR_COMMANDS = ["code.cmd", "cursor.cmd", "codium.cmd"];
@@ -149,12 +151,22 @@ export const run = async () => {
 		process.exit(1);
 	}
 
-	const directory = mkdtempSync(join(tmpdir(), "embedito95-vsix-"));
-	const vsixPath = join(directory, VSIX_FILE_NAME);
+	const bundledVsixPath = existsSync(BUNDLED_VSIX_PATH)
+		? BUNDLED_VSIX_PATH
+		: null;
+	const directory = bundledVsixPath
+		? null
+		: mkdtempSync(join(tmpdir(), "embedito95-vsix-"));
+	const vsixPath = bundledVsixPath ?? join(directory, VSIX_FILE_NAME);
 
 	try {
-		writeLine(`Installing the Embedito95 extension with ${editor}...`);
-		await downloadVsix(vsixPath);
+		writeLine(
+			`Installing ${bundledVsixPath ? "the bundled" : "the latest"} Embedito95 extension with ${editor}...`,
+		);
+
+		if (!bundledVsixPath) {
+			await downloadVsix(vsixPath);
+		}
 
 		if (!installExtension(editor, vsixPath)) {
 			throw new Error("The editor could not install the extension");
@@ -166,6 +178,8 @@ export const run = async () => {
 		writeLine(`${red("✖")} ${error.message}`);
 		process.exitCode = 1;
 	} finally {
-		rmSync(directory, { recursive: true, force: true });
+		if (directory) {
+			rmSync(directory, { recursive: true, force: true });
+		}
 	}
 };

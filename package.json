@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "changeset": "changeset",
-    "version": "changeset version",
+    "version": "changeset version && node packages/cli/scripts/sync-extension-version.js",
     "release": "pnpm --filter embedito95-cli publish",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome check",
@@ -20,7 +20,7 @@
     "docs:sync": "node packages/cli/scripts/sync-docs.js",
     "prepare": "node packages/cli/scripts/sync-docs.js && git config core.hooksPath .githooks || true",
     "embedito95-cli": "node packages/cli/src/cli.js",
-    "lsp:install": "pnpm run --filter @embedito95/lsp build && node packages/lsp-vscode/build.mjs && cd packages/lsp-vscode && echo y | npx vsce package --allow-missing-repository --no-dependencies && code --install-extension embedito95-*.vsix"
+    "lsp:install": "node packages/cli/scripts/build-extension.js && code --install-extension packages/cli/assets/embedito95-lsp.vsix"
   },
   "packageManager": "pnpm@11.7.0",
   "engines": {

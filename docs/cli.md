@@ -193,8 +193,9 @@ can. Run it after installing or when a build fails for missing tools.
 npx embedito95-cli install-vs-code
 ```
 
-Installs the extension in VS Code, Cursor or VSCodium. The language server is
-bundled inside. Add `--verbose` to see the raw editor output.
+Installs the extension in VS Code, Cursor or VSCodium. The extension and its
+language server are bundled inside the CLI package, so the installed version
+always matches the CLI version. Add `--verbose` to see the raw editor output.
 
 ## config.json
 

@@ -36,6 +36,10 @@ To use the tools from the editor, install the VS Code extension:
 pnpm run lsp:install
 ```
 
+The extension version is tied to the CLI version. `pnpm changeset version`
+syncs `packages/lsp` and `packages/lsp-vscode`, and the CLI `prepack` builds
+the VSIX from the same commit and embeds it in the published tarball.
+
 ## Try the CLI
 
 Create a scratch directory inside `packages/test` and run the initializer from

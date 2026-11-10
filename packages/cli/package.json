@@ -28,13 +28,14 @@
 	},
 	"files": [
 		"src",
-		"docs"
+		"docs",
+		"assets"
 	],
 	"engines": {
 		"node": ">=22"
 	},
 	"scripts": {
-		"prepack": "node scripts/sync-docs.js"
+		"prepack": "node scripts/sync-docs.js && node scripts/build-extension.js"
 	},
 	"publishConfig": {
 		"access": "public"
