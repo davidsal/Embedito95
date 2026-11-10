@@ -12,7 +12,11 @@ import {
 	reportUnexpectedToken,
 } from "./token-stream.js";
 import { formatToken, isExpressionStart, isNameToken } from "./tokens.js";
-import { parseParameter, parseTypeUnion } from "./types.js";
+import {
+	parseParameter,
+	parseTypeParameters,
+	parseTypeUnion,
+} from "./types.js";
 
 const isNullOnlyTypeAnnotation = (context) => {
 	const firstToken = context.tokens[context.position];
@@ -169,10 +173,13 @@ const toTypeAnnotation = (parsedType) => {
 	if (!parsedType) {
 		return null;
 	}
+	const singleMember =
+		parsedType.memberNodes?.length === 1 ? parsedType.memberNodes[0] : null;
 	return {
 		type: parsedType.name,
 		loc: parsedType.loc,
 		members: parsedType.memberNodes,
+		typeArguments: singleMember?.typeArguments ?? null,
 	};
 };
 
@@ -284,6 +291,10 @@ export const parseTypeDeclaration = (context) => {
 		name,
 		loc: makeLocation(nameToken ?? start, extendLocation(nameToken ?? start)),
 	};
+	const typeParameters =
+		peek(context).type === TOKEN_TYPE.lessThan
+			? parseTypeParameters(context)
+			: null;
 	expectRequired(context, TOKEN_TYPE.equal);
 	expectRequired(context, TOKEN_TYPE.leftBrace);
 	const members = collectTypeMembers(context);
@@ -292,6 +303,7 @@ export const parseTypeDeclaration = (context) => {
 		type: AST_NODE.typeDeclaration,
 		name,
 		nameIdent,
+		typeParameters,
 		members,
 		loc: makeLocation(start, closingBrace ?? peek(context)),
 	};

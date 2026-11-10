@@ -1,5 +1,6 @@
 import { AST_NODE, DATA_TYPE, ERROR_CODE, SEVERITY } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { isAsyncTaskType } from "./async-task-type.js";
 import {
 	checkComparisonTypeMismatch,
 	resolveCheckExpressionType,
@@ -74,7 +75,9 @@ export const buildCheckContext = ({
 			return ranged;
 		}
 		const type = variableTypes.resolve(name, loc);
-		return type && objectTypes[type] ? type : undefined;
+		return type && (objectTypes[type] || isAsyncTaskType(type))
+			? type
+			: undefined;
 	};
 
 	const resolveVariableTypeAt = createNarrowedTypeResolver(
@@ -115,6 +118,7 @@ export const buildCheckContext = ({
 		rhsNode,
 		floatContext,
 		location,
+		resolveCallType = null,
 	) => {
 		if (isArbitraryUnionType(targetType)) {
 			return;
@@ -150,6 +154,16 @@ export const buildCheckContext = ({
 			wordSize,
 			objectTypes,
 		);
+		const callAwareRhsType = resolveCallType
+			? resolveExpressionType(
+					resolveVariableNameType,
+					rhsNode,
+					floatContext,
+					resolveCallType,
+					wordSize,
+					objectTypes,
+				)
+			: null;
 
 		if (
 			rhsType &&
@@ -171,6 +185,24 @@ export const buildCheckContext = ({
 			? getNonNullableType(targetType)
 			: targetType;
 		const nonNullRhs = rhsType ? getNonNullableType(rhsType) : rhsType;
+		const nonNullCallRhs = callAwareRhsType
+			? getNonNullableType(callAwareRhsType)
+			: null;
+		const taskRhsType = isAsyncTaskType(nonNullRhs)
+			? rhsType
+			: isAsyncTaskType(nonNullCallRhs)
+				? callAwareRhsType
+				: null;
+		if (taskRhsType && !isAsyncTaskType(nonNullTarget)) {
+			errors.push(
+				makeDiagnostic({
+					code: ERROR_CODE.assignmentTypeMismatch,
+					params: { name: name ?? "?", type: targetType, rhsType: taskRhsType },
+					location,
+				}),
+			);
+			return;
+		}
 		const targetIsChar = CHARACTER_TYPES.has(nonNullTarget);
 		const rhsIsChar = CHARACTER_TYPES.has(nonNullRhs);
 
@@ -337,6 +369,7 @@ export const buildCheckContext = ({
 		enumTypes,
 		functionDefinitions,
 		resolveImportedName,
+		resolveCallType,
 		wordSize,
 		rangeScopes,
 		registerVariableRange,

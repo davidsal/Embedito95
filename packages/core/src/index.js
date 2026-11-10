@@ -1,4 +1,5 @@
 export {
+	ASYNC_TASK_TYPE_NAME,
 	buildLibraryFunctionReturnTypes,
 	check,
 	collectArgumentCastWarnings,
@@ -10,6 +11,7 @@ export {
 	collectObjectLiteralTypes,
 	collectUserFunctionReturnTypes,
 	collectVariableTypes,
+	createAsyncTaskType,
 	createNarrowedTypeResolver,
 	decodeObjectShape,
 	getImportEffectiveName,
@@ -17,11 +19,13 @@ export {
 	inferArrayElementType,
 	inferFunctionReturnType,
 	inferLiteralType,
+	isAsyncTaskType,
 	isNarrowedAt,
 	isNullableType,
 	isObjectShapeType,
 	normalizeOperandTypes,
 	parseArrayType,
+	parseAsyncTaskType,
 	resolveArrayMethod,
 	resolveAssignmentTruncation,
 	resolveBinaryOperationType,
@@ -38,6 +42,8 @@ export {
 	resolveVariableType,
 	resolveWordDataType,
 	STRING_METHODS,
+	stripTypeArguments,
+	unwrapAsyncTaskType,
 	walk,
 } from "./checker/index.js";
 export { evaluateConstant, nodeIsFloat } from "./const-eval.js";

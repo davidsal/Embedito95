@@ -1,5 +1,6 @@
 import { AST_NODE, DATA_TYPE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { createAsyncTaskType } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import { getImportEffectiveName, isModuleNameTaken } from "./imports.js";
 import { resolveFloatType, resolveIntegerType } from "./type-resolution.js";
@@ -288,9 +289,13 @@ const registerFunctionDefinition = (state, name, initializer, location) => {
 		defaultValue: param.defaultValue ?? null,
 	}));
 	state.functionParameterCount[name] = functionParamCount;
+	const declaredReturnType = initializer.returnType?.name ?? DATA_TYPE.void;
 	state.functionDefinitions[name] = {
 		params: functionParamTypes,
-		returnType: initializer.returnType?.name ?? DATA_TYPE.void,
+		returnType:
+			initializer.async === true
+				? createAsyncTaskType(declaredReturnType)
+				: declaredReturnType,
 	};
 
 	if (REQUIRED_FUNCTIONS.includes(name) && initializer.async) {

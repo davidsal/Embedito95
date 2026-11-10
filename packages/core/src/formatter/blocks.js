@@ -227,6 +227,18 @@ const collectTypeMemberLines = (
 	});
 };
 
+const formatTypeParameters = (typeParameters) => {
+	if (!typeParameters || typeParameters.length === 0) {
+		return "";
+	}
+	const parameters = typeParameters.map((typeParameter) => {
+		return typeParameter.defaultType
+			? `${typeParameter.name} = ${typeParameter.defaultType.name}`
+			: typeParameter.name;
+	});
+	return `<${parameters.join(", ")}>`;
+};
+
 const formatTypeDeclaration = (
 	node,
 	depth,
@@ -241,7 +253,8 @@ const formatTypeDeclaration = (
 		node.loc?.start?.line,
 	);
 	const prefix = node.export ? "export " : "";
-	const head = `${before}${getIndent(depth)}${prefix}type ${node.name} = {`;
+	const typeParameters = formatTypeParameters(node.typeParameters);
+	const head = `${before}${getIndent(depth)}${prefix}type ${node.name}${typeParameters} = {`;
 	if (node.members.length === 0) {
 		return `${head} }`;
 	}

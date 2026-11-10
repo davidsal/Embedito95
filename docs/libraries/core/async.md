@@ -20,5 +20,8 @@ type AsyncTask<T = null> = {
 }
 ```
 
-An `async` function returns an `AsyncTask`. Several async tasks started from
+An `async` function always returns an `AsyncTask<T>`, where `T` is the type of the
+returned value. When the function returns nothing, the task carries no payload
+and its type is plain `AsyncTask`. `await` on an `AsyncTask<T>` yields `T`, so
+the task's `value` field has that same type. Several async tasks started from
 `main` run cooperatively on the event loop.

@@ -1,5 +1,6 @@
 import { AST_NODE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { stripTypeArguments } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import { selfContextStack } from "./expression-objects.js";
 import { getImportEffectiveName } from "./imports.js";
@@ -216,26 +217,34 @@ export const checkScopeDuplicates = (state) => {
 };
 
 const collectTypeAnnotationName = (names, annotation) => {
-	if (typeof annotation === "string") {
-		if (annotation) {
-			names.add(annotation);
+	const addName = (name) => {
+		if (!name) {
+			return;
 		}
+		names.add(name);
+		const baseName = stripTypeArguments(name);
+		if (baseName !== name) {
+			names.add(baseName);
+		}
+	};
+	if (typeof annotation === "string") {
+		addName(annotation);
 		return;
 	}
 	if (!annotation || typeof annotation !== "object") {
 		return;
 	}
 	if (typeof annotation.type === "string" && annotation.type) {
-		names.add(annotation.type);
+		addName(annotation.type);
 	}
 	if (typeof annotation.name === "string" && annotation.name) {
-		names.add(annotation.name);
+		addName(annotation.name);
 	}
 	for (const member of annotation.members ?? []) {
 		if (typeof member === "string") {
-			names.add(member);
+			addName(member);
 		} else if (member && typeof member.name === "string") {
-			names.add(member.name);
+			addName(member.name);
 		}
 	}
 };

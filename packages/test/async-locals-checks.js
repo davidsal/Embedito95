@@ -77,6 +77,12 @@ const LIBRARY_ASYNC_ENTRY_SOURCE = [
 	"}",
 ].join("\n");
 
+const ANNOTATED_ASYNC_TASK_SOURCE = [
+	"const readAnnotated = async (): AsyncTask<i8> => {",
+	"    return 1",
+	"}",
+].join("\n");
+
 const createFakeLibraries = () => {
 	return createLibraries({
 		knownLibraries: new Set([FAKE_LIBRARY_PACKAGE]),
@@ -245,12 +251,27 @@ const checkLibraryAsyncFields = ({ wordSize, wordType }) => {
 	);
 };
 
+const checkAnnotatedAsyncTaskPayloadField = ({ wordSize }) => {
+	const fields = buildTaskTypeFields({
+		entrySource: ANNOTATED_ASYNC_TASK_SOURCE,
+		libraries: createFakeLibraries(),
+		wordSize,
+		typeName: "_ReadAnnotatedAsyncTask",
+	});
+	return expectEqual(
+		`async task annotated AsyncTask<T> stores the payload type T (word size ${wordSize})`,
+		formatFields(fields, ["value"]),
+		"value: i8",
+	);
+};
+
 export const runAsyncLocalChecks = () => {
 	return WORD_SIZE_EXPECTATIONS.flatMap(({ wordSize, wordType }) => {
 		return [
 			...checkTesterMainFields({ wordSize, wordType }),
 			checkInferredInitializerFields({ wordSize, wordType }),
 			checkLibraryAsyncFields({ wordSize, wordType }),
+			checkAnnotatedAsyncTaskPayloadField({ wordSize }),
 		];
 	});
 };

@@ -169,7 +169,9 @@ const parseAsExpression = (context, expression) => {
 	if (!typeToken) {
 		return { stop: true };
 	}
-	const parsed = parseTypeName(context, typeToken);
+	const parsed = parseTypeName(context, typeToken, {
+		allowTypeArguments: false,
+	});
 	return {
 		expression: {
 			type: AST_NODE.asExpression,

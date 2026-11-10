@@ -1,3 +1,4 @@
+import { parseAsyncTaskType } from "../checker/async-task-type.js";
 import { tokenize } from "../lexer/index.js";
 import { parse } from "../parser/index.js";
 import {
@@ -26,6 +27,17 @@ const resolveChildType = () => {
 // An async function that returns a value stores it in the task so the parent
 // can read it. The field must exist on the task type, otherwise the type has no
 // fields and is not a shared handle, so `task.value = x` would mutate a copy.
+const resolveReturnValueFieldType = (returnType) => {
+	if (!returnType?.name) {
+		return DEFAULT_LOCAL_TYPE;
+	}
+	const asyncTask = parseAsyncTaskType(returnType.name);
+	if (asyncTask) {
+		return asyncTask.argumentType ?? DEFAULT_LOCAL_TYPE;
+	}
+	return returnType.name;
+};
+
 const addReturnValueField = (fields, returnType) => {
 	const alreadyPresent = fields.some((field) => {
 		return field.name === TASK_STATE_VALUE_KEY;
@@ -35,7 +47,7 @@ const addReturnValueField = (fields, returnType) => {
 	}
 	fields.push({
 		name: TASK_STATE_VALUE_KEY,
-		type: returnType?.name ?? DEFAULT_LOCAL_TYPE,
+		type: resolveReturnValueFieldType(returnType),
 	});
 };
 

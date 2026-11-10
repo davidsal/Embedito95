@@ -4,6 +4,14 @@ export {
 	inferArrayElementType,
 	parseArrayType,
 } from "./arrays.js";
+export {
+	ASYNC_TASK_TYPE_NAME,
+	createAsyncTaskType,
+	isAsyncTaskType,
+	parseAsyncTaskType,
+	stripTypeArguments,
+	unwrapAsyncTaskType,
+} from "./async-task-type.js";
 export { check } from "./checker.js";
 export {
 	analyzeClosureFactory,

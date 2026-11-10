@@ -22,6 +22,7 @@ import {
 	buildLibraryFunctionReturnTypes,
 	flattenLibraryObjectTypes,
 } from "./library-types.js";
+import { checkMemberAccess } from "./member-access-checks.js";
 import {
 	checkAnnotationsAndReturns,
 	checkMethodCalls,
@@ -45,6 +46,7 @@ import {
 	collectObjectMethodReturnTypes,
 	resolveProjectTypes,
 } from "./return-projects.js";
+import { checkTypeArguments } from "./type-arguments.js";
 import { resolveWordDataType } from "./type-resolution.js";
 import { checkTypeUnions } from "./union-checks.js";
 import {
@@ -209,6 +211,7 @@ export const check = (ast, libs = {}) => {
 	};
 
 	checkTopLevelDeclarations(state);
+	checkTypeArguments(state);
 
 	for (const [typeName, capturedFieldTypes] of collectClosureCapturedFieldTypes(
 		ast,
@@ -256,7 +259,8 @@ export const check = (ast, libs = {}) => {
 	checkAnnotationsAndReturns(state);
 	checkTypeUnions(state);
 
-	checkAwaitUsage(ast, errors);
+	checkMemberAccess(state);
+	checkAwaitUsage(state);
 	checkAsyncBuiltinCalls(state);
 	checkUnreachableCode(ast, errors, libs.source);
 	checkSwitchStatements(state);

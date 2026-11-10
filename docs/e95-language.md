@@ -54,7 +54,7 @@ what does not. When something is missing, use the e95 form.
 | `try`, `catch`, `throw` | Not available. |
 | `undefined` | `null`. |
 | Default or namespace imports | Named imports only. |
-| User-defined generics | None; `AsyncTask<T>` comes from `@embedito95/async`. |
+| User-defined generics | None. `AsyncTask<T>` is the only parameterized type in the language; `@embedito95/async` declares it. |
 
 ## Keywords
 

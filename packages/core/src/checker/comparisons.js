@@ -7,6 +7,7 @@ import {
 } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { parseArrayElementType } from "./arrays.js";
+import { isAsyncTaskType, unwrapAsyncTaskType } from "./async-task-type.js";
 import { flattenLogicalChain, resolveLogicalResultType } from "./logical.js";
 import { resolveObjectFieldType } from "./object-shapes.js";
 import { normalizeOperandTypes } from "./operators.js";
@@ -23,53 +24,25 @@ import {
 	NULL_TYPE,
 } from "./types.js";
 
-const resolveObjectTypeName = (context, node) => {
-	if (node?.type === AST_NODE.identifier) {
-		return context.resolveVariableNameType(node.name, node.loc) ?? null;
-	}
-	if (node?.type === AST_NODE.memberExpression) {
-		const objectType = resolveObjectTypeName(context, node.object);
-		if (!objectType || !node.property?.name) {
-			return null;
-		}
-		return (
-			resolveObjectFieldType(
-				objectType,
-				node.property.name,
-				context.objectTypes,
-			) ?? null
-		);
-	}
-	if (node?.type === AST_NODE.indexExpression) {
-		return parseArrayElementType(
-			resolveCheckExpressionType(context, node.object),
-		);
-	}
-	return null;
-};
-
 const resolveMemberExpressionType = (context, node) => {
-	if (node.property?.name) {
+	const propertyName = node.property?.name;
+	if (propertyName && node.object?.type === AST_NODE.identifier) {
 		if (
-			node.object?.type === AST_NODE.identifier &&
 			context.libEnumTypeNames.has(node.object.name) &&
-			context.libEnumMembersByType[node.object.name]?.has(node.property.name)
+			context.libEnumMembersByType[node.object.name]?.has(propertyName)
 		) {
 			return node.object.name;
 		}
-		if (
-			node.object?.type === AST_NODE.identifier &&
-			context.enumTypes.has(node.object.name)
-		) {
+		if (context.enumTypes.has(node.object.name)) {
 			return node.object.name;
 		}
 	}
-	if (node.property?.name) {
-		const objectType = resolveObjectTypeName(context, node.object);
+	if (propertyName) {
+		const objectType = resolveCheckExpressionType(context, node.object);
 		if (objectType) {
 			const fieldType = resolveObjectFieldType(
 				objectType,
-				node.property.name,
+				propertyName,
 				context.objectTypes,
 			);
 			if (fieldType) {
@@ -82,10 +55,12 @@ const resolveMemberExpressionType = (context, node) => {
 
 const resolveCallExpressionType = (context, node) => {
 	if (node.callee?.type === AST_NODE.identifier) {
-		const definition =
-			context.functionDefinitions[
-				context.resolveImportedName(node.callee.name)
-			];
+		const resolvedName = context.resolveImportedName(node.callee.name);
+		const callType = context.resolveCallType?.(resolvedName);
+		if (callType) {
+			return callType;
+		}
+		const definition = context.functionDefinitions[resolvedName];
 
 		if (definition?.returnType) {
 			return definition.returnType;
@@ -165,7 +140,9 @@ export const resolveCheckExpressionType = (context, node) => {
 			: operandType;
 	}
 	if (node.type === AST_NODE.awaitExpression) {
-		return resolveCheckExpressionType(context, node.argument);
+		return unwrapAsyncTaskType(
+			resolveCheckExpressionType(context, node.argument),
+		);
 	}
 	if (node.type === AST_NODE.binaryExpression) {
 		if (LOGICAL_OPERATORS.has(node.operator)) {
@@ -224,6 +201,20 @@ export const checkComparisonTypeMismatch = (
 				);
 			}
 		}
+		return;
+	}
+
+	const leftIsAsyncTask = isAsyncTaskType(leftType);
+	const rightIsAsyncTask = isAsyncTaskType(rightType);
+
+	if (leftIsAsyncTask !== rightIsAsyncTask) {
+		context.errors.push(
+			makeDiagnostic({
+				code: ERROR_CODE.comparisonTypeMismatch,
+				params: { operator, leftType, rightType },
+				location,
+			}),
+		);
 		return;
 	}
 

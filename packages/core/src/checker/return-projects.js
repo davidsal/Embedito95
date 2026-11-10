@@ -1,4 +1,5 @@
 import { AST_NODE } from "../constants.js";
+import { createAsyncTaskType } from "./async-task-type.js";
 import { collectFunctionDeclarations } from "./declaration-accessors.js";
 import { inferFunctionReturnType } from "./return-inference.js";
 import { collectVariableTypes } from "./variables.js";
@@ -89,6 +90,27 @@ export const collectObjectMethodReturnTypes = (ast, objectTypes) => {
 	return methodTypes;
 };
 
+const wrapAsyncCallTypes = (ast, userFunctionReturnTypes) => {
+	const callTypes = new Map();
+	for (const { declaration } of collectFunctionDeclarations(ast)) {
+		const name = declaration.id?.name;
+		const returnType = name ? userFunctionReturnTypes.get(name) : null;
+		if (!name || !returnType) {
+			continue;
+		}
+		callTypes.set(
+			name,
+			declaration.init.async === true
+				? createAsyncTaskType(returnType)
+				: returnType,
+		);
+	}
+	return callTypes;
+};
+
+// `userFunctionReturnTypes` stays raw because the async lowering reads the
+// payload type from it. `resolveCallType` (what the checker and the expression
+// resolvers see) reports `AsyncTask<T>` for async functions instead.
 export const resolveProjectTypes = (
 	ast,
 	wordType,
@@ -96,9 +118,8 @@ export const resolveProjectTypes = (
 	wordSize,
 	objectTypes,
 ) => {
-	const makeResolver = (userFunctionReturnTypes) => {
-		return (name) =>
-			userFunctionReturnTypes.get(name) ?? resolveLibraryCallType(name);
+	const makeResolver = (callTypes) => {
+		return (name) => callTypes.get(name) ?? resolveLibraryCallType(name);
 	};
 
 	let variableTypes = collectVariableTypes(
@@ -115,24 +136,26 @@ export const resolveProjectTypes = (
 		wordSize,
 		objectTypes,
 	);
+	let callTypes = wrapAsyncCallTypes(ast, userFunctionReturnTypes);
 	variableTypes = collectVariableTypes(
 		ast,
 		wordType,
-		makeResolver(userFunctionReturnTypes),
+		makeResolver(callTypes),
 		wordSize,
 		objectTypes,
 	);
 	userFunctionReturnTypes = collectUserFunctionReturnTypes(
 		ast,
 		(name, loc) => variableTypes.resolve(name, loc),
-		makeResolver(userFunctionReturnTypes),
+		makeResolver(callTypes),
 		wordSize,
 		objectTypes,
 	);
+	callTypes = wrapAsyncCallTypes(ast, userFunctionReturnTypes);
 	variableTypes = collectVariableTypes(
 		ast,
 		wordType,
-		makeResolver(userFunctionReturnTypes),
+		makeResolver(callTypes),
 		wordSize,
 		objectTypes,
 	);
@@ -140,6 +163,6 @@ export const resolveProjectTypes = (
 	return {
 		variableTypes,
 		userFunctionReturnTypes,
-		resolveCallType: makeResolver(userFunctionReturnTypes),
+		resolveCallType: makeResolver(callTypes),
 	};
 };

@@ -9,6 +9,7 @@ import {
 	formatDiagnosticMessage,
 	parse,
 	resolvePlatformTypes,
+	SEVERITY,
 	tokenize,
 } from "embedito95-core";
 import { onCompletion } from "../lsp/src/server/completions/index.js";
@@ -77,6 +78,43 @@ const ASYNC_NESTED_SOURCE = [
 	"    }",
 	"}",
 ].join("\n");
+
+const ASYNC_TASK_DOCUMENT_URI = "file:///tmp/embedito95-lsp-async/main.e95";
+const ASYNC_TASK_SOURCE = [
+	"const getNumberAsync = async () => {",
+	"    return 20",
+	"}",
+	"const task: AsyncTask<i8> = getNumberAsync()",
+	"task.value",
+	"const readTask = async (): AsyncTask => {",
+	"    return 1",
+	"}",
+	"const readNumberAsync = async (): AsyncTask<i8> => {",
+	"    return 1",
+	"}",
+].join("\n");
+const ASYNC_TASK_ASSIGNMENT_DIAGNOSTIC_SOURCE = [
+	"const getNumberAsync = async () => {",
+	"    return 20",
+	"}",
+	"const n: i8 = getNumberAsync()",
+].join("\n");
+const ASYNC_TASK_AWAIT_DIAGNOSTIC_SOURCE = [
+	"const getNumberAsync = async () => {",
+	"    return 20",
+	"}",
+	"const readNumberAsync = async (): AsyncTask<i8> => {",
+	"    const n: i8 = await getNumberAsync()",
+	"    return n",
+	"}",
+].join("\n");
+const ASYNC_TASK_INVALID_AWAIT_SOURCE = [
+	"const readAsync = async () => {",
+	"    const n: i8 = 20",
+	"    await n",
+	"}",
+].join("\n");
+const ASYNC_TASK_USER_GENERIC_SOURCE = "const x: Foo<i8> = 1";
 
 const AVR_F64_DOCUMENT_URI = pathToFileURL(
 	join(ASYNC_AVR_FIXTURE_PROJECT_DIRECTORY, "f64-hover.e95"),
@@ -367,11 +405,15 @@ const checkStringNestedBlockCompletions = async () => {
 	);
 };
 
-const parseDiagnostics = (source) => {
+const collectDiagnostics = (source) => {
 	const { tokens } = tokenize(source);
 	const { ast, comments } = parse(tokens, source);
 	const { errors } = check(ast, { isLibrary: true, comments });
-	return errors.map((error) => {
+	return errors;
+};
+
+const parseDiagnostics = (source) => {
+	return collectDiagnostics(source).map((error) => {
 		const start = error.location?.start;
 		const position = start ? `${start.line}:${start.column}` : "?";
 		return `${position} ${error.code} ${formatDiagnosticMessage(error)}`;
@@ -417,6 +459,110 @@ const checkStringMethodNestedNoFalsePositives = () => {
 		"LSP reports no diagnostics for valid string calls inside nested if blocks",
 		diagnostics.join("\n"),
 		"",
+	);
+};
+
+const hoverAsyncTaskAt = async (marker, offset = 0) => {
+	return hoverInDocument(
+		ASYNC_TASK_DOCUMENT_URI,
+		ASYNC_TASK_SOURCE,
+		findPosition(ASYNC_TASK_SOURCE, marker, offset),
+	);
+};
+
+const checkAsyncFunctionHover = async () => {
+	const hover = await hoverAsyncTaskAt("const getNumberAsync", "const ".length);
+	return expectEqual(
+		"LSP hover of an async function wraps its inferred return in AsyncTask",
+		hover,
+		"```e95\nconst getNumberAsync: () => AsyncTask<i8>\n```",
+	);
+};
+
+const checkAsyncTaskVariableHover = async () => {
+	const hover = await hoverAsyncTaskAt("const task", "const ".length);
+	return expectEqual(
+		"LSP hover of an AsyncTask-annotated variable keeps the type argument",
+		hover,
+		"```e95\nconst task: AsyncTask<i8>\n```",
+	);
+};
+
+const checkAsyncTaskFieldHover = async () => {
+	const hover = await hoverAsyncTaskAt("task.value", "task.".length);
+	return expectEqual(
+		"LSP hover of the AsyncTask value field shows the task payload type",
+		hover,
+		"```e95\nvalue: i8\n```",
+	);
+};
+
+const checkAsyncAnnotatedFunctionHover = async () => {
+	const hover = await hoverAsyncTaskAt("const readTask", "const ".length);
+	return expectEqual(
+		"LSP hover of an async function annotated AsyncTask adds no type argument",
+		hover,
+		"```e95\nconst readTask: () => AsyncTask\n```",
+	);
+};
+
+const checkAsyncTaskAnnotatedFunctionHover = async () => {
+	const hover = await hoverAsyncTaskAt(
+		"const readNumberAsync",
+		"const ".length,
+	);
+	return expectEqual(
+		"LSP hover of an async function annotated AsyncTask<i8> keeps one type argument",
+		hover,
+		"```e95\nconst readNumberAsync: () => AsyncTask<i8>\n```",
+	);
+};
+
+const checkAsyncTaskAssignmentDiagnostic = () => {
+	return expectEqual(
+		"LSP reports assigning an AsyncTask result without await",
+		parseDiagnostics(ASYNC_TASK_ASSIGNMENT_DIAGNOSTIC_SOURCE).join("\n"),
+		"4:15 error.assignmentTypeMismatch Cannot assign 'AsyncTask<i8>' value to 'n' of type 'i8'.",
+	);
+};
+
+const checkAsyncTaskDiagnosticSeverity = () => {
+	const severities = collectDiagnostics(
+		ASYNC_TASK_ASSIGNMENT_DIAGNOSTIC_SOURCE,
+	).map((error) => {
+		return error.severity;
+	});
+	return expectEqual(
+		"LSP reports the AsyncTask assignment mismatch as an error",
+		severities.join(","),
+		String(SEVERITY.error),
+	);
+};
+
+const checkAsyncTaskAwaitDiagnostic = () => {
+	return expectEqual(
+		"LSP reports no diagnostics when await unwraps AsyncTask<i8>",
+		parseDiagnostics(ASYNC_TASK_AWAIT_DIAGNOSTIC_SOURCE).join("\n"),
+		"",
+	);
+};
+
+const checkInvalidAwaitDiagnostic = () => {
+	return expectEqual(
+		"LSP reports awaiting a non-AsyncTask value",
+		parseDiagnostics(ASYNC_TASK_INVALID_AWAIT_SOURCE).join("\n"),
+		"3:11 error.invalidAwaitTarget 'await' can only be used with an 'AsyncTask' value, got 'i8'",
+	);
+};
+
+const checkTypeArgumentsDiagnostic = () => {
+	return expectEqual(
+		"LSP rejects type arguments on a non-AsyncTask type",
+		parseDiagnostics(ASYNC_TASK_USER_GENERIC_SOURCE).join("\n"),
+		[
+			"1:10 error.typeArgumentsNotAllowed Type parameters are not supported on 'Foo': only 'AsyncTask' accepts type arguments",
+			"1:10 error.unknownType Unknown type 'Foo<i8>'",
+		].join("\n"),
 	);
 };
 
@@ -636,6 +782,16 @@ export const runLspHoverChecks = async () => {
 		checkStringMethodNestedDiagnostics(),
 		checkStringMethodArgumentTypeDiagnostics(),
 		checkStringMethodNestedNoFalsePositives(),
+		await checkAsyncFunctionHover(),
+		await checkAsyncTaskVariableHover(),
+		await checkAsyncTaskFieldHover(),
+		await checkAsyncAnnotatedFunctionHover(),
+		await checkAsyncTaskAnnotatedFunctionHover(),
+		checkAsyncTaskAssignmentDiagnostic(),
+		checkAsyncTaskDiagnosticSeverity(),
+		checkAsyncTaskAwaitDiagnostic(),
+		checkInvalidAwaitDiagnostic(),
+		checkTypeArgumentsDiagnostic(),
 		await checkLibraryMathFunctionHover(),
 		await checkLibraryMathBitHelperHover(),
 		...checkRegistryLibrariesWithoutVersion(),

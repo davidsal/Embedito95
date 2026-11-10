@@ -3,13 +3,24 @@ import {
 	DATA_TYPE,
 	decodeObjectShape,
 	inferArrayElementType,
+	isAsyncTaskType,
 	isObjectShapeType,
 	parseArrayType,
 	resolveArrayMethod,
 	resolveLiteralDataType,
 	resolveStringMethod,
+	unwrapAsyncTaskType,
 } from "embedito95-core";
 import { formatMethodParameterList } from "./formatting.js";
+
+const ASYNC_TASK_VALUE_FIELD = "value";
+
+const resolveAsyncTaskMemberSignature = (key, typeName) => {
+	if (!isAsyncTaskType(typeName) || key !== ASYNC_TASK_VALUE_FIELD) {
+		return null;
+	}
+	return `${ASYNC_TASK_VALUE_FIELD}: ${unwrapAsyncTaskType(typeName)}`;
+};
 
 const resolveArrayMemberSignature = (key, typeName) => {
 	const arrayType = parseArrayType(typeName);
@@ -78,6 +89,15 @@ export const resolveObjectMemberFromType = (
 
 	if (arrayMember) {
 		return arrayMember;
+	}
+
+	const asyncTaskMember = resolveAsyncTaskMemberSignature(
+		property.key,
+		typeName,
+	);
+
+	if (asyncTaskMember) {
+		return asyncTaskMember;
 	}
 
 	const type = objectTypes?.[typeName];

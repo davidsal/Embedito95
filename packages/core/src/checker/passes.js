@@ -4,8 +4,10 @@ import {
 	ASYNC_LIBRARY_NAME,
 	ERROR_CODE,
 	SEVERITY,
+	UNRESOLVED_TYPE,
 } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { isAsyncTaskType } from "./async-task-type.js";
 import { walk } from "./walk.js";
 
 export const expressionHasEffect = (node) => {
@@ -36,7 +38,8 @@ export const expressionHasEffect = (node) => {
 	}
 };
 
-export const checkAwaitUsage = (ast, errors) => {
+export const checkAwaitUsage = (state) => {
+	const { ast, errors } = state;
 	const asyncContextStack = [false];
 	walk(ast, {
 		enter: (node) => {
@@ -50,6 +53,22 @@ export const checkAwaitUsage = (ast, errors) => {
 						makeDiagnostic({
 							code: ERROR_CODE.awaitOutsideAsync,
 							location: node.loc,
+						}),
+					);
+				}
+				const awaitedType = state.context.resolveCheckExpressionType(
+					node.argument,
+				);
+				if (
+					awaitedType &&
+					awaitedType !== UNRESOLVED_TYPE &&
+					!isAsyncTaskType(awaitedType)
+				) {
+					errors.push(
+						makeDiagnostic({
+							code: ERROR_CODE.invalidAwaitTarget,
+							params: { type: awaitedType },
+							location: node.argument?.loc ?? node.loc,
 						}),
 					);
 				}

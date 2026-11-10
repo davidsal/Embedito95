@@ -105,6 +105,7 @@ const handleVariableDeclaration = (state, node) => {
 		declaration?.init,
 		floatContext,
 		declaration?.init?.loc ?? node.loc,
+		declaration?.id?.typeAnnotation ? state.resolveCallType : null,
 	);
 };
 
@@ -240,6 +241,7 @@ const handleAssignmentExpression = (state, node) => {
 			right,
 			floatContext,
 			right.loc ?? node.loc,
+			state.resolveCallType,
 		);
 	}
 };

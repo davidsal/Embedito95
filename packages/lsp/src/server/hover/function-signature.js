@@ -1,4 +1,8 @@
-import { formatExpression, inferFunctionReturnType } from "embedito95-core";
+import {
+	createAsyncTaskType,
+	formatExpression,
+	inferFunctionReturnType,
+} from "embedito95-core";
 import { formatObjectShapeType } from "./formatting.js";
 
 const formatFunctionExpressionParameters = (functionExpression) => {
@@ -38,9 +42,15 @@ export const getFunctionSignature = (
 		syntaxTree,
 		objectTypes,
 	).type;
-	const returnType = functionExpression.returnType
+	const declaredReturnType = functionExpression.returnType
 		? functionExpression.returnType.name
 		: (inferredReturn ?? "void");
+	// An async function always returns the task handle, so the hover wraps the
+	// payload in `AsyncTask<T>`; a declared `AsyncTask` annotation is reused.
+	const returnType =
+		functionExpression.async === true
+			? createAsyncTaskType(declaredReturnType)
+			: declaredReturnType;
 
 	return `(${parameters}) => ${formatObjectShapeType(returnType)}`;
 };

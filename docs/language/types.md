@@ -11,6 +11,7 @@
 | `T[]` | heap handle | dynamic array; `[1, 2, 3]` is an array literal |
 | `T[N]` | heap handle | capacity annotation; `N` is not reserved yet |
 | object (`type`) | heap handle | fields stored inline in one block |
+| `AsyncTask<T>` | heap handle | the only parameterized type; `await` yields `T` and `value` holds `T` |
 | `T \| null` | same as `T` | the only union |
 | `void` | — | no return value |
 
@@ -22,6 +23,10 @@
 - `T[]` grows dynamically. `T[N]` parses, but `N` does not reserve storage yet;
   see [Engine](../engine.md#2-heap-fragmentation).
 - `enum` values are integer-backed.
+- `AsyncTask<T>` is the only parameterized type the language understands, and it
+  is not a user-defined generic: an `async` function produces it, `await` yields
+  its `T` payload, and the `value` field is typed `T`. A task without a payload
+  is written as plain `AsyncTask`.
 - Template literals with interpolation are also supported: `` `value: ${x}` ``.
 
 ## Null and nullable
