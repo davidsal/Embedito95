@@ -1,6 +1,11 @@
 #!/bin/sh
 # Block the push when a workspace package changed without a changeset.
 # Create one with `pnpm changeset` and commit it before pushing.
+# Release commits consume the changesets, so they are allowed.
 # Bypass (emergencies only): `git push --no-verify`.
+
+if git log -1 --pretty=%s | grep -q '^chore(release):'; then
+	exit 0
+fi
 
 pnpm changeset status --since=origin/main
