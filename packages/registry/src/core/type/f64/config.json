@@ -1,0 +1,8 @@
+{
+	"type": "library",
+	"embedito95Version": "embedito95@0.1.0",
+	"name": "f64",
+	"package": "@embedito95/f64",
+	"version": "0.1.0",
+	"autoImport": { "platform": { "float64": "software" } }
+}

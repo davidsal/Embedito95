@@ -58,9 +58,29 @@ const listLibraryDirectories = (libraryRoot) => {
 	return directories.filter((directory) => existsSync(directory));
 };
 
+const matchesPlatformCapabilities = (requirements, platform) => {
+	if (!requirements || !platform) {
+		return false;
+	}
+	return Object.entries(requirements).every(([name, expected]) => {
+		return platform[name] === expected;
+	});
+};
+
+const isAutoImported = (autoImport, platform) => {
+	if (autoImport === true) {
+		return true;
+	}
+	if (!autoImport || typeof autoImport !== "object") {
+		return false;
+	}
+	return matchesPlatformCapabilities(autoImport.platform, platform);
+};
+
 const collectAutoImportLibraryNames = (
 	libraryNames,
 	currentWorkingDirectory,
+	platform,
 ) => {
 	for (const librariesDirectory of listLibraryDirectories(
 		currentWorkingDirectory,
@@ -71,7 +91,7 @@ const collectAutoImportLibraryNames = (
 				continue;
 			}
 			const config = JSON.parse(readFileSync(configPath, UTF8));
-			if (config.autoImport) {
+			if (isAutoImported(config.autoImport, platform)) {
 				libraryNames.add(libraryName);
 			}
 		}
@@ -130,9 +150,14 @@ export const loadLibraryModules = async (
 	usedLibraries,
 	strategyName,
 	currentWorkingDirectory,
+	platform,
 ) => {
 	const libraryNames = new Set(usedLibraries);
-	collectAutoImportLibraryNames(libraryNames, currentWorkingDirectory);
+	collectAutoImportLibraryNames(
+		libraryNames,
+		currentWorkingDirectory,
+		platform,
+	);
 
 	const { packageToDirectory, basenameToDirectory } = scanLibraryDirectories([
 		getLibrarySourceDirectory(),

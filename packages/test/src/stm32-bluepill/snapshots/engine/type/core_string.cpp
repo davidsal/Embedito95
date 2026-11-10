@@ -98,6 +98,11 @@ static u32 stringParseMagnitude(const char *text, u32 limit, boolean *saturated)
 	return magnitude;
 }
 
+const f64 STRING_FLOAT_ZERO = (f64)0;
+const f64 STRING_FLOAT_ONE = (f64)1;
+const f64 STRING_FLOAT_FIVE = (f64)5;
+const f64 STRING_FLOAT_TEN = (f64)10;
+
 static f64 stringScaleByPowerOfTen(f64 value, i32 exponent) {
 	i32 remaining = exponent;
 	if (remaining > detail::STRING_FLOAT_MAX_EXPONENT) {
@@ -107,11 +112,11 @@ static f64 stringScaleByPowerOfTen(f64 value, i32 exponent) {
 		remaining = -detail::STRING_FLOAT_MAX_EXPONENT;
 	}
 	while (remaining > 0) {
-		value *= 10.0;
+		value *= STRING_FLOAT_TEN;
 		remaining--;
 	}
 	while (remaining < 0) {
-		value /= 10.0;
+		value /= STRING_FLOAT_TEN;
 		remaining++;
 	}
 	return value;
@@ -245,7 +250,7 @@ String::String(boolean value) : storage_(Ref<StrStorage>::emplace()) {
 }
 
 String::String(f32 value) : storage_(Ref<StrStorage>::emplace()) {
-	assignFloat(value, 7);
+	assignFloat((f64)value, 7);
 }
 
 String::String(f64 value) : storage_(Ref<StrStorage>::emplace()) {
@@ -453,24 +458,24 @@ f64 String::parseFloat64() const {
 		cursor++;
 	}
 	boolean hasDigits = false;
-	f64 value = 0.0;
+	f64 value = STRING_FLOAT_ZERO;
 	i32 fractionalDigits = 0;
 	while (stringIsDigit(*cursor)) {
-		value = value * 10.0 + (f64)(*cursor - '0');
+		value = value * STRING_FLOAT_TEN + (f64)(*cursor - '0');
 		hasDigits = true;
 		cursor++;
 	}
 	if (*cursor == '.') {
 		cursor++;
 		while (stringIsDigit(*cursor)) {
-			value = value * 10.0 + (f64)(*cursor - '0');
+			value = value * STRING_FLOAT_TEN + (f64)(*cursor - '0');
 			hasDigits = true;
 			fractionalDigits++;
 			cursor++;
 		}
 	}
 	if (!hasDigits) {
-		return 0.0;
+		return STRING_FLOAT_ZERO;
 	}
 	i32 exponent = 0;
 	if (*cursor == 'e' || *cursor == 'E') {
@@ -937,11 +942,11 @@ void String::assignU128(u64 lo, u64 hi, boolean negative) {
 void String::assignFloat(f64 value, u16 maxDigits) {
 	char text[48];
 	u16 length = 0;
-	if (value < 0) {
+	if (value < STRING_FLOAT_ZERO) {
 		text[length++] = '-';
 		value = -value;
 	}
-	if (value == 0) {
+	if (value == STRING_FLOAT_ZERO) {
 		text[length++] = '0';
 		text[length] = '\0';
 		assign(text);
@@ -952,14 +957,14 @@ void String::assignFloat(f64 value, u16 maxDigits) {
 		return;
 	}
 	i16 exponent = 0;
-	if (value >= 10.0) {
-		while (value >= 10.0 && exponent < _E95_FLOAT_MAX_EXPONENT) {
-			value /= 10.0;
+	if (value >= STRING_FLOAT_TEN) {
+		while (value >= STRING_FLOAT_TEN && exponent < _E95_FLOAT_MAX_EXPONENT) {
+			value /= STRING_FLOAT_TEN;
 			exponent++;
 		}
-	} else if (value < 1.0) {
-		while (value < 1.0 && exponent > -_E95_FLOAT_MAX_EXPONENT) {
-			value *= 10.0;
+	} else if (value < STRING_FLOAT_ONE) {
+		while (value < STRING_FLOAT_ONE && exponent > -_E95_FLOAT_MAX_EXPONENT) {
+			value *= STRING_FLOAT_TEN;
 			exponent--;
 		}
 	}
@@ -968,9 +973,9 @@ void String::assignFloat(f64 value, u16 maxDigits) {
 	for (u16 i = 0; i < maxDigits; i++) {
 		i32 digit = (i32)value;
 		digits[digitCount++] = (char)('0' + digit);
-		value = (value - (f64)digit) * 10.0;
+		value = (value - (f64)digit) * STRING_FLOAT_TEN;
 	}
-	if (value >= 5.0) {
+	if (value >= STRING_FLOAT_FIVE) {
 		i16 i = (i16)digitCount - 1;
 		while (i >= 0) {
 			digits[i]++;

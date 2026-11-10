@@ -1,0 +1,99 @@
+// 64-bit floating point on every platform. AVR stores it as the portable
+// software binary64 (`_e95_f64`), while STM32 uses the native compiler
+// `double`; the same source must compile and link on both.
+const setup = () => {}
+
+const computeSum = (): f64 => {
+    const left: f64 = 0.1
+    const right: f64 = 0.2
+    return left + right
+}
+
+const computeQuotient = (): f64 => {
+    const numerator: f64 = 1.0
+    const denominator: f64 = 3.0
+    return numerator / denominator
+}
+
+const computeProduct = (): f64 => {
+    let value: f64 = 1.5
+    value = value * 2.0
+    value = value - 0.5
+    return value
+}
+
+const compareValues = (): boolean => {
+    const sum: f64 = 0.1 + 0.2
+    const same: f64 = 0.3
+    return sum == same
+}
+
+const convertValue = (): f64 => {
+    const integer: i32 = 42
+    return (integer as f64)
+}
+
+const initFromInteger = (): f64 => {
+    const zero: f64 = 0
+    const one: f64 = 1
+    return zero + one
+}
+
+const literalReturn = (): f64 => {
+    return 2.5
+}
+
+const integerReturn = (): f64 => {
+    return 42
+}
+
+const sumLiterals = (): f64 => {
+    return 0.1 + 0.2
+}
+
+const inferPrecisionReturn = () => {
+    return 0.30000000000000004
+}
+
+const inferMaximumReturn = () => {
+    return 1e308
+}
+
+const incrementByOne = (value: f64): f64 => {
+    return value + 1.0
+}
+
+const foldedMaximumProduct = (): f64 => {
+    const maximum: f64 = 1e308 * 1.0
+    return maximum
+}
+
+const takeValue = (value: f64): void => {
+    return
+}
+
+const passLiterals = (): void => {
+    takeValue(1)
+    takeValue(2.5)
+    return
+}
+
+const main = () => {
+    setup()
+    computeSum()
+    computeQuotient()
+    computeProduct()
+    compareValues()
+    convertValue()
+    initFromInteger()
+    literalReturn()
+    integerReturn()
+    sumLiterals()
+    inferPrecisionReturn()
+    inferMaximumReturn()
+    incrementByOne(1.0)
+    foldedMaximumProduct()
+    passLiterals()
+}
+
+main()

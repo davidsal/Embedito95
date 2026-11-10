@@ -127,11 +127,11 @@ void String::assignU128(u64 lo, u64 hi, boolean negative) {
 void String::assignFloat(f64 value, u16 maxDigits) {
 	char text[48];
 	u16 length = 0;
-	if (value < 0) {
+	if (value < STRING_FLOAT_ZERO) {
 		text[length++] = '-';
 		value = -value;
 	}
-	if (value == 0) {
+	if (value == STRING_FLOAT_ZERO) {
 		text[length++] = '0';
 		text[length] = '\0';
 		assign(text);
@@ -142,14 +142,14 @@ void String::assignFloat(f64 value, u16 maxDigits) {
 		return;
 	}
 	i16 exponent = 0;
-	if (value >= 10.0) {
-		while (value >= 10.0 && exponent < _E95_FLOAT_MAX_EXPONENT) {
-			value /= 10.0;
+	if (value >= STRING_FLOAT_TEN) {
+		while (value >= STRING_FLOAT_TEN && exponent < _E95_FLOAT_MAX_EXPONENT) {
+			value /= STRING_FLOAT_TEN;
 			exponent++;
 		}
-	} else if (value < 1.0) {
-		while (value < 1.0 && exponent > -_E95_FLOAT_MAX_EXPONENT) {
-			value *= 10.0;
+	} else if (value < STRING_FLOAT_ONE) {
+		while (value < STRING_FLOAT_ONE && exponent > -_E95_FLOAT_MAX_EXPONENT) {
+			value *= STRING_FLOAT_TEN;
 			exponent--;
 		}
 	}
@@ -158,9 +158,9 @@ void String::assignFloat(f64 value, u16 maxDigits) {
 	for (u16 i = 0; i < maxDigits; i++) {
 		i32 digit = (i32)value;
 		digits[digitCount++] = (char)('0' + digit);
-		value = (value - (f64)digit) * 10.0;
+		value = (value - (f64)digit) * STRING_FLOAT_TEN;
 	}
-	if (value >= 5.0) {
+	if (value >= STRING_FLOAT_FIVE) {
 		i16 i = (i16)digitCount - 1;
 		while (i >= 0) {
 			digits[i]++;

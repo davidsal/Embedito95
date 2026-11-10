@@ -7,7 +7,7 @@ import {
 import { AST_NODE, DATA_TYPE, OBJECT_TYPE } from "../constants.js";
 import { renderCondition } from "./condition-render.js";
 import { renderCallExpression } from "./expression-call-render.js";
-import { formatFloat32Value, formatFloat64Value } from "./float-format.js";
+import { formatFloat32Value, formatFloat64Literal } from "./float-format.js";
 import { renderObjectLiteral } from "./object-literal-render.js";
 import {
 	renderBinaryExpression,
@@ -21,6 +21,8 @@ import {
 	makeThisFieldResolver,
 	makeThisMethodResolver,
 } from "./type-resolve.js";
+
+const EXPONENT_TEXT_PATTERN = /[eE]/;
 
 const renderMemberProperty = (node, context, lines) => {
 	if (node?.type === AST_NODE.identifier) {
@@ -48,7 +50,7 @@ const isObjectHandleReceiver = (node, context) => {
 	return Boolean(receiverType && context.isObjectHandle?.(receiverType));
 };
 
-export const renderFoldedValue = (value, variableType) => {
+export const renderFoldedValue = (value, variableType, float64Software) => {
 	if (typeof value === "boolean") {
 		return value ? "true" : "false";
 	}
@@ -64,9 +66,13 @@ export const renderFoldedValue = (value, variableType) => {
 			: `${formatFloat32Value(value)}f`;
 	}
 	if (variableType === DATA_TYPE.f64) {
-		return Number.isInteger(value)
-			? `${String(value)}.0`
-			: formatFloat64Value(value);
+		if (float64Software) {
+			return formatFloat64Literal(value, true);
+		}
+		const text = String(value);
+		return Number.isInteger(value) && !EXPONENT_TEXT_PATTERN.test(text)
+			? `${text}.0`
+			: formatFloat64Literal(value, false);
 	}
 	return String(value);
 };

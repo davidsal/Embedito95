@@ -1,5 +1,6 @@
 import {
 	DEFAULT_TYPES,
+	FLOAT64_MODE,
 	INTERRUPT_TRIGGER,
 	PIN_MODE,
 	STANDARD_BAUD_RATES,
@@ -12,6 +13,7 @@ export const platform = {
 	strategy: "arduino",
 	displayName: "Arduino Uno",
 	types: DEFAULT_TYPES,
+	float64: FLOAT64_MODE.SOFTWARE,
 	pins: {
 		0: {
 			name: "RX",

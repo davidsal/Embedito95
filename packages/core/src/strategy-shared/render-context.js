@@ -96,6 +96,7 @@ export const makeRenderContext = ({
 	libraryFreeMethodTypes = null,
 	resolveLibraryEnumMember = null,
 	renderFunctionExpression = null,
+	float64Software = false,
 }) => {
 	let currentFunctionName = null;
 	const resolveCType = (type) => {
@@ -167,6 +168,7 @@ export const makeRenderContext = ({
 		flashStrings,
 		selfFields: null,
 		floatContext: null,
+		float64Software,
 		functionReturnType: null,
 		userObjectMethods,
 		userTypeNames,

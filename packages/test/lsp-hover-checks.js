@@ -5,8 +5,10 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
 	check,
+	ERROR_CODE,
 	formatDiagnosticMessage,
 	parse,
+	resolvePlatformTypes,
 	tokenize,
 } from "embedito95-core";
 import { onCompletion } from "../lsp/src/server/completions/index.js";
@@ -75,6 +77,39 @@ const ASYNC_NESTED_SOURCE = [
 	"    }",
 	"}",
 ].join("\n");
+
+const AVR_F64_DOCUMENT_URI = pathToFileURL(
+	join(ASYNC_AVR_FIXTURE_PROJECT_DIRECTORY, "f64-hover.e95"),
+).href;
+const STM32_F64_FIXTURE_PROJECT_DIRECTORY = join(
+	REPOSITORY_ROOT,
+	"packages",
+	"test",
+	"fixtures",
+	"stm32-bluepill-lsp",
+);
+const STM32_F64_DOCUMENT_URI = pathToFileURL(
+	join(STM32_F64_FIXTURE_PROJECT_DIRECTORY, "f64-hover.e95"),
+).href;
+const F64_TYPE_NAME = "f64";
+const INVENTED_TYPE_NAME = "f128";
+const F64_SOURCE = [
+	`const ratio: ${F64_TYPE_NAME} = 0.5`,
+	`const total: ${F64_TYPE_NAME} = ratio + 0.25`,
+].join("\n");
+// The negative control keeps the same shape but uses a type no platform
+// declares, so it must trip the checker's type diagnostics.
+const INVENTED_TYPE_SOURCE = F64_SOURCE.replaceAll(
+	F64_TYPE_NAME,
+	INVENTED_TYPE_NAME,
+);
+const REGISTRY_PLATFORMS_DIRECTORY = join(
+	REPOSITORY_ROOT,
+	"packages",
+	"registry",
+	"src",
+	"platforms",
+);
 
 const SOURCE = [
 	"type Writer = {",
@@ -505,12 +540,90 @@ const checkAsyncLocalNestedDiagnostics = () => {
 	);
 };
 
+const checkF64Hover = async (documentUri, platformName) => {
+	const hover = await hoverInDocument(
+		documentUri,
+		F64_SOURCE,
+		findPosition(F64_SOURCE, "const ratio", "const ".length),
+	);
+	return expectEqual(
+		`LSP hover types an f64 declaration on ${platformName}`,
+		hover,
+		"```e95\nconst ratio: f64 = 0.5\n```",
+	);
+};
+
+const loadPlatform = async (platformName) => {
+	const platformModule = await import(
+		pathToFileURL(join(REGISTRY_PLATFORMS_DIRECTORY, `${platformName}.js`)).href
+	);
+	return platformModule.platform;
+};
+
+const isTypeAvailabilityDiagnostic = (error) => {
+	return (
+		error.code === ERROR_CODE.unknownType ||
+		error.code === ERROR_CODE.unsupportedType
+	);
+};
+
+const collectTypeDiagnostics = (source, platformTypes) => {
+	const { tokens } = tokenize(source);
+	const { ast, comments } = parse(tokens, source);
+	// Match the real editor context (entry document, not a library) so the
+	// checker enforces `platformTypes` via `unsupportedType`.
+	const { errors } = check(ast, { comments, platformTypes });
+	return errors.filter(isTypeAvailabilityDiagnostic);
+};
+
+// The hover text is rebuilt from the annotation, so it passes even when the
+// platform does not expose `f64`. Assert the platform type set itself and re-run
+// the same checker the LSP uses with the real platform types, plus a control
+// with an invented type to prove the harness can detect the failure.
+const checkF64Availability = async (platformName) => {
+	const platformTypes = resolvePlatformTypes(await loadPlatform(platformName));
+	const listedType = platformTypes.has(F64_TYPE_NAME) ? F64_TYPE_NAME : "";
+	const availability = expectEqual(
+		`Platform ${platformName} declares f64 in its type set`,
+		listedType,
+		F64_TYPE_NAME,
+	);
+	const diagnostics = collectTypeDiagnostics(F64_SOURCE, platformTypes);
+	const noFalsePositive = expectEqual(
+		`LSP reports no type diagnostic for f64 on ${platformName}`,
+		diagnostics
+			.map((error) => {
+				return `${error.code} ${formatDiagnosticMessage(error)}`;
+			})
+			.join("\n"),
+		"",
+	);
+	const controlDiagnostics = collectTypeDiagnostics(
+		INVENTED_TYPE_SOURCE,
+		platformTypes,
+	);
+	const control = expectEqual(
+		`LSP reports an unknown type for the invented annotation on ${platformName}`,
+		controlDiagnostics
+			.map((error) => {
+				return error.code;
+			})
+			.join("\n"),
+		[ERROR_CODE.unknownType, ERROR_CODE.unknownType].join("\n"),
+	);
+	return [availability, noFalsePositive, control];
+};
+
 export const runLspHoverChecks = async () => {
 	return [
 		await checkLocalClosureHover(),
 		await checkLocalVariableHover(),
 		await checkAsyncLocalVariableHover(),
 		checkAsyncLocalNestedDiagnostics(),
+		await checkF64Hover(AVR_F64_DOCUMENT_URI, "arduino-nano"),
+		await checkF64Hover(STM32_F64_DOCUMENT_URI, "stm32-bluepill"),
+		...(await checkF64Availability("arduino-nano")),
+		...(await checkF64Availability("stm32-bluepill")),
 		await checkParameterHover(),
 		await checkReturnedObjectHover(),
 		await checkReturnedMethodHover(),

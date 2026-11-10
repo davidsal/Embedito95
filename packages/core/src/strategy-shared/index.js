@@ -30,7 +30,11 @@ export {
 	resolveExecutableSuffix,
 	WINDOWS_PLATFORM,
 } from "./executables.js";
-export { formatFloat32Value, formatFloat64Value } from "./float-format.js";
+export {
+	formatFloat32Value,
+	formatFloat64Literal,
+	formatFloat64Value,
+} from "./float-format.js";
 export { compileProjectLibrary } from "./library.js";
 export { extractLiteralConstants } from "./literal-constants.js";
 export {

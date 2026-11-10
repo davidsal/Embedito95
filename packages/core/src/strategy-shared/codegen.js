@@ -29,6 +29,12 @@ import { makeRenderContext } from "./render-context.js";
 import { renderFunctionExpression } from "./statements.js";
 import { renderUserCode } from "./user-code.js";
 
+const SOFTWARE_FLOAT64_MODE = "software";
+
+const isSoftwareFloat64 = (platform) => {
+	return platform?.float64 === SOFTWARE_FLOAT64_MODE;
+};
+
 export const generateCode = ({
 	ast,
 	sourceLines,
@@ -149,6 +155,7 @@ export const generateCode = ({
 		libraryFreeMethodTypes,
 		resolveLibraryEnumMember: makeLibraryEnumMemberResolver(libraryModules),
 		renderFunctionExpression,
+		float64Software: isSoftwareFloat64(platform),
 	});
 
 	const { typeDeclarations, mainBody } = renderSetupAndMain(

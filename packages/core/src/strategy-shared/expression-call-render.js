@@ -1,8 +1,10 @@
 import {
+	getNonNullableType,
 	resolveMethodCallReturnType,
 	resolveReceiverType,
 } from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
+import { isFloatType } from "./c-types.js";
 import { renderExpression } from "./expression.js";
 
 const FREE_METHOD_RECEIVER_TEMP_PREFIX = "_e95_receiver";
@@ -15,13 +17,23 @@ const makeFreeMethodReceiverTempName = (node) => {
 	return `${FREE_METHOD_RECEIVER_TEMP_PREFIX}_${line}_${column}`;
 };
 
+// An argument initializes the parameter, so float literals must use the
+// parameter type as their float context.
+const resolveArgumentFloatContext = (paramType) => {
+	const nonNullType = getNonNullableType(paramType);
+	return isFloatType(nonNullType) ? nonNullType : null;
+};
+
 const renderArgument = (argument, index, paramTypes, context, lines) => {
 	const paramType = paramTypes?.[index];
 	const shouldWrap =
 		argument?.type === AST_NODE.objectLiteral &&
 		paramType &&
 		context.isObjectHandle?.(paramType);
+	const savedFloatContext = context.floatContext;
+	context.floatContext = resolveArgumentFloatContext(paramType);
 	const rendered = renderExpression(argument, context, lines);
+	context.floatContext = savedFloatContext;
 	if (!rendered) {
 		return rendered;
 	}

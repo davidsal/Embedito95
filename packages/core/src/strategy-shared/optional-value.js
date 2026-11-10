@@ -18,7 +18,7 @@ const isEnumType = (type, context) => {
 	return false;
 };
 
-export const renderOptionalZero = (entry) => {
+export const renderOptionalZero = (entry, float64Software) => {
 	if (entry.isHandle || entry.isStructHandle || entry.isString) {
 		return `${entry.ctype}::null()`;
 	}
@@ -32,7 +32,7 @@ export const renderOptionalZero = (entry) => {
 		return "0.0f";
 	}
 	if (entry.ctype === DATA_TYPE.f64) {
-		return "0.0";
+		return float64Software ? "f64::fromBits(0x00000000u, 0x00000000u)" : "0.0";
 	}
 	if (entry.ctype === DATA_TYPE.boolean) {
 		return "false";
@@ -42,8 +42,8 @@ export const renderOptionalZero = (entry) => {
 
 // A null stored into a `nullable<T>` is the engaged-with-zero payload; any other
 // value is the disengaged-with-value payload.
-export const renderOptionalNull = (entry) => {
-	return `${optionalName(entry.ctype)}{ true, ${renderOptionalZero(entry)} }`;
+export const renderOptionalNull = (entry, float64Software) => {
+	return `${optionalName(entry.ctype)}{ true, ${renderOptionalZero(entry, float64Software)} }`;
 };
 
 export const renderOptionalWrap = (entry, rendered) => {

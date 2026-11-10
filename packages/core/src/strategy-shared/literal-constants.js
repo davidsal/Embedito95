@@ -15,7 +15,7 @@ import {
 } from "../constants.js";
 import { optionalName, resolveLiteralCType } from "./c-types.js";
 import { renderExpression } from "./expression.js";
-import { formatFloat32Value, formatFloat64Value } from "./float-format.js";
+import { formatFloat32Value, formatFloat64Literal } from "./float-format.js";
 import { renderTypedObjectLiteral } from "./object-literal-render.js";
 import {
 	renderOptionalNull,
@@ -135,7 +135,7 @@ export const extractLiteralConstants = (ast, variableTypes, renderContext) => {
 	return constants;
 };
 
-const resolveConstantRaw = (constant, constantCType) => {
+const resolveConstantRaw = (constant, constantCType, float64Software) => {
 	if (constantCType === DATA_TYPE.f32) {
 		return Number.isInteger(constant.value)
 			? String(constant.value)
@@ -143,7 +143,7 @@ const resolveConstantRaw = (constant, constantCType) => {
 	}
 
 	if (constantCType === DATA_TYPE.f64) {
-		return formatFloat64Value(constant.value);
+		return formatFloat64Literal(constant.value, Boolean(float64Software));
 	}
 
 	return constant.raw;
@@ -165,7 +165,13 @@ const renderLetConstant = (constant, wordCType, renderContext) => {
 	const rendered =
 		storedCType === STRING_C_TYPE
 			? `core_string::String(${JSON.stringify(decodeEscapes(constant.raw))})`
-			: constant.raw;
+			: storedCType === DATA_TYPE.f64
+				? resolveConstantRaw(
+						constant,
+						storedCType,
+						renderContext?.float64Software,
+					)
+				: constant.raw;
 	if (!nullable) {
 		return `${cType} ${constant.name} = ${rendered};`;
 	}
@@ -227,7 +233,11 @@ export const renderLiteralConstant = (
 		return `const core_string::String ${constant.name} = core_string::String(${rendered});`;
 	}
 
-	const raw = resolveConstantRaw(constant, constantCType);
+	const raw = resolveConstantRaw(
+		constant,
+		constantCType,
+		renderContext?.float64Software,
+	);
 	const isObject = objectTypeNames?.has(constant.type);
 	const constPrefix = isObject ? "" : "const ";
 

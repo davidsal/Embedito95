@@ -25,14 +25,22 @@ export const parseIdentifier = (context) => {
 	};
 };
 
+const isNumericLiteralRaw = (raw) => {
+	return /^-?\d/.test(raw);
+};
+
+const isFloatLiteralRaw = (raw) => {
+	return raw.includes(".") || raw.includes("e") || raw.includes("E");
+};
+
 export const parseLiteral = (context) => {
 	const token = consume(context);
 	const literalValue = LITERAL_VALUES.get(token.value);
 	const value =
 		literalValue !== undefined
 			? literalValue
-			: /^-?\d/.test(token.value)
-				? token.value.includes(".")
+			: isNumericLiteralRaw(token.value)
+				? isFloatLiteralRaw(token.value)
 					? parseFloat(token.value)
 					: parseInt(token.value, 10)
 				: token.value;

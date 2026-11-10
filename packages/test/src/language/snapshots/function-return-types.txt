@@ -34,6 +34,34 @@ checker returnTypeMismatch: no
 checker functionTypeAnnotation: no
 checker nullableOperation: no
 
+// return 0.30000000000000004
+inferred: f64
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return 1e308
+inferred: f64
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return 1.5
+inferred: f32
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
+// return x + 1.0 [x: f64]
+inferred: f64
+checker incompatibleReturnTypes: no
+checker returnTypeMismatch: no
+checker functionTypeAnnotation: no
+checker nullableOperation: no
+
 // return a; return b [a: i16, b: f64]
 inferred: f64
 checker incompatibleReturnTypes: no

@@ -4,6 +4,7 @@ import {
 	isNullLiteralNode,
 } from "../checker/index.js";
 import { AST_NODE, DATA_TYPE } from "../constants.js";
+import { isFloatType } from "./c-types.js";
 import { renderCondition } from "./condition-render.js";
 import {
 	renderAssignmentExpression,
@@ -107,7 +108,21 @@ const renderStatement = (node, context, lines) => {
 	}
 };
 
+// A `return` initializes the function result, so float literals in the
+// returned expression must use the return type as their float context.
+const resolveReturnFloatContext = (returnType) => {
+	const nonNullType = getNonNullableType(returnType);
+	return isFloatType(nonNullType) ? nonNullType : null;
+};
+
 const renderReturnStatement = (node, context, lines) => {
+	const savedFloatContext = context.floatContext;
+	context.floatContext = resolveReturnFloatContext(context.functionReturnType);
+	renderReturnStatementBody(node, context, lines);
+	context.floatContext = savedFloatContext;
+};
+
+const renderReturnStatementBody = (node, context, lines) => {
 	const argument = node.argument;
 	if (!argument) {
 		lines.push("return;");
@@ -117,7 +132,9 @@ const renderReturnStatement = (node, context, lines) => {
 	if (isNullableType(returnType)) {
 		if (isNullLiteralNode(argument)) {
 			const entry = resolveOptionalEntry(returnType, context);
-			lines.push(`return ${renderOptionalNull(entry)};`);
+			lines.push(
+				`return ${renderOptionalNull(entry, context.float64Software)};`,
+			);
 			return;
 		}
 		const argumentType = expressionDataType(
@@ -143,7 +160,9 @@ const renderReturnStatement = (node, context, lines) => {
 			entry.isHandle && argument?.type === AST_NODE.objectLiteral
 				? `${context.toCType(nonNullType)}(${context.objectStorageCType(nonNullType)}${rendered})`
 				: rendered;
-		lines.push(`return ${renderOptionalWrap(entry, renderedValue)};`);
+		lines.push(
+			`return ${renderOptionalWrap(entry, renderedValue, context.float64Software)};`,
+		);
 		return;
 	}
 	const rendered = renderGroupedExpression(argument, context, lines);

@@ -26,6 +26,11 @@ export const DATA_TYPE = {
 	void: "void",
 };
 
+export const FLOAT64_MODE = {
+	NATIVE: "native",
+	SOFTWARE: "software",
+};
+
 export const RESTRICTION = {
 	ADC_ONLY: "adc-only",
 	INPUT_ONLY: "input-only",
@@ -59,6 +64,7 @@ export const DEFAULT_TYPES = [
 	DATA_TYPE.i128,
 	DATA_TYPE.u128,
 	DATA_TYPE.f32,
+	DATA_TYPE.f64,
 	DATA_TYPE.string,
 	DATA_TYPE.char,
 	DATA_TYPE.boolean,
