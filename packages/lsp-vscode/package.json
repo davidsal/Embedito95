@@ -2,7 +2,7 @@
 	"name": "embedito95-lsp",
 	"displayName": "Embedito95 Language Support",
 	"description": "Language support for .e95 files",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"publisher": "embedito95",
 	"private": true,
 	"license": "AGPL-3.0-only",
