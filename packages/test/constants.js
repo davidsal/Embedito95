@@ -200,6 +200,7 @@ export const COMPILE_SIZES_SNAPSHOT_STATUS = {
 
 export const ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP = "async-local-types";
 export const ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP = "async-task-type";
+export const FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP = "function-type-parser";
 export const CLI_PROJECT_UNIT_CHECKS_GROUP = "cli-project";
 export const MONITOR_STATE_UNIT_CHECKS_GROUP = "monitor-state";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";

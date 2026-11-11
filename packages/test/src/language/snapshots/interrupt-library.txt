@@ -40,13 +40,13 @@ types:
 
 // handler that takes parameters is reported
 diagnostics:
-- error error.callbackHasParameters @ 5:31: Callback handler 'onEdge' must take no parameters.
+- error error.callbackSignatureMismatch @ 5:31: Callback handler 'handler' does not match the expected signature '() => void' (found '(value: u8) => void'): parameter count (expected 0, found 1).
 types:
 - none
 
-// inline handler without captured state is reported
+// inline handler without captured state is accepted
 diagnostics:
-- error error.callbackMustBeNamed @ 4:37: Callback handler for 'handler' must be a top-level function reference.
+- none
 types:
 - none
 

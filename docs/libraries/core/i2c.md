@@ -24,9 +24,10 @@ const bus = getI2C(I2C.1)
 | `read(): u8` | Reads one received byte. |
 | `available(): u8` | Bytes left in the receive buffer. |
 | `initializeSlave(address: u8): void` | Configures the bus as a slave. |
-| `onReceive(handler): void` | Registers a handler for write transactions. |
-| `onRequest(handler): void` | Registers a handler for read transactions. |
+| `onReceive(handler: () => void): void` | Registers a handler for write transactions. |
+| `onRequest(handler: () => void): void` | Registers a handler for read transactions. |
 | `sendResponse(data: u8[]): void` | Queues the response for a read transaction. |
 
-`onReceive` and `onRequest` must receive a top-level function without parameters
-or captured state. Both run in interrupt context.
+`onReceive` and `onRequest` take a `handler: () => void`: pass a named function
+or a captureless inline arrow with that exact signature. Both run in interrupt
+context.

@@ -24,17 +24,32 @@ const collectTypeNames = (name, target) => {
 	}
 };
 
+const collectAnnotationTypes = (annotation, target) => {
+	if (!annotation) {
+		return;
+	}
+	if (annotation.functionType) {
+		for (const param of annotation.functionType.params ?? []) {
+			collectAnnotationTypes(param.typeAnnotation, target);
+		}
+		collectAnnotationTypes(
+			annotation.functionType.returnTypeAnnotation,
+			target,
+		);
+		return;
+	}
+	if (annotation.members) {
+		for (const member of annotation.members) {
+			collectTypeNames(member.name, target);
+		}
+		return;
+	}
+	collectTypeNames(annotation.type, target);
+};
+
 const collectReferencedTypes = (node, target) => {
-	if (node.typeAnnotation?.members) {
-		for (const member of node.typeAnnotation.members) {
-			collectTypeNames(member.name, target);
-		}
-	}
-	if (node.returnTypeAnnotation?.members) {
-		for (const member of node.returnTypeAnnotation.members) {
-			collectTypeNames(member.name, target);
-		}
-	}
+	collectAnnotationTypes(node.typeAnnotation, target);
+	collectAnnotationTypes(node.returnTypeAnnotation, target);
 	if (typeof node.returnType === "string") {
 		collectTypeNames(node.returnType, target);
 	} else if (node.returnType?.name) {

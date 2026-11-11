@@ -93,17 +93,19 @@ export type I2CBus = {
     /**
      * Registers the function invoked when a master writes bytes to the slave.
      * The function takes no arguments and reads the received bytes with `read`
-     * and `available`. It must be a top-level function without captured state.
+     * and `available`. It is declared as `() => void`, so pass a named function
+     * or a captureless inline arrow with that exact signature.
      * @param handler - Function invoked when a write transaction arrives
      */
-    onReceive: (handler) => void
+    onReceive: (handler: () => void) => void
     /**
      * Registers the function invoked when a master requests bytes from the
      * slave. Inside it, call `sendResponse` to queue the bytes sent back. It
-     * must be a top-level function without captured state.
+     * must match the `() => void` signature: a named function or a captureless
+     * inline arrow with that exact signature.
      * @param handler - Function invoked when a read transaction arrives
      */
-    onRequest: (handler) => void
+    onRequest: (handler: () => void) => void
     /**
      * Queues `data` as the response to the master that requested a read. It
      * only has an effect while an `onRequest` handler runs; otherwise it does

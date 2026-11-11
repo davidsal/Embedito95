@@ -13,6 +13,7 @@ import {
 	renderVariableDeclaration,
 } from "./declaration-render.js";
 import { renderExpression } from "./expression.js";
+import { renderParameterDeclaration } from "./function-pointer.js";
 import {
 	renderOptionalNull,
 	renderOptionalWrap,
@@ -243,9 +244,9 @@ export const renderFunctionExpression = (
 	methodDefinition = null,
 ) => {
 	const params = (functionExpression.params ?? [])
-		.map(
-			(param) => `${context.toCType(param.typeAnnotation?.type)} ${param.name}`,
-		)
+		.map((param) => {
+			return renderParameterDeclaration(param, context.toCType);
+		})
 		.join(", ");
 	const returnType =
 		functionExpression.returnType?.name ??

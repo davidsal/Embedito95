@@ -18,10 +18,11 @@ export type HardwareTimer = {
      * match, then disables period callbacks. The counter starts running as
      * soon as its period is configured.
      * @param periodMicros - Period between matches, in microseconds
-     * @param callback - Function invoked on each period match; it must be a
-     * top-level function without captured state
+     * @param callback - Function invoked on each period match; it is declared
+     * as `() => void`, so pass a named function or a captureless inline arrow
+     * with that exact signature
      */
-    initialize: (periodMicros: u32, callback) => void
+    initialize: (periodMicros: u32, callback: () => void) => void
     /**
      * Changes the timer period while keeping the timer in its current
      * running state.

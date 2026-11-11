@@ -278,7 +278,7 @@ const checkAttachPinInterruptHover = async () => {
 	return expectEqual(
 		"LSP hover shows the attachPinInterrupt signature and documentation",
 		hover,
-		"```e95\nconst attachPinInterrupt(pin: Pin, handler, mode: InterruptMode): void\n```\n\nRegisters `handler` to run when `pin` reports the transition selected by  \n`mode`. The pin must expose an interrupt channel and the mode must be one the  \npin supports. `handler` runs in interrupt context, so it must be a top-level  \nfunction without parameters and without captured state.  \n@param pin - Pin whose interrupt channel is used  \n@param handler - Function invoked on each matching transition  \n@param mode - Signal transition that triggers the handler",
+		"```e95\nconst attachPinInterrupt(pin: Pin, handler: () => void, mode: InterruptMode): void\n```\n\nRegisters `handler` to run when `pin` reports the transition selected by  \n`mode`. The pin must expose an interrupt channel and the mode must be one the  \npin supports. `handler` is declared as `() => void` and runs in interrupt  \ncontext: pass a named function or a captureless inline arrow with that exact  \nsignature.  \n@param pin - Pin whose interrupt channel is used  \n@param handler - Function invoked on each matching transition  \n@param mode - Signal transition that triggers the handler",
 	);
 };
 
@@ -358,7 +358,7 @@ const checkParameterHandler = () => {
 	return expectEqual(
 		"LSP reports a named handler that takes parameters",
 		diagnostics.join("\n"),
-		"5:31 error.callbackHasParameters Callback handler 'onEdge' must take no parameters.",
+		"5:31 error.callbackSignatureMismatch Callback handler 'handler' does not match the expected signature '() => void' (found '(value: u8) => void'): parameter count (expected 0, found 1).",
 	);
 };
 

@@ -21,6 +21,7 @@ import {
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
+	FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
 	GREEN_CHECK,
 	LANGUAGE_DIRECTORY_NAME,
 	LINT_POLICY_UNIT_CHECKS_GROUP,
@@ -49,6 +50,7 @@ import {
 } from "./constants.js";
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
+import { runFunctionTypeParserChecks } from "./function-type-parser-checks.js";
 import { runRegistryIntTypeParityChecks } from "./int-type-parity-checks.js";
 import { listLanguageSnapshots } from "./language-snapshots.js";
 import { runLintPolicyChecks } from "./lint-policy-checks.js";
@@ -216,6 +218,13 @@ export const run = async () => {
 	const asyncTaskTypeResults = runAsyncTaskTypeChecks();
 	reportUnitChecks(ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP, asyncTaskTypeResults);
 	collectMismatches(asyncTaskTypeResults, mismatches);
+
+	const functionTypeParserResults = runFunctionTypeParserChecks();
+	reportUnitChecks(
+		FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
+		functionTypeParserResults,
+	);
+	collectMismatches(functionTypeParserResults, mismatches);
 
 	const cliProjectResults = await runCliProjectChecks();
 	reportUnitChecks(CLI_PROJECT_UNIT_CHECKS_GROUP, cliProjectResults);

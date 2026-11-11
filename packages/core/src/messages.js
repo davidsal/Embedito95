@@ -138,10 +138,8 @@ const DIAG_MESSAGES = {
 		"Field '{field}' of type '{type}' is captured by the closure, so it is private and cannot be accessed from outside.",
 	[ERROR_CODE.callbackCapturesLocalState]:
 		"Callback handler for '{name}' captures local state; register a top-level function instead.",
-	[ERROR_CODE.callbackMustBeNamed]:
-		"Callback handler for '{name}' must be a top-level function reference.",
-	[ERROR_CODE.callbackHasParameters]:
-		"Callback handler '{name}' must take no parameters.",
+	[ERROR_CODE.callbackSignatureMismatch]:
+		"Callback handler '{name}' does not match the expected signature '{expected}' (found '{actual}'): {detail}.",
 	[ERROR_CODE.unreachableCode]:
 		"Unreachable code: this statement comes after a 'return'.",
 	[ERROR_CODE.nonExhaustiveSwitch]:

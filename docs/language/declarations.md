@@ -22,12 +22,16 @@ let temperature: f32 = 0.0   // explicit type
 ## Functions
 
 Functions are arrow functions assigned to `const`. Parameters need an explicit
-type; the return type is inferred from the returns or declared after the
-parameters:
+type, including callback parameters, which use a function type; the return type
+is inferred from the returns or declared after the parameters:
 
 ```e95
 const add = (a: i16, b: i16): i16 => {
     return a + b
+}
+
+const run = (callback: () => void) => {
+    callback()
 }
 
 const blink = () => {
@@ -130,5 +134,6 @@ const makeCounter = (): Counter => {
   `return { paint: paint }`.
 - Closure forms are restricted: a local closure outside a factory or a nested
   closure property is rejected with a diagnostic.
-- Callbacks handed to interrupt, timer and I2C APIs cannot capture state; those
-  must be top-level functions. See [Callbacks](control-flow.md#callbacks).
+- Callbacks handed to interrupt, timer and I2C APIs cannot capture state; pass a
+  named function or a captureless inline arrow whose signature matches the
+  declared function type exactly. See [Callbacks](control-flow.md#callbacks).

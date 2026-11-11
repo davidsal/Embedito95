@@ -213,6 +213,7 @@ const processVariableDeclaration = (
 			params: declaration.init.params.map((param) => ({
 				name: param.name,
 				type: param.typeAnnotation?.type ?? null,
+				functionType: param.typeAnnotation?.functionType ?? null,
 				defaultValue: param.defaultValue ?? null,
 			})),
 			returnType: declaration.init.returnType?.name ?? DATA_TYPE.void,

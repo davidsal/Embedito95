@@ -1,0 +1,38 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+const noReturn = () => {}
+
+const returnI16 = (): i16 => {
+    return 8
+}
+
+const invokeVoid = (callback: () => void) => {
+    callback()
+}
+
+const invokeI16 = (callback: () => i16): i16 => {
+    return callback()
+}
+
+const invokeWithArgument = (callback: (value: i16) => void) => {
+    callback(1)
+}
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+    invokeVoid(noReturn)
+    invokeVoid(() => {})
+    const value: i16 = invokeI16(returnI16)
+    serial.sendLine(value)
+    invokeWithArgument((value: i16) => {
+        serial.sendLine(value)
+    })
+}
+
+main()

@@ -1,6 +1,7 @@
 import { decodeObjectShape } from "../checker/index.js";
 import { isFloatType, optionalName } from "./c-types.js";
 import { renderExpression } from "./expression.js";
+import { renderFunctionPointer } from "./function-pointer.js";
 import { hasDataFields } from "./object-info.js";
 import { renderMethod } from "./object-methods.js";
 
@@ -9,11 +10,11 @@ import { renderMethod } from "./object-methods.js";
 const NULL_FUNCTION_POINTER = "nullptr";
 
 const renderFunctionPointerField = (member, context) => {
-	const returnCType = context.toCType(member.returnType);
-	const parameterTypes = (member.params ?? [])
-		.map((param) => context.toCType(param.type))
-		.join(", ");
-	return `\t${returnCType} (*${member.name})(${parameterTypes});`;
+	return `\t${renderFunctionPointer(
+		member.name,
+		{ params: member.params ?? [], returnType: member.returnType },
+		context.toCType,
+	)};`;
 };
 
 export const renderTypeDeclaration = (node, context) => {

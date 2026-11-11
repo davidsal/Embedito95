@@ -14,8 +14,11 @@ import {
 import { formatToken, isExpressionStart, isNameToken } from "./tokens.js";
 import {
 	parseParameter,
+	parseTypeAnnotation,
 	parseTypeParameters,
 	parseTypeUnion,
+	toSignatureParameter,
+	toTypeAnnotation,
 } from "./types.js";
 
 const isNullOnlyTypeAnnotation = (context) => {
@@ -32,9 +35,9 @@ const parseVariableDeclarator = (context) => {
 	if (peek(context).type === TOKEN_TYPE.colon) {
 		consume(context);
 		if (!isNullOnlyTypeAnnotation(context)) {
-			const parsed = parseTypeUnion(context);
+			const parsed = parseTypeAnnotation(context);
 			if (parsed) {
-				identifier.typeAnnotation = toTypeAnnotation(parsed);
+				identifier.typeAnnotation = parsed;
 			}
 		}
 	}
@@ -169,20 +172,6 @@ export const parseEnumDeclaration = (context) => {
 	};
 };
 
-const toTypeAnnotation = (parsedType) => {
-	if (!parsedType) {
-		return null;
-	}
-	const singleMember =
-		parsedType.memberNodes?.length === 1 ? parsedType.memberNodes[0] : null;
-	return {
-		type: parsedType.name,
-		loc: parsedType.loc,
-		members: parsedType.memberNodes,
-		typeArguments: singleMember?.typeArguments ?? null,
-	};
-};
-
 const parseTypeMethodSignature = (context) => {
 	const params = [];
 	while (
@@ -190,11 +179,7 @@ const parseTypeMethodSignature = (context) => {
 		peek(context).type !== TOKEN_TYPE.eof
 	) {
 		const param = parseParameter(context);
-		params.push({
-			name: param.name,
-			type: param.typeAnnotation?.type ?? null,
-			typeAnnotation: param.typeAnnotation,
-		});
+		params.push(toSignatureParameter(param));
 		if (peek(context).type === TOKEN_TYPE.comma) {
 			consume(context);
 		}

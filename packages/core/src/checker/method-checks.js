@@ -3,7 +3,7 @@ import { makeDiagnostic } from "../errors.js";
 import { checkMethodArgument } from "./arguments.js";
 import { resolveArrayMethod } from "./array-methods.js";
 import { parseArrayType } from "./arrays.js";
-import { checkCallbackHandlerArgument } from "./callback-argument-checks.js";
+import { checkCallbackSignatureArgument } from "./callback-argument-checks.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import { resolveReceiverType } from "./expressions.js";
 import { endsWithReturn } from "./statement-flow.js";
@@ -207,7 +207,7 @@ const validateResolvedMethod = (
 
 	for (let index = 0; index < node.arguments.length; index++) {
 		const argument = unwrapParentheses(node.arguments[index]);
-		checkCallbackHandlerArgument(state, argument, method.params[index]);
+		checkCallbackSignatureArgument(state, argument, method.params[index]);
 		checkMethodArgument(
 			argument,
 			method.params[index],
@@ -385,63 +385,94 @@ export const checkAnnotationsAndReturns = (state) => {
 			if (node.type === AST_NODE.functionExpression) {
 				checkFunctionExpressionAnnotations(state, node);
 			}
+
+			if (node.type === AST_NODE.typeDeclaration) {
+				checkTypeMemberAnnotations(state, node);
+			}
 		},
 	});
 };
 
-const checkFunctionParameterAnnotations = (state, node) => {
-	for (const param of node.params) {
-		if (!param.typeAnnotation) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.missingTypeAnnotation,
-					params: { name: param.name },
-					location: param.loc,
-				}),
-			);
-		} else if (param.typeAnnotation.members) {
-			checkParameterMemberTypes(state, param);
-		} else if (
-			!state.isLibrary &&
-			!typeIsKnown(
-				param.typeAnnotation.type,
-				state.enumTypes,
-				state.libEnumTypeNames,
-				state.libNameToType,
-				state.objectTypeNames,
-			)
-		) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.unknownType,
-					params: { type: param.typeAnnotation.type },
-					location: param.typeAnnotation.loc,
-				}),
-			);
+const isKnownAnnotationType = (state, typeName) => {
+	if (typeName === NULL_TYPE || isPostInstallPlaceholderType(typeName)) {
+		return true;
+	}
+	return typeIsKnown(
+		typeName,
+		state.enumTypes,
+		state.libEnumTypeNames,
+		state.libNameToType,
+		state.objectTypeNames,
+	);
+};
+
+const checkAnnotationType = (state, annotation) => {
+	if (!annotation?.type) {
+		return;
+	}
+	if (annotation.functionType) {
+		checkFunctionTypeAnnotationTypes(state, annotation.functionType);
+		return;
+	}
+	if (annotation.members) {
+		for (const member of annotation.members) {
+			if (!isKnownAnnotationType(state, member.name)) {
+				state.errors.push(
+					makeDiagnostic({
+						code: ERROR_CODE.unknownType,
+						params: { type: member.name },
+						location: member.loc,
+					}),
+				);
+			}
 		}
+		return;
+	}
+	if (!state.isLibrary && !isKnownAnnotationType(state, annotation.type)) {
+		state.errors.push(
+			makeDiagnostic({
+				code: ERROR_CODE.unknownType,
+				params: { type: annotation.type },
+				location: annotation.loc,
+			}),
+		);
 	}
 };
 
-const checkParameterMemberTypes = (state, param) => {
-	for (const member of param.typeAnnotation.members) {
-		if (
-			member.name !== NULL_TYPE &&
-			!isPostInstallPlaceholderType(member.name) &&
-			!typeIsKnown(
-				member.name,
-				state.enumTypes,
-				state.libEnumTypeNames,
-				state.libNameToType,
-				state.objectTypeNames,
-			)
-		) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.unknownType,
-					params: { type: member.name },
-					location: member.loc,
-				}),
-			);
+const checkFunctionTypeAnnotationTypes = (state, functionType) => {
+	for (const param of functionType.params ?? []) {
+		checkParameterAnnotation(state, param);
+	}
+	checkAnnotationType(state, functionType.returnTypeAnnotation);
+};
+
+const checkParameterAnnotation = (state, param) => {
+	if (!param.typeAnnotation) {
+		state.errors.push(
+			makeDiagnostic({
+				code: ERROR_CODE.missingTypeAnnotation,
+				params: { name: param.name },
+				location: param.loc,
+			}),
+		);
+		return;
+	}
+	checkAnnotationType(state, param.typeAnnotation);
+};
+
+const checkFunctionParameterAnnotations = (state, node) => {
+	for (const param of node.params) {
+		checkParameterAnnotation(state, param);
+	}
+};
+
+const checkTypeMemberAnnotations = (state, node) => {
+	for (const member of node.members ?? []) {
+		if (member.kind !== "method") {
+			continue;
+		}
+		for (const param of member.params ?? []) {
+			checkParameterAnnotation(state, param);
 		}
 	}
 };

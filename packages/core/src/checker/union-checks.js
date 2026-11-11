@@ -20,13 +20,31 @@ const pushUnsupportedUnion = (state, typeName, location, allowCoreLibrary) => {
 };
 
 const checkAnnotationUnion = (state, annotation, allowCoreLibrary = false) => {
-	if (!annotation?.type || !annotation.loc) {
+	if (!annotation?.type) {
+		return;
+	}
+	if (annotation.functionType) {
+		checkFunctionTypeUnions(state, annotation.functionType, allowCoreLibrary);
+		return;
+	}
+	if (!annotation.loc) {
 		return;
 	}
 	pushUnsupportedUnion(
 		state,
 		annotation.type,
 		annotation.loc,
+		allowCoreLibrary,
+	);
+};
+
+const checkFunctionTypeUnions = (state, functionType, allowCoreLibrary) => {
+	for (const param of functionType.params ?? []) {
+		checkAnnotationUnion(state, param.typeAnnotation, allowCoreLibrary);
+	}
+	checkAnnotationUnion(
+		state,
+		functionType.returnTypeAnnotation,
 		allowCoreLibrary,
 	);
 };
