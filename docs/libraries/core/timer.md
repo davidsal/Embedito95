@@ -13,7 +13,7 @@ const timer = getTimer(Timer.1)
 
 | API | Description |
 | --- | --- |
-| `initialize(periodMicros: u32, callback): void` | Sets the period and registers the period callback. |
+| `initialize(periodMicros: u32, callback: () => void): void` | Sets the period and registers the period callback. |
 | `setPeriod(periodMicros: u32): void` | Changes the period while running. |
 | `start(): void` | Starts period callbacks. |
 | `stop(): void` | Stops period callbacks. |
@@ -26,5 +26,5 @@ Free functions:
 | `stopTone(pin: Pin): void` | Stops the tone and leaves the pin `LOW`. |
 | `measurePulseWidth(pin: Pin, pulseLevel: DigitalLevel, timeoutMicros: u32): u32` | Measures a pulse in microseconds, or `0` on timeout. |
 
-The callback runs in interrupt context and must be a top-level function without
-captured state.
+The callback is declared as `() => void`: pass a named function or a captureless
+inline arrow with that exact signature. It runs in interrupt context.

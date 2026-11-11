@@ -29,6 +29,30 @@
   is written as plain `AsyncTask`.
 - Template literals with interpolation are also supported: `` `value: ${x}` ``.
 
+## Function types
+
+A function type declares the parameters and return type of a value:
+
+```e95
+const run = (callback: () => void) => {
+    callback()
+}
+
+const each = (callback: (value: i16) => void) => {
+    callback(1)
+}
+
+const compute = (getValue: () => i16): i16 => {
+    return getValue()
+}
+```
+
+Function types lower to C function pointers, so assignability is **exact**:
+parameter count, parameter types and return type must match. In particular,
+`() => i16` is not assignable to `() => void`, even though the result would be
+discarded; the emitted C would not compile. There are no implicit parameter or
+return conversions.
+
 ## Null and nullable
 
 `null` is the absent value. The only union the language supports is `T | null`:

@@ -41,22 +41,39 @@ do {
 
 ## Callbacks
 
-A parameter without a type is a **callback slot** and lowers to a C function
-pointer:
+A callback parameter is declared with a **function type**. It lowers to a C
+function pointer:
 
 ```e95
-const run = (callback) => {
+const run = (callback: () => void) => {
     callback()
 }
 ```
 
-The argument must be a top-level function reference with no parameters and no
-captured state. This is what `attachPinInterrupt`, `HardwareTimer.initialize` and
-the I2C slave handlers accept.
+The type lists the parameters and the return type, so callbacks that carry
+values declare them explicitly:
 
-For callbacks that carry values, use a method-only `type`. Its value holds
-function pointers, and each slot can be a named function or a stateless inline
-arrow:
+```e95
+const each = (callback: (value: i16) => void) => {
+    callback(1)
+}
+
+const compute = (callback: () => i16): i16 => {
+    return callback()
+}
+```
+
+Pass a named function or a captureless inline arrow. Its parameter and return
+types must match the declared function type exactly: `() => i16` is not
+assignable to `() => void`, just like a C function pointer. A callback that
+references local state would need a closure and is rejected.
+
+This is what `attachPinInterrupt` (`handler: () => void`),
+`HardwareTimer.initialize` (`(periodMicros: u32, callback: () => void)`) and the
+I2C slave handlers (`onReceive`/`onRequest` with `handler: () => void`) accept.
+
+Function types also type object members. Each slot can be a named function or a
+captureless inline arrow:
 
 ```e95
 type Handler = {

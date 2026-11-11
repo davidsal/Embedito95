@@ -1,5 +1,6 @@
 import { parseArrayType, walk } from "../checker/index.js";
 import { AST_NODE, DATA_TYPE } from "../constants.js";
+import { renderParameterDeclaration } from "./function-pointer.js";
 import { renderFunctionBody } from "./statements.js";
 
 const recordObjectMethods = (
@@ -128,8 +129,7 @@ export const renderMethod = (
 		.join("\n");
 	const params = (functionExpression.params ?? [])
 		.map((param) => {
-			const paramType = param.typeAnnotation?.type;
-			return `${methodContext.toCType(paramType)} ${param.name}`;
+			return renderParameterDeclaration(param, methodContext.toCType);
 		})
 		.join(", ");
 	const returnCType = methodContext.toCType(returnType);

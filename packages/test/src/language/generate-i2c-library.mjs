@@ -193,7 +193,7 @@ export const start = () => {
 }`,
 		},
 		{
-			label: "inline stateless handler reported as not named",
+			label: "inline stateless handler is accepted",
 			probes: [],
 			body: `import { I2C, I2CBus, getI2C } from '@embedito95/i2c'
 const bus: I2CBus = getI2C(I2C.1)

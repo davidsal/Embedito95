@@ -177,6 +177,41 @@ export const findVariableDeclaration = (node, name) => {
 	return null;
 };
 
+const collectFunctionExpressionsAt = (node, line, column, matches) => {
+	if (!node || typeof node !== "object") {
+		return;
+	}
+
+	for (const [key, value] of Object.entries(node)) {
+		if (key === "loc") {
+			continue;
+		}
+
+		const children = Array.isArray(value) ? value : [value];
+
+		for (const child of children) {
+			collectFunctionExpressionsAt(child, line, column, matches);
+		}
+	}
+
+	if (
+		node.type === AST_NODE.functionExpression &&
+		isInLocation(line, column, node.loc)
+	) {
+		matches.push(node);
+	}
+};
+
+export const collectEnclosingFunctionExpressions = (
+	syntaxTree,
+	line,
+	column,
+) => {
+	const matches = [];
+	collectFunctionExpressionsAt(syntaxTree, line, column, matches);
+	return matches;
+};
+
 export const findFunctionDeclaration = (syntaxTree, name) => {
 	for (const statement of syntaxTree.body) {
 		if (

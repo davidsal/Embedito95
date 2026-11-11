@@ -150,6 +150,12 @@
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
+		"core/arduino-nano/function-parameter.test.e95": {
+			"flash": 3712,
+			"ram": 250,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
 		"core/arduino-nano/gpio.test.e95": {
 			"flash": 2500,
 			"ram": 41,
@@ -449,6 +455,12 @@
 		"core/stm32-bluepill/float-args.test.e95": {
 			"flash": 6924,
 			"ram": 2000,
+			"flashMax": 65536,
+			"ramMax": 20480
+		},
+		"core/stm32-bluepill/function-parameter.test.e95": {
+			"flash": 11252,
+			"ram": 2084,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},

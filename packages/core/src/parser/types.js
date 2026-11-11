@@ -2,7 +2,115 @@ import { TOKEN_TYPE } from "../constants.js";
 import { parseExpression } from "./expressions.js";
 import { parseIdentifier } from "./imports.js";
 import { extendLocation, makeLocation } from "./location.js";
-import { consume, expectRequiredOrEof, peek } from "./token-stream.js";
+import {
+	consume,
+	expectRequiredOrEof,
+	peek,
+	reportUnexpectedToken,
+} from "./token-stream.js";
+
+const TYPE_LIST_SEPARATOR = ", ";
+const MISSING_TYPE_TEXT = "";
+const PARAMETER_EXPECTED = "parameter";
+const TYPE_ANNOTATION_EXPECTED = "type annotation";
+const RETURN_TYPE_EXPECTED = "return type";
+
+export const toTypeAnnotation = (parsedType) => {
+	if (!parsedType) {
+		return null;
+	}
+	const singleMember =
+		parsedType.memberNodes?.length === 1 ? parsedType.memberNodes[0] : null;
+	return {
+		type: parsedType.name,
+		loc: parsedType.loc,
+		members: parsedType.memberNodes,
+		typeArguments: singleMember?.typeArguments ?? null,
+	};
+};
+
+const formatFunctionTypeParameter = (parameter) => {
+	if (!parameter.type) {
+		return parameter.name;
+	}
+	return `${parameter.name}: ${parameter.type}`;
+};
+
+const formatFunctionType = (signature) => {
+	const parameters = signature.params
+		.map((parameter) => {
+			return formatFunctionTypeParameter(parameter);
+		})
+		.join(TYPE_LIST_SEPARATOR);
+	return `(${parameters}) => ${signature.returnType ?? MISSING_TYPE_TEXT}`;
+};
+
+export const toSignatureParameter = (parameter) => {
+	return {
+		name: parameter.name,
+		type: parameter.typeAnnotation?.type ?? null,
+		typeAnnotation: parameter.typeAnnotation,
+	};
+};
+
+const parseFunctionTypeParameter = (context) => {
+	const parameter = parseParameter(context);
+	if (!parameter.typeAnnotation) {
+		reportUnexpectedToken(context, TYPE_ANNOTATION_EXPECTED, peek(context));
+	}
+	return toSignatureParameter(parameter);
+};
+
+const parseFunctionTypeSignature = (context) => {
+	const params = [];
+	while (
+		peek(context).type !== TOKEN_TYPE.rightParenthesis &&
+		peek(context).type !== TOKEN_TYPE.eof
+	) {
+		if (peek(context).type === TOKEN_TYPE.comma) {
+			reportUnexpectedToken(context, PARAMETER_EXPECTED, peek(context));
+			consume(context);
+			continue;
+		}
+		params.push(parseFunctionTypeParameter(context));
+		if (peek(context).type === TOKEN_TYPE.comma) {
+			consume(context);
+			continue;
+		}
+		break;
+	}
+	expectRequiredOrEof(context, TOKEN_TYPE.rightParenthesis);
+	expectRequiredOrEof(context, TOKEN_TYPE.arrow);
+	const parsedReturnType = parseTypeUnion(context);
+	if (!parsedReturnType) {
+		reportUnexpectedToken(context, RETURN_TYPE_EXPECTED, peek(context));
+	}
+	return {
+		params,
+		returnType: parsedReturnType?.name ?? null,
+		returnTypeAnnotation: toTypeAnnotation(parsedReturnType),
+	};
+};
+
+const makeFunctionTypeAnnotation = (signature, startToken, lastToken) => {
+	return {
+		type: formatFunctionType(signature),
+		loc: makeLocation(startToken, extendLocation(lastToken ?? startToken)),
+		members: [],
+		typeArguments: null,
+		functionType: signature,
+	};
+};
+
+export const parseTypeAnnotation = (context) => {
+	if (peek(context).type !== TOKEN_TYPE.leftParenthesis) {
+		return toTypeAnnotation(parseTypeUnion(context));
+	}
+	const startToken = consume(context);
+	const signature = parseFunctionTypeSignature(context);
+	const lastToken = context.tokens[context.position - 1] ?? startToken;
+	return makeFunctionTypeAnnotation(signature, startToken, lastToken);
+};
 
 const parseTypeArgument = (context) => {
 	const parsed = parseTypeUnion(context);
@@ -136,53 +244,20 @@ export const parseTypeUnion = (context) => {
 	};
 };
 
+const parseParameterUnionAnnotation = (context) => {
+	return toTypeAnnotation(parseTypeUnion(context));
+};
+
 export const parseParameter = (context) => {
 	const identifier = parseIdentifier(context);
-	if (peek(context).type === TOKEN_TYPE.colon) {
-		consume(context);
-		const memberNodes = [];
-		const firstType = parseTypeReference(context);
-		const locationStart = peek(context);
-		let lastToken = peek(context);
-		if (firstType) {
-			memberNodes.push({
-				name: firstType.name,
-				loc: firstType.loc,
-				typeArguments: firstType.typeArguments ?? null,
-			});
-			lastToken = {
-				line: firstType.loc.end.line,
-				column: firstType.loc.end.column,
-			};
-		}
-		while (peek(context).type === TOKEN_TYPE.pipe) {
-			consume(context);
-			const nextType = parseTypeReference(context);
-			if (nextType) {
-				memberNodes.push({
-					name: nextType.name,
-					loc: nextType.loc,
-					typeArguments: nextType.typeArguments ?? null,
-				});
-				lastToken = {
-					line: nextType.loc.end.line,
-					column: nextType.loc.end.column,
-				};
-			}
-		}
-		const typeString = memberNodes.map((member) => member.name).join(" | ");
-		const singleMember = memberNodes.length === 1 ? memberNodes[0] : null;
-		identifier.typeAnnotation =
-			memberNodes.length > 0
-				? {
-						type: typeString,
-						loc: makeLocation(locationStart, extendLocation(lastToken)),
-						members: memberNodes,
-						typeArguments: singleMember?.typeArguments ?? null,
-					}
-				: null;
-	} else {
+	if (peek(context).type !== TOKEN_TYPE.colon) {
 		identifier.typeAnnotation = null;
+	} else {
+		consume(context);
+		identifier.typeAnnotation =
+			peek(context).type === TOKEN_TYPE.leftParenthesis
+				? parseTypeAnnotation(context)
+				: parseParameterUnionAnnotation(context);
 	}
 	identifier.defaultValue = null;
 	if (peek(context).type === TOKEN_TYPE.equal) {

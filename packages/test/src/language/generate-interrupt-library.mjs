@@ -143,7 +143,7 @@ export const register = () => {
 }`,
 		},
 		{
-			label: "inline handler without captured state is reported",
+			label: "inline handler without captured state is accepted",
 			probes: [],
 			body: `import { InterruptMode, attachPinInterrupt } from '@embedito95/interrupt'
 import { Pin } from '@embedito95/gpio'

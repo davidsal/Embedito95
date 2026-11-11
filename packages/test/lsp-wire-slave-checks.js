@@ -139,13 +139,13 @@ const METHOD_HOVER_CASES = [
 		description: "onReceive registers the write-transaction handler",
 		marker: "bus.onReceive(",
 		expected:
-			"```e95\nonReceive: (handler) => void\n```\n\nRegisters the function invoked when a master writes bytes to the slave.  \nThe function takes no arguments and reads the received bytes with `read`  \nand `available`. It must be a top-level function without captured state.  \n@param handler - Function invoked when a write transaction arrives",
+			"```e95\nonReceive: (handler: () => void) => void\n```\n\nRegisters the function invoked when a master writes bytes to the slave.  \nThe function takes no arguments and reads the received bytes with `read`  \nand `available`. It is declared as `() => void`, so pass a named function  \nor a captureless inline arrow with that exact signature.  \n@param handler - Function invoked when a write transaction arrives",
 	},
 	{
 		description: "onRequest registers the read-transaction handler",
 		marker: "bus.onRequest(",
 		expected:
-			"```e95\nonRequest: (handler) => void\n```\n\nRegisters the function invoked when a master requests bytes from the  \nslave. Inside it, call `sendResponse` to queue the bytes sent back. It  \nmust be a top-level function without captured state.  \n@param handler - Function invoked when a read transaction arrives",
+			"```e95\nonRequest: (handler: () => void) => void\n```\n\nRegisters the function invoked when a master requests bytes from the  \nslave. Inside it, call `sendResponse` to queue the bytes sent back. It  \nmust match the `() => void` signature: a named function or a captureless  \ninline arrow with that exact signature.  \n@param handler - Function invoked when a read transaction arrives",
 	},
 	{
 		description: "sendResponse queues the slave response bytes",
@@ -288,7 +288,7 @@ const checkParameterHandler = () => {
 	return expectEqual(
 		"LSP reports a callback handler that takes parameters",
 		diagnostics.join("\n"),
-		`6:19 error.callbackHasParameters Callback handler 'onSlaveReceive' must take no parameters.`,
+		`6:19 error.callbackSignatureMismatch Callback handler 'handler' does not match the expected signature '() => void' (found '(value: u8) => void'): parameter count (expected 0, found 1).`,
 	);
 };
 

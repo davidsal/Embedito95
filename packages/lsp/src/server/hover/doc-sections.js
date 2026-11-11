@@ -5,6 +5,9 @@ import {
 	getDocComment,
 } from "../shared/doc-comments.js";
 import { getLibraryObjectTypeMemberDoc } from "../shared/library-docs.js";
+import { collectEnclosingFunctionExpressions } from "./ast-finders.js";
+
+const UNKNOWN_TYPE = "unknown";
 
 export const getObjectMemberDocSection = (
 	syntaxTree,
@@ -46,19 +49,15 @@ export const getObjectMemberDocSection = (
 	return "";
 };
 
-export const findParameterInfo = (syntaxTree, comments, name) => {
-	for (const statement of syntaxTree.body) {
-		if (statement.type !== AST_NODE.variableDeclaration) {
-			continue;
-		}
+export const findParameterInfo = (syntaxTree, comments, name, line, column) => {
+	const enclosingFunctions = collectEnclosingFunctionExpressions(
+		syntaxTree,
+		line,
+		column,
+	);
 
-		const declaration = statement.declarations?.[0];
-
-		if (declaration?.init?.type !== AST_NODE.functionExpression) {
-			continue;
-		}
-
-		const parameter = declaration.init.params.find((parameterItem) => {
+	for (const functionExpression of enclosingFunctions) {
+		const parameter = functionExpression.params.find((parameterItem) => {
 			return parameterItem.name === name;
 		});
 
@@ -66,9 +65,12 @@ export const findParameterInfo = (syntaxTree, comments, name) => {
 			continue;
 		}
 
-		const docComment = getDocComment(comments, statement.loc?.start?.line);
+		const docComment = getDocComment(
+			comments,
+			functionExpression.loc?.start?.line,
+		);
 		const parameterDoc = docComment ? extractParamDoc(docComment, name) : null;
-		const type = parameter.typeAnnotation?.type ?? "unknown";
+		const type = parameter.typeAnnotation?.type ?? UNKNOWN_TYPE;
 		const signature = `\`\`\`e95\n${name}: ${type}\n\`\`\``;
 		const docSection = parameterDoc ? formatDocComment(parameterDoc) : "";
 

@@ -160,7 +160,7 @@ const checkNestedParameterUnionDiagnostic = async () => {
 	return expectEqual(
 		"LSP reports an arbitrary union on a nested function parameter",
 		rendered,
-		`2:30 ${ERROR_SEVERITY_LABEL} ${ERROR_CODE.arbitraryUnion} ${formatDiagnosticMessage(
+		`2:23 ${ERROR_SEVERITY_LABEL} ${ERROR_CODE.arbitraryUnion} ${formatDiagnosticMessage(
 			{
 				code: ERROR_CODE.arbitraryUnion,
 				params: { type: "string | u8" },
@@ -189,7 +189,7 @@ const checkPortableLibraryUnionDiagnostic = async () => {
 	return expectEqual(
 		"LSP reports an arbitrary union inside a portable library",
 		rendered,
-		`1:37 ${ERROR_SEVERITY_LABEL} ${ERROR_CODE.arbitraryUnion} ${formatDiagnosticMessage(
+		`1:30 ${ERROR_SEVERITY_LABEL} ${ERROR_CODE.arbitraryUnion} ${formatDiagnosticMessage(
 			{
 				code: ERROR_CODE.arbitraryUnion,
 				params: { type: "string | u8" },

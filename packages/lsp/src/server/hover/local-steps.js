@@ -30,6 +30,8 @@ export const resolveParameterHover = (context) => {
 		context.syntaxTree,
 		context.comments,
 		context.name,
+		context.line,
+		context.column,
 	);
 
 	return parameterHover ?? NOT_HANDLED;

@@ -101,9 +101,9 @@ diagnostics:
 types:
 - none
 
-// inline stateless handler reported as not named
+// inline stateless handler is accepted
 diagnostics:
-- error error.callbackMustBeNamed @ 4:25: Callback handler for 'handler' must be a top-level function reference.
+- none
 types:
 - none
 
@@ -121,6 +121,6 @@ types:
 
 // handler with parameters reported
 diagnostics:
-- error error.callbackHasParameters @ 6:19: Callback handler 'onSlaveReceive' must take no parameters.
+- error error.callbackSignatureMismatch @ 6:19: Callback handler 'handler' does not match the expected signature '() => void' (found '(value: u8) => void'): parameter count (expected 0, found 1).
 types:
 - none

@@ -6,6 +6,7 @@ import {
 	renderSharedObjectFactory,
 	renderSharedObjectMethod,
 } from "./classes.js";
+import { renderParameterDeclaration } from "./function-pointer.js";
 import { hasDataFields } from "./object-info.js";
 import { collectObjectMethods, renderObjectMethod } from "./object-methods.js";
 import { renderFunctionBody } from "./statements.js";
@@ -57,7 +58,11 @@ const renderUserFunctionDeclaration = (
 				isObjectShapeType(paramType) || userTypeNames?.has(paramType);
 			const isHandleParam = renderContext.isObjectHandle?.(paramType);
 			const byReference = isObjectParam && !isHandleParam;
-			return `${renderContext.toCType(paramType)}${byReference ? " &" : " "}${param.name}`;
+			return renderParameterDeclaration(
+				param,
+				renderContext.toCType,
+				byReference,
+			);
 		})
 		.join(", ");
 	const returnCType = returnType ? renderContext.toCType(returnType) : "void";

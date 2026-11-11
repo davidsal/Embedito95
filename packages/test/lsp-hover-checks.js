@@ -172,6 +172,17 @@ const SOURCE = [
 	"screen.paint()",
 ].join("\n");
 
+const FUNCTION_TYPE_SOURCE = [
+	"const observe = (callback: () => void) => { callback() }",
+	"const report = (callback: (value: i16) => void): i16 => {",
+	"    callback(1)",
+	"    return 2",
+	"}",
+	"const nested = (callback: (value: i16) => void) => {",
+	"    const inner = () => { callback(2) }",
+	"}",
+].join("\n");
+
 const findPosition = (source, marker, offset = 0) => {
 	const index = source.indexOf(marker);
 	const point = index + offset;
@@ -597,6 +608,58 @@ const checkParameterHover = async () => {
 	);
 };
 
+const checkFunctionTypeParameterHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_TYPE_SOURCE,
+		findPosition(FUNCTION_TYPE_SOURCE, "callback: (value", 0),
+	);
+	return expectEqual(
+		"LSP hover of a callback parameter shows its function type",
+		hover,
+		"```e95\ncallback: (value: i16) => void\n```",
+	);
+};
+
+const checkFunctionTypeParameterScopingHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_TYPE_SOURCE,
+		findPosition(FUNCTION_TYPE_SOURCE, "callback(1)", 0),
+	);
+	return expectEqual(
+		"LSP hover of a callback parameter ignores same-named parameters from other functions",
+		hover,
+		"```e95\ncallback: (value: i16) => void\n```",
+	);
+};
+
+const checkFunctionTypeNestedParameterHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_TYPE_SOURCE,
+		findPosition(FUNCTION_TYPE_SOURCE, "callback(2)", 0),
+	);
+	return expectEqual(
+		"LSP hover of a callback used inside a nested function keeps the enclosing parameter type",
+		hover,
+		"```e95\ncallback: (value: i16) => void\n```",
+	);
+};
+
+const checkFunctionTypeSignatureHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_TYPE_SOURCE,
+		findPosition(FUNCTION_TYPE_SOURCE, "const report", "const ".length),
+	);
+	return expectEqual(
+		"LSP hover of a function with a typed callback parameter shows its signature",
+		hover,
+		"```e95\nconst report: (callback: (value: i16) => void) => i16\n```",
+	);
+};
+
 const checkReturnedObjectHover = async () => {
 	const hover = await hoverAt(
 		findPosition(SOURCE, "const screen", "const ".length),
@@ -771,6 +834,10 @@ export const runLspHoverChecks = async () => {
 		...(await checkF64Availability("arduino-nano")),
 		...(await checkF64Availability("stm32-bluepill")),
 		await checkParameterHover(),
+		await checkFunctionTypeParameterHover(),
+		await checkFunctionTypeParameterScopingHover(),
+		await checkFunctionTypeNestedParameterHover(),
+		await checkFunctionTypeSignatureHover(),
 		await checkReturnedObjectHover(),
 		await checkReturnedMethodHover(),
 		...(await checkStringMethodHovers()),

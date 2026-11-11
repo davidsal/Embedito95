@@ -235,6 +235,10 @@ export const renderExpression = (node, context, lines) => {
 			return `${renderExpression(node.object, context, lines)}[${renderExpression(node.index, context, lines)}]`;
 		case AST_NODE.callExpression:
 			return renderCallExpression(node, context, lines);
+		case AST_NODE.functionExpression:
+			return context.renderFunctionExpression
+				? context.renderFunctionExpression(node, context)
+				: "";
 		case AST_NODE.parenthesizedExpression:
 			return `(${renderGroupedExpression(node.expression, context, lines)})`;
 		case AST_NODE.asExpression:

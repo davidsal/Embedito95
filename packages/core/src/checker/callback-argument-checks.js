@@ -1,11 +1,16 @@
-import { AST_NODE, ERROR_CODE } from "../constants.js";
+import { AST_NODE, DATA_TYPE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { getDeclaration } from "./declaration-accessors.js";
 import { getImportEffectiveName } from "./imports.js";
 import {
 	capturesLocalState,
 	collectFreeNames,
 } from "./object-method-validation.js";
 import { collectBoundNames } from "./references-checks.js";
+import { inferFunctionReturnType } from "./return-inference.js";
+
+const PARAMETER_SEPARATOR = ", ";
+const NOT_A_FUNCTION_DETAIL = "value is not a function";
 
 const addStatementBindingNames = (statement, names) => {
 	if (statement.type === AST_NODE.variableDeclaration) {
@@ -50,40 +55,122 @@ const referencesOutsideModuleScope = (functionExpression, moduleNames) => {
 	return false;
 };
 
-// A parameter declared without a type is a callback slot: it lowers to a C
-// function pointer, so its argument must name a top-level function. An inline
-// arrow has nowhere to live (the codegen has no lambda form) and, when it
-// references a name that is not declared at module scope, it would need
-// captured state.
-const pushCallbackDiagnostic = (state, code, param, location) => {
+const resolveExpectedFunctionType = (param) => {
+	if (!param) {
+		return null;
+	}
+	return param.typeAnnotation?.functionType ?? param.functionType ?? null;
+};
+
+const describeSignature = (signature) => {
+	if (!signature) {
+		return DATA_TYPE.void;
+	}
+	const parameters = (signature.params ?? [])
+		.map((param) => {
+			if (!param.type) {
+				return param.name ?? "";
+			}
+			return `${param.name}: ${param.type}`;
+		})
+		.join(PARAMETER_SEPARATOR);
+	const returnType = signature.returnType ?? DATA_TYPE.void;
+	return `(${parameters}) => ${returnType}`;
+};
+
+const resolveActualReturnType = (state, functionNode) => {
+	if (functionNode.returnType?.name) {
+		return functionNode.returnType.name;
+	}
+	const inferred = inferFunctionReturnType(
+		functionNode,
+		(name, loc) => state.variableTypes.resolve(name, loc),
+		state.resolveCallType,
+		state.wordSize,
+		state.ast,
+		state.objectTypes,
+	);
+	return inferred.type ?? DATA_TYPE.void;
+};
+
+const buildSignatureFromFunctionNode = (state, functionNode) => {
+	return {
+		params: (functionNode.params ?? []).map((param) => ({
+			name: param.name,
+			type: param.typeAnnotation?.type ?? null,
+		})),
+		returnType: resolveActualReturnType(state, functionNode),
+	};
+};
+
+const buildSignatureFromDefinition = (definition) => {
+	return {
+		params: (definition.params ?? []).map((param) => ({
+			name: param.name,
+			type: param.type ?? null,
+		})),
+		returnType: definition.returnType ?? DATA_TYPE.void,
+	};
+};
+
+const findUserFunctionNode = (state, name) => {
+	const statement = state.defined?.get(name);
+	const declaration = statement ? getDeclaration(statement) : null;
+	return declaration?.init?.type === AST_NODE.functionExpression
+		? declaration.init
+		: null;
+};
+
+const compareSignatures = (expected, actual) => {
+	const expectedParams = expected.params ?? [];
+	const actualParams = actual.params ?? [];
+	if (expectedParams.length !== actualParams.length) {
+		return `parameter count (expected ${expectedParams.length}, found ${actualParams.length})`;
+	}
+	for (const [index, expectedParam] of expectedParams.entries()) {
+		const actualParam = actualParams[index];
+		const expectedType = expectedParam.type ?? null;
+		const actualType = actualParam.type ?? null;
+		if (expectedType && actualType && expectedType !== actualType) {
+			return `parameter '${expectedParam.name}' type (expected '${expectedType}', found '${actualType}')`;
+		}
+	}
+	const expectedReturnType = expected.returnType ?? DATA_TYPE.void;
+	const actualReturnType = actual.returnType ?? DATA_TYPE.void;
+	if (expectedReturnType !== actualReturnType) {
+		return `return type (expected '${expectedReturnType}', found '${actualReturnType}')`;
+	}
+	return null;
+};
+
+const pushSignatureMismatch = (
+	state,
+	param,
+	expected,
+	actual,
+	detail,
+	location,
+) => {
 	state.errors.push(
 		makeDiagnostic({
-			code,
-			params: { name: param?.name ?? "" },
+			code: ERROR_CODE.callbackSignatureMismatch,
+			params: {
+				name: param?.name ?? "",
+				expected: describeSignature(expected),
+				actual: describeSignature(actual),
+				detail,
+			},
 			location,
 		}),
 	);
 };
 
-export const checkCallbackHandlerArgument = (state, argument, param) => {
-	if (!param || param.type) {
-		return;
-	}
-	if (argument.type === AST_NODE.identifier) {
-		const resolvedName =
-			state.resolveImportedName?.(argument.name) ?? argument.name;
-		const definition = state.functionDefinitions?.[resolvedName];
-		if (definition) {
-			if ((definition.params?.length ?? 0) > 0) {
-				pushCallbackDiagnostic(
-					state,
-					ERROR_CODE.callbackHasParameters,
-					{ name: argument.name },
-					argument.loc,
-				);
-			}
-			return;
-		}
+const checkNamedCallbackArgument = (state, argument, param, expected) => {
+	const resolvedName =
+		state.resolveImportedName?.(argument.name) ?? argument.name;
+	const functionNode = findUserFunctionNode(state, argument.name);
+	const definition = state.functionDefinitions?.[resolvedName];
+	if (!functionNode && !definition) {
 		if (state.defined?.has(argument.name)) {
 			state.errors.push(
 				makeDiagnostic({
@@ -95,37 +182,64 @@ export const checkCallbackHandlerArgument = (state, argument, param) => {
 		}
 		return;
 	}
-	if (argument.type === AST_NODE.functionExpression) {
-		if ((argument.params?.length ?? 0) > 0) {
-			pushCallbackDiagnostic(
-				state,
-				ERROR_CODE.callbackHasParameters,
-				param,
-				argument.loc,
-			);
-			return;
-		}
-		const localNames = state.context.resolveLocalBindingNames();
-		const capturesLocal =
-			capturesLocalState(argument, localNames) ||
-			referencesOutsideModuleScope(
-				argument,
-				collectTopLevelBindingNames(state.ast),
-			);
-		if (capturesLocal) {
-			pushCallbackDiagnostic(
-				state,
-				ERROR_CODE.callbackCapturesLocalState,
-				param,
-				argument.loc,
-			);
-			return;
-		}
+	const actual = functionNode
+		? buildSignatureFromFunctionNode(state, functionNode)
+		: buildSignatureFromDefinition(definition);
+	const detail = compareSignatures(expected, actual);
+	if (detail) {
+		pushSignatureMismatch(state, param, expected, actual, detail, argument.loc);
 	}
-	pushCallbackDiagnostic(
+};
+
+const checkArrowCallbackArgument = (state, argument, param, expected) => {
+	const localNames = state.context.resolveLocalBindingNames();
+	const capturesLocal =
+		capturesLocalState(argument, localNames) ||
+		referencesOutsideModuleScope(
+			argument,
+			collectTopLevelBindingNames(state.ast),
+		);
+	if (capturesLocal) {
+		state.errors.push(
+			makeDiagnostic({
+				code: ERROR_CODE.callbackCapturesLocalState,
+				params: { name: param?.name ?? "" },
+				location: argument.loc,
+			}),
+		);
+		return;
+	}
+	const actual = buildSignatureFromFunctionNode(state, argument);
+	const detail = compareSignatures(expected, actual);
+	if (detail) {
+		pushSignatureMismatch(state, param, expected, actual, detail, argument.loc);
+	}
+};
+
+// A function-typed parameter lowers to a C function pointer, so its argument
+// must be a function whose parameter and return types match the declared
+// signature exactly (like a C function pointer: `() => i16` does not convert to
+// `() => void`). A named function or a captureless inline arrow is accepted; an
+// inline arrow that references local state would need a closure and is rejected.
+export const checkCallbackSignatureArgument = (state, argument, param) => {
+	const expected = resolveExpectedFunctionType(param);
+	if (!expected) {
+		return;
+	}
+	if (argument.type === AST_NODE.identifier) {
+		checkNamedCallbackArgument(state, argument, param, expected);
+		return;
+	}
+	if (argument.type === AST_NODE.functionExpression) {
+		checkArrowCallbackArgument(state, argument, param, expected);
+		return;
+	}
+	pushSignatureMismatch(
 		state,
-		ERROR_CODE.callbackMustBeNamed,
 		param,
-		argument.loc ?? param.loc,
+		expected,
+		null,
+		NOT_A_FUNCTION_DETAIL,
+		argument.loc,
 	);
 };

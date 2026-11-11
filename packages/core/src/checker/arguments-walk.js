@@ -1,7 +1,7 @@
 import { AST_NODE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { checkArgumentAgainstParam } from "./argument-checks.js";
-import { checkCallbackHandlerArgument } from "./callback-argument-checks.js";
+import { checkCallbackSignatureArgument } from "./callback-argument-checks.js";
 import { unwrapParentheses } from "./types.js";
 import { walk } from "./walk.js";
 
@@ -40,7 +40,7 @@ export const checkFunctionCallArguments = (state) => {
 							argumentNode,
 						] of node.arguments.entries()) {
 							const argument = unwrapParentheses(argumentNode);
-							checkCallbackHandlerArgument(
+							checkCallbackSignatureArgument(
 								state,
 								argument,
 								fnDefinition.params[argumentIndex],
