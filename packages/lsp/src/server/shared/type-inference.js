@@ -66,9 +66,29 @@ export const createLibraryCallTypeResolver = (allExports, importAliases) => {
 	};
 };
 
-export const createVariableTypeResolver = (variableTypes) => {
+// Resolves the declared type of a library constant imported into the document,
+// reapplying the local import alias to match the export's original name. It lets
+// `resolveNameType` answer for names like `console` that live in the library
+// surface, not in the project's local `variableTypes`.
+export const resolveLibraryConstantType = (name, allExports, importAliases) => {
+	const originalName = importAliases?.get(name) ?? name;
+	const libraryConstant = allExports.find((exportItem) => {
+		return exportItem.name === originalName && exportItem.kind === "constant";
+	});
+
+	return libraryConstant?.type ?? null;
+};
+
+export const createVariableTypeResolver = (
+	variableTypes,
+	allExports,
+	importAliases,
+) => {
 	return (resolvedName, location) => {
-		return variableTypes.resolve(resolvedName, location);
+		return (
+			variableTypes.resolve(resolvedName, location) ??
+			resolveLibraryConstantType(resolvedName, allExports, importAliases)
+		);
 	};
 };
 
@@ -98,6 +118,10 @@ export const buildProjectTypeInference = (options) => {
 		objectTypes,
 		variableTypes,
 		resolveCallType,
-		resolveNameType: createVariableTypeResolver(variableTypes),
+		resolveNameType: createVariableTypeResolver(
+			variableTypes,
+			allExports,
+			importAliases,
+		),
 	};
 };

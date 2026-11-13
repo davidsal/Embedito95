@@ -65,6 +65,10 @@ export const DOCS_DIRECTORIES = [
 	join(PROJECT_ROOT, "packages/cli/docs"),
 ];
 export const TEST_SOURCES_DIRECTORY = join(PACKAGE_DIRECTORY, "src");
+export const VSCODE_LANGUAGE_CONFIGURATION_FILE = join(
+	PACKAGE_DIRECTORY,
+	"../lsp-vscode/src/language-configuration.json",
+);
 
 export const LANGUAGE_DIRECTORY_NAME = "language";
 export const FORMATTER_DIRECTORY_NAME = "formatter";
@@ -211,6 +215,8 @@ export const REGISTRY_ENUM_RESOLUTION_UNIT_CHECKS_GROUP =
 export const REGISTRY_INT128_NEGATION_UNIT_CHECKS_GROUP =
 	"registry-int128-negation";
 export const REGISTRY_POST_INSTALL_UNIT_CHECKS_GROUP = "registry-post-install";
+export const POSIX_STRATEGY_UNIT_CHECKS_GROUP = "posix-strategy";
+export const CONSOLE_UNIT_CHECKS_GROUP = "console";
 export const REGISTRY_CORE_PARITY_UNIT_CHECKS_GROUP = "registry-core-parity";
 export const REGISTRY_STM32_PARALLEL_COMPILE_UNIT_CHECKS_GROUP =
 	"registry-stm32-parallel-compile";
@@ -223,7 +229,9 @@ export const LINT_POLICY_UNIT_CHECKS_GROUP = "lint-policy";
 export const LSP_COMPLETION_UNIT_CHECKS_GROUP = "lsp-completion";
 export const LSP_HOVER_UNIT_CHECKS_GROUP = "lsp-hover";
 export const LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP = "lsp-diagnostics";
+export const VSCODE_INDENTATION_UNIT_CHECKS_GROUP = "vscode-indentation";
 export const SHARED_CONSTANTS_UNIT_CHECKS_GROUP = "shared-constants";
+export const WORD_SIZE_UNIT_CHECKS_GROUP = "word-size";
 export const SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP = "supported-platforms";
 export const TEST_COMPILE_UNIT_CHECKS_GROUP = "test-compile";
 export const LINT_SCRIPT_NAME = "lint";
