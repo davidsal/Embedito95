@@ -9,6 +9,7 @@ import {
 	shared,
 	UTF8,
 } from "embedito95-core";
+import { PLATFORM_CATEGORY } from "embedito95-registry/platforms";
 import { green, red, writeErrorLine, writeLine } from "../../console.js";
 import { INTERMEDIATE_DIRECTORY_NAME } from "../../constants.js";
 import { loadProjectConfiguration } from "../shared/config.js";
@@ -71,6 +72,7 @@ const writeIntermediates = (
 	buildDirectory,
 	variableTypes,
 	libraryTypeContext,
+	platform,
 ) => {
 	const intermediateDirectory = join(
 		buildDirectory,
@@ -84,6 +86,7 @@ const writeIntermediates = (
 		buildLibraryFunctionReturnTypes(projectLibraries?.libraryFunctions ?? {}),
 		variableTypes,
 		libraryTypeContext,
+		{ exitWhenIdle: platform?.category === PLATFORM_CATEGORY.HOST },
 	);
 	const intermediateEntryPath = join(
 		intermediateDirectory,
@@ -236,6 +239,7 @@ export const run = async () => {
 			buildDirectory,
 			variableTypes,
 			libraryTypeContext,
+			platform,
 		);
 
 	const asyncTaskModule = compileAsyncModule(

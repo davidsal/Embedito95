@@ -107,7 +107,18 @@ const buildDispatchPass = (dispatch, limitName, increment) => {
 	];
 };
 
-const buildEventLoopBody = (handles, entryNames) => {
+const buildIdleExitSource = (exitWhenIdle) => {
+	if (!exitWhenIdle) {
+		return [];
+	}
+	return [
+		`${INDENT.repeat(2)}if (${TASK_QUEUE_VARIABLE_NAME}.length() == 0) {`,
+		`${INDENT.repeat(3)}return`,
+		`${INDENT.repeat(2)}}`,
+	];
+};
+
+const buildEventLoopBody = (handles, entryNames, exitWhenIdle) => {
 	const dispatch = buildDispatchSwitch(handles, entryNames);
 	return [
 		`${INDENT}let ${EVENT_LOOP_SUBSET_OFFSET_NAME} = 0`,
@@ -143,12 +154,13 @@ const buildEventLoopBody = (handles, entryNames) => {
 		"",
 		buildCompactSource(3),
 		`${INDENT.repeat(2)}}`,
+		...buildIdleExitSource(exitWhenIdle),
 		`${INDENT}}`,
 	].join("\n");
 };
 
-const buildEventLoopSource = (handles, entryNames) => {
-	const body = buildEventLoopBody(handles, entryNames);
+const buildEventLoopSource = (handles, entryNames, exitWhenIdle) => {
+	const body = buildEventLoopBody(handles, entryNames, exitWhenIdle);
 	return `const ${EVENT_LOOP_NAME} = (${HANDLERS_NAME}: ${HANDLERS_TYPE_NAME}) => {\n${body}\n}\n`;
 };
 
@@ -237,7 +249,13 @@ const insertHandlersTypeNode = (ast, handlersType) => {
 	ast.body.splice(typeIndex + 1, 0, handlersType);
 };
 
-export const injectEventLoop = (ast, entryHandles, libraryHandles) => {
+export const injectEventLoop = (
+	ast,
+	entryHandles,
+	libraryHandles,
+	options = {},
+) => {
+	const { exitWhenIdle = false } = options;
 	const handles = [...entryHandles, ...libraryHandles];
 	const entryNames = new Set(
 		entryHandles.map((handle) => {
@@ -245,7 +263,7 @@ export const injectEventLoop = (ast, entryHandles, libraryHandles) => {
 		}),
 	);
 	const [eventLoop] = parseStatements(
-		buildEventLoopSource(handles, entryNames),
+		buildEventLoopSource(handles, entryNames, exitWhenIdle),
 	);
 	const [handlersType] = parseStatements(buildHandlersTypeSource(entryHandles));
 	const callStatements = parseStatements(
