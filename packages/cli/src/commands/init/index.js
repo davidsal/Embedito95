@@ -13,7 +13,10 @@ import {
 	readPackageNames,
 	UTF8,
 } from "embedito95-core";
-import { supportedPlatforms } from "embedito95-registry/platforms";
+import {
+	PLATFORM_CATEGORY,
+	supportedPlatforms,
+} from "embedito95-registry/platforms";
 import { cyan, red, write, writeErrorLine, writeLine } from "../../console.js";
 import {
 	AGENTS_FILE_NAME,
@@ -21,6 +24,7 @@ import {
 	HEADER_BORDER_PADDING,
 	HEADER_BOX_WIDTH,
 	PACKAGE_PREFIX,
+	TEMPLATE_HOST_PROJECT_FILE,
 	TEMPLATE_LIBRARY_FILE,
 	TEMPLATE_PROJECT_FILE,
 	VERSION_PREFIX,
@@ -32,6 +36,7 @@ import { input, select } from "../shared/prompt.js";
 import {
 	ensurePlatformRequirements,
 	isAnyUnsatisfied,
+	printRequirements,
 } from "../shared/requirements.js";
 import { resolveProjectToolchainVersion } from "../shared/version.js";
 import { buildAgentsDocument } from "./agents-template.js";
@@ -40,6 +45,11 @@ import { copyProjectDocumentation } from "./project-docs.js";
 const CURRENT_WORKING_DIRECTORY = getCurrentWorkingDirectory();
 const IS_LIBRARY = process.argv[3] === "--library";
 const TEMPLATE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
+const PROJECT_TEMPLATE_FILES = {
+	[PLATFORM_CATEGORY.BOARD]: TEMPLATE_PROJECT_FILE,
+	[PLATFORM_CATEGORY.HOST]: TEMPLATE_HOST_PROJECT_FILE,
+};
+const DEFAULT_PLATFORM_CATEGORY = PLATFORM_CATEGORY.BOARD;
 const ENVIRONMENT_OK_MESSAGE = "Toolchain ready";
 const ENVIRONMENT_NOT_READY_MESSAGE = "Toolchain not ready";
 const ENVIRONMENT_MISSING_MESSAGE =
@@ -47,6 +57,14 @@ const ENVIRONMENT_MISSING_MESSAGE =
 
 const isNameValid = (name) => {
 	return /^[a-zA-Z0-9_-]+$/.test(name);
+};
+
+export const resolveProjectTemplateFile = (platform) => {
+	const category = platform?.category ?? DEFAULT_PLATFORM_CATEGORY;
+	return (
+		PROJECT_TEMPLATE_FILES[category] ??
+		PROJECT_TEMPLATE_FILES[DEFAULT_PLATFORM_CATEGORY]
+	);
 };
 
 const getPlatformName = async (isLibrary) => {
@@ -92,6 +110,7 @@ const runEnvironmentCheck = async ({ platform }) => {
 	const requirements = await ensurePlatformRequirements({ platform });
 
 	if (isAnyUnsatisfied({ requirements })) {
+		printRequirements({ requirements });
 		writeLine(`${red("✖")} ${ENVIRONMENT_NOT_READY_MESSAGE}`);
 		return false;
 	}
@@ -210,7 +229,7 @@ const writeScaffoldFiles = (
 		isLibrary && projectPlatform ? `${projectPlatform}.e95` : MAIN_FILE;
 	const templateName = isLibrary
 		? TEMPLATE_LIBRARY_FILE
-		: TEMPLATE_PROJECT_FILE;
+		: resolveProjectTemplateFile(platform);
 	writeFileSync(
 		join(projectPath, entryFileName),
 		readFileSync(join(TEMPLATE_DIRECTORY, templateName), UTF8),

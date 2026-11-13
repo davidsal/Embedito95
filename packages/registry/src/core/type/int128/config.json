@@ -2,5 +2,5 @@
 	"type": "library",
 	"name": "int128",
 	"package": "@embedito95/int128",
-	"autoImport": true
+	"autoImport": { "platform": { "int128": "software" } }
 }

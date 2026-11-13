@@ -17,3 +17,8 @@ import { delay, getMillis, hasElapsed } from '@embedito95/time'
 
 `delay` blocks and does not yield. Inside async tasks use `await sleep(ms)` from
 `@embedito95/async` instead.
+
+On the `macos-arm64` host, the clock uses `CLOCK_MONOTONIC`, `delay` and
+`delayMicros` wait with `nanosleep` and retry after `EINTR`, and the 64-bit
+counter is truncated to `u32` with overflow-safe `hasElapsed*` subtraction.
+Host support does not imply upload, GPIO or Raspberry Pi support.

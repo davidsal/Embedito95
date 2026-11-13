@@ -25,3 +25,10 @@ returned value. When the function returns nothing, the task carries no payload
 and its type is plain `AsyncTask`. `await` on an `AsyncTask<T>` yields `T`, so
 the task's `value` field has that same type. Several async tasks started from
 `main` run cooperatively on the event loop.
+
+On the `macos-arm64` host, `sleep` and `sleepMicros` are backed by
+`@embedito95/time` (`CLOCK_MONOTONIC` plus `nanosleep`), and the event loop
+returns when no task remains, so `run` exits on its own. The `async: "scheduler"`
+platform capability enables the host auto-import; board targets keep their
+existing behavior. Host support does not imply upload, GPIO or Raspberry Pi
+support.

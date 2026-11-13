@@ -19,5 +19,7 @@ const blink = async () => {
   event-loop pass.
 - `delay(ms)` blocks and does not yield; inside tasks, use `await sleep(ms)`.
 - Several async tasks started from `main` run cooperatively.
+- On the `macos-arm64` host, the event loop returns when no task remains, so the
+  program exits instead of looping forever.
 
 See [Engine](../engine.md) for scheduling and task storage.

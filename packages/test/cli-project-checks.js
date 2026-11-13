@@ -3,6 +3,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -11,21 +12,35 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
+	AST_NODE,
 	appendPackageName,
+	BUILD_DIRECTORY_NAME,
 	CONFIG_FILE,
+	CORE_LIBRARIES_DIRECTORY_NAME,
+	check,
 	JSON_INDENTATION,
 	LIBRARIES_DIRECTORY_NAME,
 	LIBRARY_PROJECT_TYPE,
 	PROJECT_TYPE,
+	parse,
 	readPackageNames,
+	tokenize,
 	UTF8,
 } from "embedito95-core";
+import {
+	PLATFORM_CATEGORY,
+	supportedPlatforms,
+} from "embedito95-registry/platforms";
 import { buildAgentsDocument } from "../cli/src/commands/init/agents-template.js";
-import { buildConfiguration } from "../cli/src/commands/init/index.js";
+import {
+	buildConfiguration,
+	resolveProjectTemplateFile,
+} from "../cli/src/commands/init/index.js";
 import { copyProjectDocumentation } from "../cli/src/commands/init/project-docs.js";
 import { CLI_VERSION } from "../cli/src/commands/shared/cli-package.js";
 import { copyDocumentation } from "../cli/src/commands/shared/docs.js";
 import {
+	copyLibraries,
 	findRegistryLibrary,
 	listCoreLibraries,
 	listRegistryLibraries,
@@ -49,6 +64,8 @@ import {
 	NPX_YES_FLAG,
 	SKIP_VERSION_CHECK_ENVIRONMENT_KEY,
 	SKIP_VERSION_CHECK_ENVIRONMENT_VALUE,
+	TEMPLATE_HOST_PROJECT_FILE,
+	TEMPLATE_PROJECT_FILE,
 	VERSION_PREFIX,
 	WINDOWS_COMMAND_INTERPRETER,
 	WINDOWS_COMMAND_INTERPRETER_RUN_FLAG,
@@ -68,6 +85,8 @@ const ARDUINO_NANO_DISPLAY_NAME = "Arduino Nano";
 const ABSENT_DOCS_DIRECTORY_NAME = "absent-docs";
 const AVAILABLE_LIBRARIES_LABEL = "Available libraries";
 const CLI_DOC_FILE_NAME = "cli.md";
+const CONSOLE_LIBRARY_NAME = "console";
+const CONSOLE_PACKAGE_NAME = "@embedito95/console";
 const CONTROL_FLOW_TOPIC_FILE_NAME = "control-flow.md";
 const CORE_LIBRARY_NAME = "gpio";
 const CORE_LIBRARY_PACKAGE_NAME = "@embedito95/gpio";
@@ -89,9 +108,36 @@ const LANGUAGE_TOPIC_DIRECTORY_NAME = "language";
 const LANGUAGE_TOPIC_LINK = "language/declarations.md";
 const LIBRARIES_COMMAND = "libraries";
 const LIBRARIES_DOC_FILE_NAME = "libraries.md";
+const RUN_COMMAND = "run";
+const HELP_FLAG = "--help";
+const RUN_USAGE_DESCRIPTION = "build + compile + run";
+const EXECUTION_NOT_SUPPORTED_MESSAGE =
+	"Execution not supported for this platform";
+const UNSUPPORTED_RUN_PROJECT_DIRECTORY_NAME = "unsupported-run-project";
 const MISSING_DOCS_DIRECTORY_NAME = "missing-docs";
+const MACOS_ARM64_PLATFORM = "macos-arm64";
 const PROJECT_NAME = "cli-project-checks";
 const PROJECT_PLATFORM = "arduino-nano";
+const HOST_CORE_LIBRARY_NAMES = ["type", "console", "time", "async"];
+const HOST_CORE_DIRECTORY_NAMES = ["async", "console", "time", "type"];
+const HOST_CORE_PACKAGE_NAMES = [
+	"@embedito95/async",
+	"@embedito95/console",
+	"@embedito95/time",
+	"@embedito95/type",
+];
+const BOARD_ONLY_CORE_LIBRARY_NAMES = [
+	"gpio",
+	"serial",
+	"i2c",
+	"spi",
+	"math",
+	"system",
+];
+const CORE_LIBRARY_PROJECT_DIRECTORY_NAME = "core-library-project";
+const CORE_LIBRARY_DIRECTORY_ENTRY = {
+	withFileTypes: true,
+};
 const TYPESCRIPT_MIGRATION_HEADING = "## Coming from TypeScript";
 const UNKNOWN_LIBRARY_NAME = "not-a-real-library";
 const INHERITED_PROJECT_VERSION_NUMBER = "1.0.0";
@@ -119,6 +165,31 @@ const ARDUINO_NANO_PLATFORM = {
 	name: PROJECT_PLATFORM,
 	displayName: ARDUINO_NANO_DISPLAY_NAME,
 };
+const INIT_TEMPLATE_DIRECTORY = new URL(
+	"../cli/src/commands/init/",
+	import.meta.url,
+);
+const BOARD_TEMPLATE_PLATFORM = { category: PLATFORM_CATEGORY.BOARD };
+const HOST_TEMPLATE_PLATFORM = { category: PLATFORM_CATEGORY.HOST };
+const UNCATEGORIZED_TEMPLATE_PLATFORM = { name: PROJECT_PLATFORM };
+const BOARD_TEMPLATE_FRAGMENTS = [
+	"@embedito95/gpio",
+	"@embedito95/time",
+	"setup",
+	"blinkLed",
+];
+const HOST_TEMPLATE_FORBIDDEN_FRAGMENTS = ["import", "blinkLed", "console.log"];
+const HOST_TEMPLATE_STATEMENT_COUNT = 3;
+const HOST_TEMPLATE_SETUP_INDEX = 0;
+const HOST_TEMPLATE_MAIN_INDEX = 1;
+const HOST_TEMPLATE_MAIN_CALL_INDEX = 2;
+const HOST_TEMPLATE_FIRST_STATEMENT_INDEX = 0;
+const SETUP_FUNCTION_NAME = "setup";
+const MAIN_FUNCTION_NAME = "main";
+const HOST_FIXTURE_FILE = new URL(
+	"./fixtures/host-project/main.e95",
+	import.meta.url,
+);
 
 const runProcess = promisify(execFile);
 
@@ -221,6 +292,121 @@ const checkCoreLibraryListing = () => {
 	];
 };
 
+const findSupportedPlatform = (platformName) => {
+	return supportedPlatforms.find((platform) => {
+		return platform.name === platformName;
+	});
+};
+
+const listCoreDirectoryNames = (projectDirectory) => {
+	const coreDirectory = join(projectDirectory, CORE_LIBRARIES_DIRECTORY_NAME);
+
+	if (!existsSync(coreDirectory)) {
+		return [];
+	}
+
+	return readdirSync(coreDirectory, CORE_LIBRARY_DIRECTORY_ENTRY)
+		.filter((entry) => {
+			return entry.isDirectory();
+		})
+		.map((entry) => {
+			return entry.name;
+		})
+		.sort();
+};
+
+const installCoreLibraries = async (temporaryDirectory, platformName) => {
+	const projectDirectory = join(
+		temporaryDirectory,
+		`${CORE_LIBRARY_PROJECT_DIRECTORY_NAME}-${platformName}`,
+	);
+	mkdirSync(projectDirectory, { recursive: true });
+	const configuration = { core: [] };
+	await copyLibraries(
+		projectDirectory,
+		configuration,
+		findSupportedPlatform(platformName),
+	);
+
+	return { projectDirectory, configuration };
+};
+
+const checkHostCoreLibraryFiltering = async (temporaryDirectory) => {
+	const { projectDirectory, configuration } = await installCoreLibraries(
+		temporaryDirectory,
+		MACOS_ARM64_PLATFORM,
+	);
+	const coreDirectoryNames = listCoreDirectoryNames(projectDirectory);
+	const corePackageNames = readPackageNames(configuration.core);
+	const boardOnlyLibraries = BOARD_ONLY_CORE_LIBRARY_NAMES.filter((name) => {
+		return coreDirectoryNames.includes(name);
+	});
+
+	return [
+		expectEqual(
+			"host platform declares the type, console, time and async core libraries",
+			findSupportedPlatform(MACOS_ARM64_PLATFORM)?.coreLibraries?.join(","),
+			HOST_CORE_LIBRARY_NAMES.join(","),
+		),
+		expectEqual(
+			"host config.core lists the type, console, time and async packages",
+			corePackageNames.sort().join(","),
+			HOST_CORE_PACKAGE_NAMES.join(","),
+		),
+		expectEqual(
+			"host core/ contains the type, console, time and async directories",
+			coreDirectoryNames.join(","),
+			HOST_CORE_DIRECTORY_NAMES.join(","),
+		),
+		expectEqual(
+			"host core/ excludes board-only libraries",
+			boardOnlyLibraries.join(","),
+			"",
+		),
+	];
+};
+
+const checkBoardCoreLibraryFiltering = async (temporaryDirectory) => {
+	const { projectDirectory, configuration } = await installCoreLibraries(
+		temporaryDirectory,
+		PROJECT_PLATFORM,
+	);
+	const expectedDirectories = listCoreLibraries()
+		.map((library) => {
+			return library.directoryName;
+		})
+		.filter((name) => {
+			return name !== CONSOLE_LIBRARY_NAME;
+		});
+	const expectedPackages = listCoreLibraries()
+		.map((library) => {
+			return library.packageName;
+		})
+		.filter((packageName) => {
+			return packageName !== CONSOLE_PACKAGE_NAME;
+		});
+	const coreDirectoryNames = listCoreDirectoryNames(projectDirectory);
+	const corePackageNames = readPackageNames(configuration.core).sort();
+
+	return [
+		expectEqual(
+			"board platform does not filter core libraries by an explicit list",
+			findSupportedPlatform(PROJECT_PLATFORM)?.coreLibraries,
+			undefined,
+		),
+		expectEqual(
+			"board core/ keeps every core library except console",
+			coreDirectoryNames.join(","),
+			expectedDirectories.sort().join(","),
+		),
+		expectEqual(
+			"board config.core keeps every core library except console",
+			corePackageNames.join(","),
+			expectedPackages.sort().join(","),
+		),
+	];
+};
+
 const checkRegistryLibraryLookup = () => {
 	const byDirectoryName = findRegistryLibrary(DHT22_LIBRARY_NAME);
 	const byPackageName = findRegistryLibrary(DHT22_PACKAGE_NAME);
@@ -306,6 +492,11 @@ const checkInitConfiguration = () => {
 		PROJECT_PLATFORM,
 		false,
 	);
+	const macosProjectConfiguration = buildConfiguration(
+		INIT_PROJECT_NAME,
+		MACOS_ARM64_PLATFORM,
+		false,
+	);
 
 	return [
 		expectEqual(
@@ -339,6 +530,139 @@ const checkInitConfiguration = () => {
 			Array.isArray(projectConfiguration.libraries) &&
 				projectConfiguration.libraries.length === 0,
 			true,
+		),
+		expectEqual(
+			"init project configuration stores the macOS ARM64 platform id",
+			macosProjectConfiguration.platform,
+			MACOS_ARM64_PLATFORM,
+		),
+	];
+};
+
+const readProjectTemplate = (templateFile) => {
+	return readFileSync(new URL(templateFile, INIT_TEMPLATE_DIRECTORY), UTF8);
+};
+
+const parseProjectTemplate = (source) => {
+	const { tokens } = tokenize(source);
+	return parse(tokens);
+};
+
+const getDeclaredInitializer = (statement) => {
+	return statement?.declarations?.[0]?.init ?? null;
+};
+
+const getDeclaredName = (statement) => {
+	return statement?.declarations?.[0]?.id?.name ?? null;
+};
+
+const getFirstFunctionStatement = (statement) => {
+	const initializer = getDeclaredInitializer(statement);
+	return initializer?.body?.body?.[HOST_TEMPLATE_FIRST_STATEMENT_INDEX] ?? null;
+};
+
+const getCallName = (statement) => {
+	return statement?.expression?.callee?.name ?? null;
+};
+
+const runEntryChecker = (source) => {
+	const { ast } = parseProjectTemplate(source);
+	return check(ast).errors;
+};
+
+const checkProjectTemplateSelection = () => {
+	const boardTemplateFile = resolveProjectTemplateFile(BOARD_TEMPLATE_PLATFORM);
+	const hostTemplateFile = resolveProjectTemplateFile(HOST_TEMPLATE_PLATFORM);
+	const uncategorizedTemplateFile = resolveProjectTemplateFile(
+		UNCATEGORIZED_TEMPLATE_PLATFORM,
+	);
+	const boardTemplateSource = readProjectTemplate(boardTemplateFile);
+	const hostTemplateSource = readProjectTemplate(hostTemplateFile);
+	const hostFixtureSource = readFileSync(HOST_FIXTURE_FILE, UTF8);
+	const { ast, errors } = parseProjectTemplate(hostTemplateSource);
+	const setupStatement = ast.body[HOST_TEMPLATE_SETUP_INDEX];
+	const mainStatement = ast.body[HOST_TEMPLATE_MAIN_INDEX];
+	const mainCallStatement = ast.body[HOST_TEMPLATE_MAIN_CALL_INDEX];
+
+	return [
+		expectEqual(
+			"board targets keep the blink project template",
+			boardTemplateFile,
+			TEMPLATE_PROJECT_FILE,
+		),
+		expectEqual(
+			"host targets use the minimal project template",
+			hostTemplateFile,
+			TEMPLATE_HOST_PROJECT_FILE,
+		),
+		expectEqual(
+			"platforms without a category keep the blink project template",
+			uncategorizedTemplateFile,
+			TEMPLATE_PROJECT_FILE,
+		),
+		expectEqual(
+			"blink project template keeps its imports and helpers",
+			BOARD_TEMPLATE_FRAGMENTS.every((fragment) => {
+				return boardTemplateSource.includes(fragment);
+			}),
+			true,
+		),
+		expectEqual(
+			"minimal project template omits GPIO and console code",
+			HOST_TEMPLATE_FORBIDDEN_FRAGMENTS.every((fragment) => {
+				return !hostTemplateSource.includes(fragment);
+			}),
+			true,
+		),
+		expectEqual(
+			"minimal project template parses without errors",
+			errors.length,
+			0,
+		),
+		expectEqual(
+			"minimal project template declares setup, main and the main call",
+			ast.body.length,
+			HOST_TEMPLATE_STATEMENT_COUNT,
+		),
+		expectEqual(
+			"minimal project template starts with the setup declaration",
+			getDeclaredName(setupStatement),
+			SETUP_FUNCTION_NAME,
+		),
+		expectEqual(
+			"minimal project template setup is an empty function",
+			getDeclaredInitializer(setupStatement)?.type,
+			AST_NODE.functionExpression,
+		),
+		expectEqual(
+			"minimal project template declares main",
+			getDeclaredName(mainStatement),
+			MAIN_FUNCTION_NAME,
+		),
+		expectEqual(
+			"minimal project template calls setup first inside main",
+			getCallName(getFirstFunctionStatement(mainStatement)),
+			SETUP_FUNCTION_NAME,
+		),
+		expectEqual(
+			"minimal project template ends with the main call",
+			getCallName(mainCallStatement),
+			MAIN_FUNCTION_NAME,
+		),
+		expectEqual(
+			"minimal project template passes the entry checker",
+			runEntryChecker(hostTemplateSource).length,
+			0,
+		),
+		expectEqual(
+			"versioned host fixture is present",
+			existsSync(HOST_FIXTURE_FILE),
+			true,
+		),
+		expectEqual(
+			"host fixture matches the minimal project template",
+			hostFixtureSource,
+			hostTemplateSource,
 		),
 	];
 };
@@ -485,6 +809,51 @@ const captureCliFailure = async (projectDirectory, ...args) => {
 	} catch (error) {
 		return error;
 	}
+};
+
+const checkRunCommandHelp = async (temporaryDirectory) => {
+	const helpOutput = await runCliCommand(temporaryDirectory, HELP_FLAG);
+
+	return [
+		expectEqual(
+			"help lists the run command",
+			helpOutput.stdout.includes(`  ${RUN_COMMAND} `),
+			true,
+		),
+		expectEqual(
+			"help describes run as build + compile + run",
+			helpOutput.stdout.includes(RUN_USAGE_DESCRIPTION),
+			true,
+		),
+	];
+};
+
+const checkUnsupportedPlatformRun = async (temporaryDirectory) => {
+	const projectDirectory = join(
+		temporaryDirectory,
+		UNSUPPORTED_RUN_PROJECT_DIRECTORY_NAME,
+	);
+	writeMinimalProject(projectDirectory);
+
+	const runError = await captureCliFailure(projectDirectory, RUN_COMMAND);
+
+	return [
+		expectEqual(
+			"run fails on platforms without execution support",
+			runError !== null,
+			true,
+		),
+		expectEqual(
+			"run explains that execution is not supported for the platform",
+			runError?.stderr.includes(EXECUTION_NOT_SUPPORTED_MESSAGE),
+			true,
+		),
+		expectEqual(
+			"unsupported run does not reach the build step",
+			existsSync(join(projectDirectory, BUILD_DIRECTORY_NAME)),
+			false,
+		),
+	];
 };
 
 const checkInstalledLibraryState = async (projectDirectory) => {
@@ -969,6 +1338,9 @@ export const runCliProjectChecks = async () => {
 			...checkRegistryLibraryLookup(),
 			...checkPackageNameNormalization(),
 			...checkInitConfiguration(),
+			...(await checkHostCoreLibraryFiltering(temporaryDirectory)),
+			...(await checkBoardCoreLibraryFiltering(temporaryDirectory)),
+			...checkProjectTemplateSelection(),
 			...checkAgentsDocument(),
 			...checkProjectDocsCopy(
 				join(temporaryDirectory, DOCS_PROJECT_DIRECTORY_NAME),
@@ -980,6 +1352,8 @@ export const runCliProjectChecks = async () => {
 			...checkDelegationFailure(),
 			...checkDelegationPlatformCommand(),
 			...checkForceFlagConsumption(),
+			...(await checkRunCommandHelp(temporaryDirectory)),
+			...(await checkUnsupportedPlatformRun(temporaryDirectory)),
 			...(await checkInstallLibraryCommand(temporaryDirectory)),
 		];
 	} finally {

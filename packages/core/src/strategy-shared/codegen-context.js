@@ -81,17 +81,55 @@ const buildLibraryParamDefaults = (ast, libraryFunctions, importAliases) => {
 	return libParamDefaults;
 };
 
+// A library can export a constant whose type declares methods but no fields,
+// e.g. a stateless service object. Calls such as `service.run(value)` are
+// emitted as `namespace::run(value)`: the object is a namespace at the call
+// site, not a runtime handle. Any library type with methods and zero data
+// fields qualifies, so this stays generic across libraries.
+const buildLibraryNamespaceObjects = (
+	libraryTypes,
+	libraryObjectTypes,
+	libraryNamespaces,
+) => {
+	const namespaceObjects = new Map();
+	for (const [packageName, types] of Object.entries(libraryTypes ?? {})) {
+		const namespace = libraryNamespaces?.[packageName];
+		if (!namespace) {
+			continue;
+		}
+		const objectTypes = libraryObjectTypes?.[packageName] ?? {};
+		for (const [name, typeName] of Object.entries(types ?? {})) {
+			const info = objectTypes[typeName];
+			if (!info) {
+				continue;
+			}
+			const hasMethods = Object.keys(info.methods ?? {}).length > 0;
+			const hasFields = Object.keys(info.fields ?? {}).length > 0;
+			if (hasMethods && !hasFields) {
+				namespaceObjects.set(name, namespace);
+			}
+		}
+	}
+	return namespaceObjects;
+};
+
 export const buildImportContext = (
 	ast,
 	libraryNamespaces,
 	libraryObjectTypes,
 	libraryFunctions,
+	libraryTypes,
 ) => {
 	const importAliases = collectImportAliases(ast);
 	const resolveImportedName = makeResolveImportedName(importAliases);
 	const importNamespaces = libraryNamespaces
 		? collectImportNamespaces(ast, libraryNamespaces, libraryObjectTypes)
 		: null;
+	const libraryNamespaceObjects = buildLibraryNamespaceObjects(
+		libraryTypes,
+		libraryObjectTypes,
+		libraryNamespaces,
+	);
 	const libFunctionReturnTypes =
 		buildLibraryFunctionReturnTypes(libraryFunctions);
 	const resolveLibraryCallType = (name) => {
@@ -112,6 +150,7 @@ export const buildImportContext = (
 		importAliases,
 		resolveImportedName,
 		importNamespaces,
+		libraryNamespaceObjects,
 		resolveLibraryCallType,
 		libParamTypes,
 		libParamDefaults,

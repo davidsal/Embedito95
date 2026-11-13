@@ -1,8 +1,10 @@
 import {
 	DEFAULT_TYPES,
 	FLOAT64_MODE,
+	INT128_MODE,
 	INTERRUPT_TRIGGER,
 	PIN_MODE,
+	PLATFORM_CATEGORY,
 	RESTRICTION,
 	STANDARD_BAUD_RATES,
 } from "./enums.js";
@@ -13,8 +15,11 @@ export const platform = {
 	version: "0.1.0",
 	strategy: "arduino",
 	displayName: "Arduino Nano",
+	category: PLATFORM_CATEGORY.BOARD,
+	order: 10,
 	types: DEFAULT_TYPES,
 	float64: FLOAT64_MODE.SOFTWARE,
+	int128: INT128_MODE.SOFTWARE,
 	pins: {
 		0: {
 			name: "RX",

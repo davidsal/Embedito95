@@ -1,5 +1,6 @@
 {
 	"type": "library",
 	"name": "async",
-	"package": "@embedito95/async"
+	"package": "@embedito95/async",
+	"autoImport": { "platform": { "async": "scheduler" } }
 }

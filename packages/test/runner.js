@@ -13,11 +13,13 @@ import {
 } from "./case-discovery.js";
 import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
+import { runConsoleChecks } from "./console-checks.js";
 import {
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
+	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
@@ -29,6 +31,7 @@ import {
 	LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
 	LSP_HOVER_UNIT_CHECKS_GROUP,
 	MONITOR_STATE_UNIT_CHECKS_GROUP,
+	POSIX_STRATEGY_UNIT_CHECKS_GROUP,
 	RED_CROSS,
 	REGISTRY_CORE_PARITY_UNIT_CHECKS_GROUP,
 	REGISTRY_DOC_COMMENT_UNIT_CHECKS_GROUP,
@@ -47,6 +50,8 @@ import {
 	SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP,
 	TEST_SOURCES_DIRECTORY,
 	UPDATE_SNAPSHOTS_FLAG,
+	VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
+	WORD_SIZE_UNIT_CHECKS_GROUP,
 } from "./constants.js";
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
@@ -67,6 +72,7 @@ import { runLspString3Checks } from "./lsp-string3-checks.js";
 import { runLspUnionChecks } from "./lsp-union-checks.js";
 import { runLspWireChecks } from "./lsp-wire-checks.js";
 import { runLspWireSlaveChecks } from "./lsp-wire-slave-checks.js";
+import { runPosixStrategyChecks } from "./posix-strategy-checks.js";
 import { buildEntry, copyEntryFiles, createProject } from "./project-setup.js";
 import { runRegistryCoreParityChecks } from "./registry-core-parity-checks.js";
 import { runRegistryDocCommentChecks } from "./registry-doc-comment-checks.js";
@@ -82,6 +88,8 @@ import { runStm32FirmwareChecks } from "./stm32-firmware-checks.js";
 import { runStm32ParallelCompileChecks } from "./stm32-parallel-compile-checks.js";
 import { runSupportedPlatformsChecks } from "./supported-platforms-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
+import { runVscodeIndentationChecks } from "./vscode-indentation-checks.js";
+import { runWordSizeChecks } from "./word-size-checks.js";
 
 const buildLanguageResults = (updateSnapshots) => {
 	const results = [];
@@ -273,6 +281,14 @@ export const run = async () => {
 	);
 	collectMismatches(registryIntTypeParityResults, mismatches);
 
+	const posixStrategyResults = await runPosixStrategyChecks();
+	reportUnitChecks(POSIX_STRATEGY_UNIT_CHECKS_GROUP, posixStrategyResults);
+	collectMismatches(posixStrategyResults, mismatches);
+
+	const consoleResults = await runConsoleChecks();
+	reportUnitChecks(CONSOLE_UNIT_CHECKS_GROUP, consoleResults);
+	collectMismatches(consoleResults, mismatches);
+
 	const registryCoreParityResults = runRegistryCoreParityChecks();
 	reportUnitChecks(
 		REGISTRY_CORE_PARITY_UNIT_CHECKS_GROUP,
@@ -283,6 +299,17 @@ export const run = async () => {
 	const sharedConstantsResults = await runSharedConstantsChecks();
 	reportUnitChecks(SHARED_CONSTANTS_UNIT_CHECKS_GROUP, sharedConstantsResults);
 	collectMismatches(sharedConstantsResults, mismatches);
+
+	const wordSizeResults = runWordSizeChecks();
+	reportUnitChecks(WORD_SIZE_UNIT_CHECKS_GROUP, wordSizeResults);
+	collectMismatches(wordSizeResults, mismatches);
+
+	const vscodeIndentationResults = runVscodeIndentationChecks();
+	reportUnitChecks(
+		VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
+		vscodeIndentationResults,
+	);
+	collectMismatches(vscodeIndentationResults, mismatches);
 
 	const stm32ParallelCompileResults = await runStm32ParallelCompileChecks();
 	reportUnitChecks(
@@ -303,7 +330,7 @@ export const run = async () => {
 	reportUnitChecks(STM32_DOCTOR_UNIT_CHECKS_GROUP, stm32DoctorResults);
 	collectMismatches(stm32DoctorResults, mismatches);
 
-	const supportedPlatformsResults = runSupportedPlatformsChecks();
+	const supportedPlatformsResults = await runSupportedPlatformsChecks();
 	reportUnitChecks(
 		SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP,
 		supportedPlatformsResults,

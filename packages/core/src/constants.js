@@ -23,6 +23,10 @@ export const OBJECT_TYPE = "Object";
 
 export const FLOAT_TYPES = new Set([DATA_TYPE.f32, DATA_TYPE.f64]);
 
+// Width in bits of the platform's native word (integer register): 16 on AVR,
+// 32 on Cortex-M/ESP32, 64 on ARM64/x64 hosts. Untyped `let` declarations and
+// integer promotions widen to this word (i16/i32/i64). Used as the fallback
+// when a platform does not declare `specs.wordSize`.
 export const DEFAULT_WORD_SIZE = 16;
 
 export const CONST_KIND = "const";

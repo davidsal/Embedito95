@@ -1,0 +1,18 @@
+/**
+ * Text-oriented output stream attached to the platform console.
+ */
+export type Console = {
+    /**
+     * Writes one value followed by a line terminator.
+     * @param data - Text, numeric, boolean or character value to write; `null`
+     * writes the literal text `null`
+     */
+    log: (data: string | char | u8 | i8 | u16 | i16 | u32 | i32 | u64 | i64 | f32 | f64 | boolean | null) => void
+}
+
+/**
+ * Console bound to the standard output of the host platform.
+ */
+export const console: Console = {
+    log: (data) => {}
+}

@@ -4,11 +4,25 @@ import { strategies } from "embedito95-registry/strategies";
 import { dim, green, red, writeLine } from "../../console.js";
 import { confirm, input } from "./prompt.js";
 
-const findPlatformStrategy = ({ platform }) => {
-	return strategies[platform.strategy];
+const MISSING_STRATEGY_REQUIREMENT_LABEL = "Platform toolchain";
+const MISSING_STRATEGY_FIX_HINT =
+	"Compilation for this platform is not implemented yet";
+
+const findPlatformStrategy = ({ platform, strategyTable = strategies }) => {
+	return strategyTable[platform.strategy] ?? null;
 };
 
-const printRequirements = ({ requirements }) => {
+const createMissingStrategyRequirements = () => {
+	return [
+		{
+			label: MISSING_STRATEGY_REQUIREMENT_LABEL,
+			satisfied: false,
+			fixHint: MISSING_STRATEGY_FIX_HINT,
+		},
+	];
+};
+
+export const printRequirements = ({ requirements }) => {
 	for (const requirement of requirements) {
 		const symbol = requirement.satisfied ? green("✔") : red("✖");
 		writeLine(`${symbol} ${requirement.label}`);
@@ -30,7 +44,12 @@ export const getPlatformRequirements = ({
 	strategyTable = strategies,
 	spawnSync: runSpawnSync = spawnSync,
 }) => {
-	const strategy = strategyTable[platform.strategy];
+	const strategy = findPlatformStrategy({ platform, strategyTable });
+
+	if (!strategy) {
+		return createMissingStrategyRequirements();
+	}
+
 	return strategy.doctorRequirements({
 		platform,
 		shared,
@@ -44,9 +63,9 @@ export const ensurePlatformRequirements = async ({
 	strategyTable = strategies,
 	spawnSync: runSpawnSync = spawnSync,
 }) => {
-	const strategy = strategyTable[platform.strategy];
+	const strategy = findPlatformStrategy({ platform, strategyTable });
 
-	if (strategy.prepare) {
+	if (strategy?.prepare) {
 		await strategy.prepare({ log, platform, shared });
 	}
 
@@ -60,12 +79,13 @@ export const ensurePlatformRequirements = async ({
 export const checkPlatformRequirements = async ({
 	log = writeLine,
 	platform,
+	strategyTable = strategies,
 }) => {
-	const strategy = findPlatformStrategy({ platform });
-	const requirements = getPlatformRequirements({ platform });
+	const strategy = findPlatformStrategy({ platform, strategyTable });
+	const requirements = getPlatformRequirements({ platform, strategyTable });
 	printRequirements({ requirements });
 
-	if (!isAnyUnsatisfied({ requirements }) || !strategy.doctorRepair) {
+	if (!isAnyUnsatisfied({ requirements }) || !strategy?.doctorRepair) {
 		return requirements;
 	}
 
@@ -81,7 +101,10 @@ export const checkPlatformRequirements = async ({
 		return requirements;
 	}
 
-	const recheckedRequirements = getPlatformRequirements({ platform });
+	const recheckedRequirements = getPlatformRequirements({
+		platform,
+		strategyTable,
+	});
 	writeLine("");
 	printRequirements({ requirements: recheckedRequirements });
 

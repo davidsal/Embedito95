@@ -41,6 +41,28 @@ const MATH_SOURCE = [
 	"export const angle = arcSine(0.5)",
 	"export const mask = bitMask(7)",
 ].join("\n");
+// A document inside the console core library loads the real
+// `@embedito95/console` exports, so console hover/completions resolve the same
+// library surface the editor sees in a host project.
+const CONSOLE_DOCUMENT_URI = pathToFileURL(
+	join(
+		REPOSITORY_ROOT,
+		"packages",
+		"registry",
+		"src",
+		"core",
+		"console",
+		"main.e95",
+	),
+).href;
+const CONSOLE_SOURCE = [
+	"import { console } from '@embedito95/console'",
+	'console.log("x")',
+].join("\n");
+const CONSOLE_LOG_DOC =
+	"```e95\nlog: (data: string | char | u8 | i8 | u16 | i16 | u32 | i32 | u64 | i64 | f32 | f64 | boolean | null) => void\n```\n\nWrites one value followed by a line terminator.  \n@param data - Text, numeric, boolean or character value to write; `null`  \nwrites the literal text `null`";
+const CONSOLE_CONSTANT_HOVER =
+	"```e95\nconst console: Console\n```\n\nConsole bound to the standard output of the host platform.";
 // A document inside the Arduino Nano project loads the AVR platform (word
 // size 16), so the hover proves the editor and the codegen share the checker
 // inference that widens `let` locals to the platform word type. The generated
@@ -708,6 +730,32 @@ const checkLibraryMathBitHelperHover = async () => {
 	);
 };
 
+const checkConsoleConstantHover = async () => {
+	const hover = await hoverInDocument(
+		CONSOLE_DOCUMENT_URI,
+		CONSOLE_SOURCE,
+		findPosition(CONSOLE_SOURCE, "console.log", 0),
+	);
+	return expectEqual(
+		"LSP hover of the imported console constant shows its type and doc comment",
+		hover,
+		CONSOLE_CONSTANT_HOVER,
+	);
+};
+
+const checkConsoleLogMemberHover = async () => {
+	const hover = await hoverInDocument(
+		CONSOLE_DOCUMENT_URI,
+		CONSOLE_SOURCE,
+		findPosition(CONSOLE_SOURCE, ".log", 1),
+	);
+	return expectEqual(
+		"LSP hover of console.log shows the member signature and doc comment",
+		hover,
+		CONSOLE_LOG_DOC,
+	);
+};
+
 const checkRegistryLibrariesWithoutVersion = () => {
 	const libraries = loadLibrariesFromContext(REGISTRY_LIBRARIES_DIRECTORY);
 	const mathFunctions =
@@ -861,6 +909,8 @@ export const runLspHoverChecks = async () => {
 		checkTypeArgumentsDiagnostic(),
 		await checkLibraryMathFunctionHover(),
 		await checkLibraryMathBitHelperHover(),
+		await checkConsoleConstantHover(),
+		await checkConsoleLogMemberHover(),
 		...checkRegistryLibrariesWithoutVersion(),
 	];
 };

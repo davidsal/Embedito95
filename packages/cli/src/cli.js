@@ -21,6 +21,7 @@ const COMMANDS = [
 	"libraries",
 	"build",
 	"compile",
+	"run",
 	"upload",
 	"flash",
 	"monitor",
@@ -35,8 +36,9 @@ Commands:
   install [library]  Reinstall libraries, or add one from the registry
   libraries          List core, built-in and installed libraries
   build              Generate C++ from the .e95 sources
-  compile            Compile the firmware for the target board
-  upload             Upload the compiled firmware
+  compile            Compile the firmware or host executable
+  run                build + compile + run
+  upload             Upload the compiled firmware to a board
   flash              build + compile + upload
   monitor            Open the serial monitor
   doctor             Check the toolchain

@@ -13,7 +13,7 @@
 	],
 	"surroundingPairs": [["{", "}"], ["(", ")"], ["'", "'"]],
 	"indentationRules": {
-		"increaseIndentPattern": "^.*\\{[^}\"']*$",
-		"decreaseIndentPattern": "^.*\\}"
+		"increaseIndentPattern": "^(?:(?!\\$\\{)[^`])*\\{[^}`\"']*$",
+		"decreaseIndentPattern": "^[ \\t]*\\}[ \\t]*[;),]*(?:[ \\t]+(?:else|catch|finally|while)\\b.*)?(?:\\s*//.*)?[ \\t]*$"
 	}
 }

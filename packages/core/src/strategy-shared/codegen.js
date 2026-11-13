@@ -43,6 +43,7 @@ export const generateCode = ({
 	libraryFunctions = {},
 	libraryEnumInfo = {},
 	libraryObjectTypes = {},
+	libraryTypes = {},
 	libraryObjectInfo = null,
 	mainGenerator,
 	additionalParts,
@@ -60,6 +61,7 @@ export const generateCode = ({
 	const {
 		resolveImportedName,
 		importNamespaces,
+		libraryNamespaceObjects,
 		resolveLibraryCallType,
 		libParamTypes,
 		libParamDefaults,
@@ -68,6 +70,7 @@ export const generateCode = ({
 		libraryNamespaces,
 		libraryObjectTypes,
 		libraryFunctions,
+		libraryTypes,
 	);
 	const {
 		libEnumMemberToType,
@@ -148,6 +151,7 @@ export const generateCode = ({
 		anonymousObjectTypes,
 		userObjectMethods,
 		importNamespaces,
+		libraryNamespaceObjects,
 		libEnumNamespaces,
 		closureFactoryTypes,
 		currentNamespace: namespace,

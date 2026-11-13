@@ -12,6 +12,28 @@ not in function names.
 | Arduino Uno | `arduino-uno` | ATmega328P | AVR | 16 MHz | 32 KB flash / 2 KB SRAM / 1 KB EEPROM | 5 V | 16-bit, portable `f64`, PROGMEM |
 | STM32 Blue Pill | `stm32-bluepill` | STM32F103C8T6 | ARM Cortex-M3 | 72 MHz | 64 KB flash / 20 KB SRAM / no EEPROM | 3.3 V | 32-bit, native `f64`, no PROGMEM |
 
+Each platform declares `specs.wordSize`: the width in bits of its native word
+(integer register). It is 16 on AVR, 32 on Cortex-M, and 64 on ARM64/x64 hosts.
+Untyped `let` declarations and integer promotions widen to that word, so
+`let value = 12` becomes `i16` on AVR, `i32` on Cortex-M, and `i64` on macOS
+ARM64.
+
+`macos-arm64` (`macOS - ARM64`) is a host target: `build`, `compile` and `run`
+work on macOS on Apple silicon. `compile` writes the executable to
+`build/<project>/artifacts/<project>`, and `run` builds, compiles and executes
+it. There is no upload step. Compiling requires `clang++` from the Xcode Command
+Line Tools (`xcode-select --install`). Other hosts (Raspberry Pi, Linux) are not
+supported yet. Host targets install the `type` (`@embedito95/type`), `console`
+(`@embedito95/console`), `time` (`@embedito95/time`) and `async`
+(`@embedito95/async`) core libraries under `core/`; board targets install every
+core library except `console`, which requires the `console: "stdout"` platform
+capability.
+
+On the host, `time` reads `CLOCK_MONOTONIC` and waits with `nanosleep`, and
+`async` runs cooperative tasks on the same event loop as the boards. The host
+event loop returns when no task remains, so `run` exits on its own. These
+libraries do not provide upload, GPIO or Raspberry Pi support.
+
 ## Peripherals
 
 | Board | GPIO | ADC | DAC | PWM | Timers | External interrupts | SPI | I2C | UART |

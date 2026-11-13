@@ -1,0 +1,29 @@
+// LSP view of the `console` core library (hover types + diagnostics).
+// Each case is a library-style program (isLibrary) whose probes are
+// exported, so unused-declaration noise is suppressed. Types come from
+// resolveProjectTypes (the same inference the language server uses for
+// hover), reading the real core/console/main.e95 through
+// collectLibraryModuleInfo. Diagnostics come from the shared check().
+// console.log accepts every documented value type
+diagnostics:
+- none
+types:
+- none
+
+// console.log accepts null and string | null values
+diagnostics:
+- none
+types:
+- none
+
+// wrong argument count is reported
+diagnostics:
+- error error.wrongArgumentCount @ 3:5: 'console.log' expects 1 argument(s) but got 0
+types:
+- show => unresolved
+
+// unknown console export is reported
+diagnostics:
+- error error.unknownImport @ 1:10: 'logger' is not exported by the library
+types:
+- missing => unresolved

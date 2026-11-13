@@ -1,6 +1,7 @@
 import { listArbitraryUnionSnapshots } from "./src/language/generate-arbitrary-unions.mjs";
 import { listAsyncUsageSnapshots } from "./src/language/generate-async-usage.mjs";
 import { listCapturedFieldAccessSnapshots } from "./src/language/generate-captured-field-access.mjs";
+import { listConsoleLibrarySnapshots } from "./src/language/generate-console-library.mjs";
 import { listEepromLibrarySnapshots } from "./src/language/generate-eeprom-library.mjs";
 import { listFunctionReturnTypeSnapshots } from "./src/language/generate-function-return-types.mjs";
 import { listGpioLibrarySnapshots } from "./src/language/generate-gpio-library.mjs";
@@ -37,6 +38,7 @@ export const listLanguageSnapshots = () => {
 		...listGpioLibrarySnapshots(),
 		...listI2CLibrarySnapshots(),
 		...listInterruptLibrarySnapshots(),
+		...listConsoleLibrarySnapshots(),
 		...listEepromLibrarySnapshots(),
 		...listSerialLibrarySnapshots(),
 		...listServoLibrarySnapshots(),

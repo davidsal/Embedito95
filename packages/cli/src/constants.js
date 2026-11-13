@@ -1,5 +1,6 @@
 // Init templates
 export const TEMPLATE_PROJECT_FILE = "template.e95";
+export const TEMPLATE_HOST_PROJECT_FILE = "template-host.e95";
 export const TEMPLATE_LIBRARY_FILE = "template-lib.e95";
 export const GITIGNORE_CONTENT = "build\ncore\n";
 export const PACKAGE_PREFIX = "embedito95-";

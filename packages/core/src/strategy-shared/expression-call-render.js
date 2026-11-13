@@ -104,6 +104,17 @@ const renderFreeObjectMethodCall = (
 	return `${prefix}${methodName}(${[receiverExpression, args].filter(Boolean).join(", ")})`;
 };
 
+const resolveLibraryNamespaceObject = (node, context) => {
+	if (node?.type !== AST_NODE.identifier) {
+		return null;
+	}
+	const originalName = context.resolveImportedName?.(node.name) ?? node.name;
+	if (!context.importNamespaces?.has(originalName)) {
+		return null;
+	}
+	return context.libraryNamespaceObjects?.get(originalName) ?? null;
+};
+
 const unwrapParenthesizedReceiver = (node) => {
 	return node?.type === AST_NODE.parenthesizedExpression
 		? unwrapParenthesizedReceiver(node.expression)
@@ -201,6 +212,14 @@ export const renderCallExpression = (node, context, lines) => {
 	if (node.callee?.type === AST_NODE.memberExpression) {
 		const methodName = node.callee.property?.name;
 		const receiverNode = node.callee.object;
+		const namespaceObject = resolveLibraryNamespaceObject(
+			receiverNode,
+			context,
+		);
+		if (namespaceObject) {
+			const args = renderMethodArguments(node, context, lines);
+			return `${namespaceObject}::${methodName}(${args})`;
+		}
 		if (receiverNode?.type === AST_NODE.thisExpression) {
 			const args = renderMethodArguments(node, context, lines);
 			if (context.isPlainFunction) {

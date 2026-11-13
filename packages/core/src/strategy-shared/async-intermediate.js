@@ -297,6 +297,7 @@ export const buildAsyncIntermediate = (
 	functionReturnTypes = {},
 	variableTypes = null,
 	libraryTypeContext = null,
+	options = {},
 ) => {
 	const { tokens } = tokenize(source);
 	const { ast } = parse(tokens);
@@ -315,7 +316,12 @@ export const buildAsyncIntermediate = (
 			libraryTypeContext,
 		);
 
-	for (const node of injectEventLoop(ast, entryHandles, libraryHandles)) {
+	for (const node of injectEventLoop(
+		ast,
+		entryHandles,
+		libraryHandles,
+		options,
+	)) {
 		asyncNodes.add(node);
 	}
 

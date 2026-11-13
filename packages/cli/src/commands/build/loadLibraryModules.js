@@ -11,6 +11,7 @@ import {
 	getClientLibrarySourceDirectory,
 	getLibrarySourceDirectory,
 } from "../shared/libraries.js";
+import { matchesPlatformCapabilities } from "../shared/platform-requirements.js";
 
 const scanLibraryDirectories = (roots) => {
 	const packageToDirectory = new Map();
@@ -56,15 +57,6 @@ const listLibraryDirectories = (libraryRoot) => {
 	}
 
 	return directories.filter((directory) => existsSync(directory));
-};
-
-const matchesPlatformCapabilities = (requirements, platform) => {
-	if (!requirements || !platform) {
-		return false;
-	}
-	return Object.entries(requirements).every(([name, expected]) => {
-		return platform[name] === expected;
-	});
 };
 
 const isAutoImported = (autoImport, platform) => {
