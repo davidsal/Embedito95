@@ -18,6 +18,10 @@ npx embedito95-cli install dht22
 
 ## Core libraries
 
+`time` and `async` are available on both board and host targets. On the
+`macos-arm64` host, `time` reads the monotonic clock and `async` tasks run on
+the cooperative event loop, which returns when no task remains.
+
 | Library | Package | Provides |
 | --- | --- | --- |
 | [GPIO](libraries/core/gpio.md) | `@embedito95/gpio` | Digital and analog pins, PWM, shift helpers |
@@ -34,6 +38,7 @@ npx embedito95-cli install dht22
 | [Software serial hardware](libraries/core/software-serial-hardware.md) | `@embedito95/software-serial-hardware` | Low-level software UART driver |
 | [Canvas](libraries/core/canvas.md) | `@embedito95/canvas` | 5x7 font glyph data |
 | [System](libraries/core/system.md) | `@embedito95/system` | Free heap reporting |
+| [Console](libraries/core/console.md) | `@embedito95/console` | Text and value output on host targets |
 | [Type](libraries/core/type.md) | `@embedito95/type` | Array, string, object and 128-bit support |
 
 ## Built-in libraries
@@ -77,5 +82,5 @@ Libraries are written in **e95 only**. There is no C++ to write: the compiler
 generates it from your e95 source. Only `.e95` files inside the library
 directory are used, and the entry file is `main.e95` if present, otherwise the
 first `.e95` file. Low-level C++ templates exist only inside the registry
-strategies for the supported boards; they are not part of a user library.
+strategies for the supported platforms; they are not part of a user library.
 

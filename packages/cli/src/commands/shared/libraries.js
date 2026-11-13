@@ -12,6 +12,7 @@ import {
 } from "embedito95-core";
 import { strategies } from "embedito95-registry/strategies";
 import { PACKAGE_PREFIX } from "../../constants.js";
+import { meetsPlatformRequirements } from "./platform-requirements.js";
 
 const REGISTRY_SOURCE_DIRECTORY = dirname(
 	dirname(fileURLToPath(import.meta.resolve("embedito95-registry/strategies"))),
@@ -91,6 +92,7 @@ const installLibrariesFrom = async ({
 	enumStyle,
 	destinationDirectoryName,
 	registeredPackages = null,
+	coreLibraries = null,
 }) => {
 	const installedPackages = [];
 
@@ -98,21 +100,32 @@ const installLibrariesFrom = async ({
 		return installedPackages;
 	}
 
+	const allowedLibraries = coreLibraries ? new Set(coreLibraries) : null;
+
 	for (const entry of readdirSync(sourceDirectory)) {
+		if (allowedLibraries && !allowedLibraries.has(entry)) {
+			continue;
+		}
+
 		const libraryConfigurationPath = join(sourceDirectory, entry, CONFIG_FILE);
 
 		if (!existsSync(libraryConfigurationPath)) {
 			continue;
 		}
 
-		if (registeredPackages) {
-			const libraryConfiguration = JSON.parse(
-				readFileSync(libraryConfigurationPath, UTF8),
-			);
+		const libraryConfiguration = JSON.parse(
+			readFileSync(libraryConfigurationPath, UTF8),
+		);
 
-			if (!registeredPackages.has(libraryConfiguration.package)) {
-				continue;
-			}
+		if (
+			registeredPackages &&
+			!registeredPackages.has(libraryConfiguration.package)
+		) {
+			continue;
+		}
+
+		if (!meetsPlatformRequirements(libraryConfiguration, platform)) {
+			continue;
 		}
 
 		const { packageName } = await installLibrary({
@@ -143,6 +156,7 @@ export const copyLibraries = async (
 		platform: selectedPlatform,
 		enumStyle: strategies[selectedPlatform.strategy]?.enumStyle,
 		destinationDirectoryName: CORE_LIBRARIES_DIRECTORY_NAME,
+		coreLibraries: selectedPlatform.coreLibraries ?? null,
 	});
 
 	configuration.core = readPackageNames(configuration.core);

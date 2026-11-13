@@ -1,0 +1,7 @@
+{
+	"type": "library",
+	"name": "console",
+	"package": "@embedito95/console",
+	"requires": { "platform": { "console": "stdout" } },
+	"autoImport": { "platform": { "console": "stdout" } }
+}

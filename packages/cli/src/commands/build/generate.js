@@ -59,6 +59,7 @@ export const generateProjectCode = async (
 			libraryFunctions: entryLibraries.libraryFunctions,
 			libraryEnumInfo: entryLibraries.libraryEnumInfo,
 			libraryObjectTypes: entryLibraries.libraryObjectTypes,
+			libraryTypes: entryLibraries.libraryTypes,
 			libraryNamespaces: entryLibraries.libraryNamespaces,
 			libraryParts: [...projectLibraryIncludes, ...projectLibraryParts],
 			moduleParts: [...moduleIncludes, ...(asyncModuleIncludes ?? [])],

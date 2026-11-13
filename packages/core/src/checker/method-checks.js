@@ -76,10 +76,15 @@ const describeReceiver = (node) => {
 	return node.type;
 };
 
+const resolveReceiverNameType = (state, name, loc) => {
+	const variableType = state.variableTypes.resolve(name, loc);
+	return variableType ?? state.libNameToType?.[name] ?? null;
+};
+
 const resolveMethodReceiverType = (state, node, selfType) => {
 	return resolveReceiverType(
 		node.callee.object,
-		(name, loc) => state.variableTypes.resolve(name, loc),
+		(name, loc) => resolveReceiverNameType(state, name, loc),
 		state.resolveCallType,
 		state.wordSize,
 		state.objectTypes,
