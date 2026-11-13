@@ -1,10 +1,12 @@
 # Embedito95
 
-Embedito95's language is **e95**, a TypeScript-like language for microcontrollers
-that compiles to C++. Its small syntax and types make embedded development
-approachable for beginners, artists and DIY makers without giving up hardware
-control, while its small API and strict types make it **AI-friendly** and easy to
-verify.
+Embedito95's language is **e95**, a TypeScript-like language that compiles to
+C++. It targets microcontrollers and hosts with the same syntax and types: the
+generated C++ can be built into device firmware, or into an executable such as a
+kernel, an operating system or an application. Its small syntax and types make
+embedded development approachable for beginners, artists and DIY makers without
+giving up hardware control, while its small API and strict types make it
+**AI-friendly** and easy to verify.
 
 ## Why Embedito95
 
@@ -64,14 +66,24 @@ the compiler generates the C++, so there is no C++ to write.
 
 ## Current targets
 
-Embedito95 supports the Arduino Nano and Uno (AVR) and the STM32 Blue Pill
-(ARM Cortex-M3), all through the same API. See [Boards](docs/boards.md) for
-specs, pinouts and peripheral details.
+Embedito95 runs on microcontroller boards and on host targets through the same
+API. Today it supports the Arduino Nano and Uno (AVR), the STM32 Blue Pill (ARM
+Cortex-M3) and `macOS - ARM64` as the first host target. See
+[Boards](docs/boards.md) for specs, pinouts and peripheral details.
 
-The next target we would like to support is the **ESP32 and its variants**,
-together with **WiFi and Bluetooth libraries**. That work requires time and
-funding: donations help build those libraries while also improving the code and
-paying human contributors, because Embedito95 is not an AI-only project.
+The output is not limited to firmware. Depending on the target, the same e95
+source can produce:
+
+- **Device firmware** for microcontrollers and bare-metal boards.
+- **Host software**, including kernels, operating systems, services and
+  applications.
+
+More host targets (Linux and Windows) and bare-metal targets are planned. The
+license does not depend on the target: it covers the output, whatever the
+platform. **ESP32 and its variants**, together with **WiFi and Bluetooth
+libraries**, remain on the roadmap. That work requires time and funding:
+donations help build those libraries while also improving the code and paying
+human contributors, because Embedito95 is not an AI-only project.
 
 ## Donations
 
@@ -162,6 +174,7 @@ your board, you also need:
 
 - **Arduino Nano or Uno** → `arduino-cli` with the AVR core.
 - **STM32 Blue Pill** → STM32CubeIDE and an ST-Link V2 probe.
+- **macOS - ARM64** → Xcode Command Line Tools (`xcode-select --install`).
 
 Follow the installation guide for your operating system:
 
@@ -185,12 +198,13 @@ It downloads the extension from GitHub and installs it with your editor. The
 language server is bundled inside, so there is nothing else to install. Add
 `--verbose` to see the raw editor output if something fails.
 
-Then create and flash a project:
+Then create a project and either flash it (boards) or run it (host targets):
 
 ```sh
 npx embedito95-cli init      # create a project
 cd my-project
-npx embedito95-cli flash     # build + compile + upload
+npx embedito95-cli flash     # build + compile + upload (boards)
+npx embedito95-cli run       # build + compile + execute (hosts)
 ```
 
 `flash` runs `build`, `compile` and `upload` in one step. If you prefer to run
@@ -206,10 +220,11 @@ Generated files live under `build/<project>/`:
 
 - **`build`** writes the transpiled source (`<project>.ino` on AVR, C++ sources
   on STM32) plus `libraries/`, `modules/`, `core/` and `intermediate/`.
-- **`compile`** creates the firmware. On STM32 it writes
-  `build/<project>/artifacts/<project>.elf` and `<project>.bin` (plus object
-  files). On AVR, `arduino-cli` keeps the `.hex` in its own build folder and the
-  command prints the Flash/RAM usage.
+- **`compile`** creates the firmware, or the host executable on `macos-arm64`.
+  On STM32 it writes `build/<project>/artifacts/<project>.elf` and
+  `<project>.bin` (plus object files). On AVR, `arduino-cli` keeps the `.hex` in
+  its own build folder and the command prints the Flash/RAM usage. On
+  `macos-arm64` it writes `build/<project>/artifacts/<project>`.
 
 ## Command line
 
@@ -256,27 +271,36 @@ extensions, runtime, core libraries and the official standard e95 libraries are
 licensed under the **GNU Affero General Public License v3.0 only**
 (`AGPL-3.0-only`). See [LICENSE](LICENSE).
 
-### Your code
+### Your code and your output
 
 Your sketches and your own libraries are yours. The C++ generated from them and
-the firmware you build belong to you.
+the resulting output belong to you, whether that output is device firmware, an
+executable, a kernel, an operating-system image or an application. Embedito95
+does not claim ownership of your output.
+
+A commercial license only changes the **distribution terms**: you need one when
+you distribute your output commercially without publishing its source under the
+AGPL. Owning or building the output never requires a payment.
 
 ### Who pays
 
-The rule is simple: **if the firmware leaves your hands, it is either open
-source or licensed.**
+The rule is simple: **if the output leaves your hands, it is either open source
+or licensed.**
 
 | You | Cost |
 | --- | --- |
-| Student, hobby, personal use | Free. You do not distribute firmware, so the AGPL asks nothing from you. |
+| Student, hobby, personal use | Free. You do not distribute the output, so the AGPL asks nothing from you. |
 | Open-source project | Free. Publish your source under the AGPL. |
-| Company using it internally | Free while you do not distribute firmware. |
-| Selling or giving away devices running your firmware | AGPL applies: publish your firmware source. |
-| Private firmware | Commercial license, per developer seat, unlimited devices. |
+| Company using it internally | Free while you do not distribute the output. |
+| Selling or giving away devices running your firmware | AGPL applies: publish your source. |
+| Distributing executables, applications, kernels or OS images | AGPL applies: publish your source. |
+| Distributing private output (firmware, executable, kernel, OS image or application) | Commercial license, per developer seat, unlimited devices and deployments. |
 | Distributing a modified Embedito95 without publishing it | Commercial license. |
 
-Shipping a product is commercial use. You do not have to pay if you publish the
-corresponding source under the AGPL. You pay when you want to keep it private.
+Shipping a product, flashing devices, or distributing an executable or an
+operating-system image is commercial use. You do not have to pay if you publish
+the corresponding source under the AGPL. You pay when you want to keep it
+private.
 
 Support, SLA and sponsored features are available separately.
 

@@ -1,6 +1,7 @@
 # Command line
 
-`embedito95-cli` creates projects, installs libraries and builds firmware.
+`embedito95-cli` creates projects, installs libraries and builds firmware or
+host executables.
 Every command can be run with `npx embedito95-cli <command>` or, after a global
 install, `embedito95 <command>`.
 
@@ -15,9 +16,9 @@ the project root. `init` and `doctor` can run anywhere.
 | [`install <library>`](#install-a-library) | Add a library and install it |
 | [`libraries`](#libraries) | List available and installed libraries |
 | [`build`](#build) | Transpile e95 to C++ |
-| [`compile`](#compile) | Compile the firmware |
+| [`compile`](#compile) | Compile the firmware or host executable |
 | [`run`](#run) | `build` + `compile` + run the executable |
-| [`upload`](#upload) | Upload the firmware |
+| [`upload`](#upload) | Upload the firmware to a board |
 | [`flash`](#flash) | `build` + `compile` + `upload` |
 | [`monitor`](#monitor) | Open the serial monitor |
 | [`doctor`](#doctor) | Check the toolchain |
@@ -172,7 +173,7 @@ compile and execute it in one step. This target requires the Xcode Command Line
 Tools; when `clang++` is missing, the command fails with:
 
 ```text
-clang++ not found. Install Xcode Command Line Tools: xcode-select --install
+clang++ not found. Install Xcode Command Line Tools (xcode-select --install) or run `embedito95-cli doctor` to set its path.
 ```
 
 ## run
@@ -238,8 +239,15 @@ timestamps.
 npx embedito95-cli doctor
 ```
 
-Checks the board toolchain for the selected platform and offers to fix what it
+Checks the platform toolchain for the selected target and offers to fix what it
 can. Run it after installing or when a build fails for missing tools.
+
+On board targets it checks the board toolchain and, for STM32, the firmware
+package that the CLI downloads. On host targets it only checks the C++ compiler:
+`clang++` on macOS. If `clang++` is not on `PATH`, `doctor` looks in the stable
+Xcode and Command Line Tools locations, without pinning a version. If it is
+installed somewhere else, `doctor` asks for the executable or tool directory and
+stores it as `clangPath` in `~/.embedito95/config.json`; later builds reuse it.
 
 ## install-vs-code
 

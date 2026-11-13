@@ -10,10 +10,8 @@ import {
 	resolveArtifactsDirectory,
 	resolveExecutablePath,
 } from "./artifacts.js";
+import { CLANG_NOT_FOUND_MESSAGE, findClangCompiler } from "./clang.js";
 
-const CLANG_COMPILER_EXECUTABLE = "clang++";
-const CLANG_VERSION_FLAG = "--version";
-const CLANG_LOOKUP_TIMEOUT_MILLISECONDS = 10000;
 const COMPILE_TIMEOUT_MILLISECONDS = 120000;
 const CXX_SOURCE_EXTENSION = ".cpp";
 const CXX_STANDARD_FLAG = "-std=c++11";
@@ -35,19 +33,6 @@ const LIBRARY_DIRECTORY_NAMES = new Set([
 	CORE_LIBRARIES_DIRECTORY_NAME,
 	MODULES_DIRECTORY_NAME,
 ]);
-export const CLANG_NOT_FOUND_MESSAGE =
-	"clang++ not found. Install Xcode Command Line Tools: xcode-select --install";
-
-export const findClangCompiler = ({
-	spawnSync: runSpawnSync = spawnSync,
-} = {}) => {
-	const lookup = runSpawnSync(CLANG_COMPILER_EXECUTABLE, [CLANG_VERSION_FLAG], {
-		stdio: "pipe",
-		timeout: CLANG_LOOKUP_TIMEOUT_MILLISECONDS,
-	});
-
-	return lookup?.status === 0 ? CLANG_COMPILER_EXECUTABLE : null;
-};
 
 const collectSourceFiles = ({ outputDirectory }) => {
 	const sourceFiles = [];

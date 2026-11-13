@@ -33,6 +33,11 @@ import { ensurePlatformRequirements } from "../cli/src/commands/shared/requireme
 import { LIBRARY_FILE_PREFIX } from "../core/src/constants.js";
 import { ASYNC_MODE, INT128_MODE } from "../registry/src/platforms/enums.js";
 import {
+	CLANG_PATH_CONFIG_KEY,
+	findClangCompiler,
+	setClangPath,
+} from "../registry/src/strategies/posix/clang.js";
+import {
 	BUILD_COMMAND,
 	CLI_PATH,
 	EMBEDITO95_PROJECT_VERSION,
@@ -55,9 +60,9 @@ const POSIX_TYPE_PACKAGE_NAME = "@embedito95/type";
 const MACOS_ARM64_PLATFORM = "macos-arm64";
 const POSIX_ENUM_STYLE = "enum";
 const POSIX_DISPLAY_NAME = "POSIX host";
-const PLATFORM_TOOLCHAIN_LABEL = "Platform toolchain";
+const PLATFORM_TOOLCHAIN_LABEL = "clang++";
 const CLANG_NOT_FOUND_HINT =
-	"clang++ not found. Install Xcode Command Line Tools: xcode-select --install";
+	"clang++ not found. Install Xcode Command Line Tools (xcode-select --install) or run `embedito95-cli doctor` to set its path.";
 const INT128_CONFIG_PATH = join(
 	REGISTRY_LIBRARIES_DIRECTORY,
 	TYPE_LIBRARY_NAME,
@@ -580,9 +585,14 @@ const checkPosixStrategySurface = async () => {
 			"",
 		),
 		expectEqual(
-			"init reports the platform toolchain requirement",
+			"init reports the host compiler requirement",
 			availableRequirements[0]?.label,
 			PLATFORM_TOOLCHAIN_LABEL,
+		),
+		expectEqual(
+			"macOS checks only the host compiler and no board firmware",
+			availableRequirements.length,
+			1,
 		),
 		expectEqual(
 			"init keeps the platform toolchain requirement satisfied when clang++ is available",
@@ -2233,6 +2243,83 @@ const runPosixProgramCheck = async ({
 	}
 };
 
+const FAKE_CLANG_FILE_NAME = "clang++";
+const FAKE_CLANG_ROOT_PREFIX = "e95-clang-path-";
+const FAKE_CLANG_TOOLS_DIRECTORY_NAME = "CommandLineTools";
+const FAKE_CLANG_CONFIG_DIRECTORY_NAME = "config";
+const FAKE_CLANG_CONFIG_FILE_NAME = "config.json";
+const FAKE_CLANG_INVALID_CONFIG_FILE_NAME = "invalid-config.json";
+const MACOS_PLATFORM_NAME = "darwin";
+
+const createClangPathLookup = ({ executablePath }) => {
+	return (command) => {
+		return { status: command === executablePath ? 0 : 1, stdout: "" };
+	};
+};
+
+const checkClangPathConfiguration = () => {
+	const rootDirectory = mkdtempSync(join(tmpdir(), FAKE_CLANG_ROOT_PREFIX));
+	const toolsDirectory = join(rootDirectory, FAKE_CLANG_TOOLS_DIRECTORY_NAME);
+	const executablePath = join(toolsDirectory, FAKE_CLANG_FILE_NAME);
+	const configDirectory = join(rootDirectory, FAKE_CLANG_CONFIG_DIRECTORY_NAME);
+	const globalConfigFile = join(configDirectory, FAKE_CLANG_CONFIG_FILE_NAME);
+	const invalidGlobalConfigFile = join(
+		rootDirectory,
+		FAKE_CLANG_INVALID_CONFIG_FILE_NAME,
+	);
+
+	mkdirSync(toolsDirectory, { recursive: true });
+	writeFileSync(executablePath, "", { mode: EXECUTABLE_FILE_MODE });
+
+	const spawnSync = createClangPathLookup({ executablePath });
+
+	try {
+		const stored = setClangPath({
+			path: toolsDirectory,
+			spawnSync,
+			platform: MACOS_PLATFORM_NAME,
+			globalConfigFile,
+		});
+		const resolved = findClangCompiler({
+			spawnSync,
+			platform: MACOS_PLATFORM_NAME,
+			globalConfigFile,
+		});
+		const configuration = JSON.parse(readFileSync(globalConfigFile, UTF8));
+		const rejected = setClangPath({
+			path: join(rootDirectory, "missing"),
+			spawnSync,
+			platform: MACOS_PLATFORM_NAME,
+			globalConfigFile: invalidGlobalConfigFile,
+		});
+
+		return [
+			expectEqual(
+				"doctor stores the clang++ executable from a tool directory",
+				stored,
+				true,
+			),
+			expectEqual(
+				"doctor stores the resolved clang++ path in the global config",
+				configuration[CLANG_PATH_CONFIG_KEY],
+				executablePath,
+			),
+			expectEqual(
+				"doctor reuses the configured clang++ path",
+				resolved,
+				executablePath,
+			),
+			expectEqual(
+				"doctor rejects a path without a clang++ executable",
+				rejected,
+				false,
+			),
+		];
+	} finally {
+		rmSync(rootDirectory, { recursive: true, force: true });
+	}
+};
+
 export const runPosixStrategyChecks = async () => {
 	const clangAvailable = await isClangAvailable();
 	return [
@@ -2240,6 +2327,7 @@ export const runPosixStrategyChecks = async () => {
 		...checkInt128AutoImportIsConditioned(),
 		...checkAsyncAutoImportIsConditioned(),
 		...checkBoardsKeepTheirAsyncSurface(),
+		...checkClangPathConfiguration(),
 		...(await checkAsyncAutoImportBehavior()),
 		...(await checkPosixLibraryDefinitions()),
 		...(await checkPosixStrategySurface()),
