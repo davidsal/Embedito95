@@ -433,6 +433,29 @@ const buildReport = () => {
 				"export const result = readBox()",
 			].join("\n"),
 		},
+		{
+			label: "array literal receiver resolves its element array type",
+			probes: [],
+			expressionProbes: [
+				{ source: "[1, 2]", nodeType: AST_NODE.arrayLiteral },
+				{
+					source: "[1, 2].length()",
+					nodeType: AST_NODE.callExpression,
+				},
+			],
+			body: "export const size = [1, 2].length()",
+		},
+		{
+			label: "string literal receiver resolves the string method surface",
+			probes: [],
+			expressionProbes: [
+				{
+					source: '"abc".length()',
+					nodeType: AST_NODE.callExpression,
+				},
+			],
+			body: 'export const textLength = "abc".length()',
+		},
 	];
 
 	const header = [

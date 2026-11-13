@@ -2,6 +2,7 @@ import {
 	AST_NODE,
 	DATA_TYPE,
 	FLOAT_TYPES,
+	UNKNOWN,
 	UNRESOLVED_TYPE,
 } from "../constants.js";
 import { resolveArrayMethod } from "./array-methods.js";
@@ -72,11 +73,33 @@ const resolveCallReceiverType = (
 	);
 };
 
+// Array literals are receivers too (`[1, 2].length()`): infer the element type
+// with the same helper the checker uses for array initializers, so the member
+// surface matches what codegen emits. An empty literal has no element evidence,
+// so it still exposes the array surface with an unknown element placeholder.
+const resolveArrayLiteralReceiverType = (
+	node,
+	resolveNameType,
+	wordSize,
+	options,
+) => {
+	const elementType = inferArrayElementType(
+		options.ast ?? null,
+		node.elements,
+		resolveNameType,
+		options.wordType ?? resolveWordDataType(wordSize),
+		options.resolveElementType ?? null,
+		options.widenToWord ?? true,
+	);
+	return `${elementType ?? UNKNOWN}[]`;
+};
+
 // Resolves the declared type of a member-expression receiver, whatever its
 // shape: a name, a nested field chain, `this.<field>`, an indexed element, a
-// parenthesized expression, a cast, a conditional or a call. The checker uses it
-// to validate `receiver.method(...)`; the codegen uses the same helper to choose
-// between a free-function call and a real member call.
+// literal, an array literal, a parenthesized expression, a cast, a conditional
+// or a call. The checker uses it to validate `receiver.method(...)`; the codegen
+// uses the same helper to choose between a free-function call and a real member
+// call.
 export const resolveReceiverType = (
 	node,
 	resolveNameType,
@@ -89,12 +112,36 @@ export const resolveReceiverType = (
 		selfType = null,
 		resolveAsType = null,
 		isObjectHandle = null,
+		ast = null,
+		wordType = null,
+		resolveElementType = null,
+		widenToWord = true,
 	} = options;
+	const receiverOptions = {
+		selfType,
+		resolveAsType,
+		isObjectHandle,
+		ast,
+		wordType,
+		resolveElementType,
+		widenToWord,
+	};
 	if (!node) {
 		return null;
 	}
 	if (node.type === AST_NODE.identifier) {
 		return resolveNameType ? resolveNameType(node.name, node.loc) : null;
+	}
+	if (node.type === AST_NODE.literal) {
+		return resolveLiteralDataType(node);
+	}
+	if (node.type === AST_NODE.arrayLiteral) {
+		return resolveArrayLiteralReceiverType(
+			node,
+			resolveNameType,
+			wordSize,
+			receiverOptions,
+		);
 	}
 	if (node.type === AST_NODE.thisExpression) {
 		return selfType;
@@ -118,7 +165,7 @@ export const resolveReceiverType = (
 			resolveCallType,
 			wordSize,
 			objectTypes,
-			options,
+			receiverOptions,
 		);
 		if (!baseType) {
 			return null;
@@ -132,7 +179,7 @@ export const resolveReceiverType = (
 			resolveCallType,
 			wordSize,
 			objectTypes,
-			options,
+			receiverOptions,
 		);
 		const arrayType = baseType ? parseArrayType(baseType) : null;
 		return arrayType ? arrayType.elementType : null;
@@ -144,7 +191,7 @@ export const resolveReceiverType = (
 			resolveCallType,
 			wordSize,
 			objectTypes,
-			options,
+			receiverOptions,
 		);
 	}
 	if (node.type === AST_NODE.asExpression) {
@@ -164,7 +211,7 @@ export const resolveReceiverType = (
 			resolveCallType,
 			wordSize,
 			objectTypes,
-			options,
+			receiverOptions,
 		);
 	}
 	if (node.type === AST_NODE.conditionalExpression) {
@@ -174,7 +221,7 @@ export const resolveReceiverType = (
 			resolveCallType,
 			wordSize,
 			objectTypes,
-			options,
+			receiverOptions,
 		);
 		const alternateType = resolveReceiverType(
 			node.alternate,
@@ -182,7 +229,7 @@ export const resolveReceiverType = (
 			resolveCallType,
 			wordSize,
 			objectTypes,
-			options,
+			receiverOptions,
 		);
 		return consequentType && consequentType === alternateType
 			? consequentType

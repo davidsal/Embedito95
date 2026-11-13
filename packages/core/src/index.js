@@ -1,4 +1,5 @@
 export {
+	ARRAY_METHODS,
 	ASYNC_TASK_TYPE_NAME,
 	buildLibraryFunctionReturnTypes,
 	check,

@@ -2,6 +2,7 @@ import {
 	AST_NODE,
 	DATA_TYPE,
 	DEFAULT_WORD_SIZE,
+	resolveNarrowedTypeAt,
 	resolveProjectTypes,
 	resolveWordDataType,
 } from "embedito95-core";
@@ -83,10 +84,20 @@ export const createVariableTypeResolver = (
 	variableTypes,
 	allExports,
 	importAliases,
+	narrowingRegions = null,
 ) => {
 	return (resolvedName, location) => {
+		const variableType = narrowingRegions
+			? resolveNarrowedTypeAt(
+					variableTypes,
+					narrowingRegions,
+					resolvedName,
+					location,
+				)
+			: variableTypes.resolve(resolvedName, location);
+
 		return (
-			variableTypes.resolve(resolvedName, location) ??
+			variableType ??
 			resolveLibraryConstantType(resolvedName, allExports, importAliases)
 		);
 	};
@@ -96,7 +107,8 @@ export const createVariableTypeResolver = (
 // inference, the same pipeline `check()` runs. The language server must not
 // reimplement it: doing so lets hover/completions drift from codegen.
 export const buildProjectTypeInference = (options) => {
-	const { syntaxTree, allExports, importAliases, platform } = options;
+	const { syntaxTree, allExports, importAliases, platform, narrowingRegions } =
+		options;
 	const wordSize = platform?.specs?.wordSize ?? DEFAULT_WORD_SIZE;
 	const wordType = resolveWordDataType(wordSize);
 	const objectTypes = collectProjectObjectTypes(syntaxTree, allExports);
@@ -122,6 +134,7 @@ export const buildProjectTypeInference = (options) => {
 			variableTypes,
 			allExports,
 			importAliases,
+			narrowingRegions ?? null,
 		),
 	};
 };

@@ -1,4 +1,9 @@
-import { collectImportAliases, parse, tokenize } from "embedito95-core";
+import {
+	collectImportAliases,
+	collectNullNarrowing,
+	parse,
+	tokenize,
+} from "embedito95-core";
 import { loadProjectLibraryExports } from "../shared/libraries.js";
 import { buildProjectTypeInference } from "../shared/type-inference.js";
 import { resolveDefaultCompletions } from "./default-completions.js";
@@ -33,17 +38,24 @@ const buildCompletionContext = (requestParameters, document, platform) => {
 const parseCompletionSyntax = (context) => {
 	const { tokens } = tokenize(context.source);
 	const { ast: syntaxTree } = parse(tokens);
+	const narrowingRegions = collectNullNarrowing(syntaxTree);
 	const inference = buildProjectTypeInference({
 		syntaxTree,
 		allExports: context.allExports,
 		importAliases: collectImportAliases(syntaxTree),
 		platform: context.platform,
+		narrowingRegions,
 	});
 
 	return {
 		syntaxTree,
+		narrowingRegions,
 		beforeCursor: context.currentLineText.slice(0, context.position.character),
+		wordSize: inference.wordSize,
+		wordType: inference.wordType,
 		resolveNameType: inference.resolveNameType,
+		resolveCallType: inference.resolveCallType,
+		objectTypes: inference.objectTypes,
 	};
 };
 

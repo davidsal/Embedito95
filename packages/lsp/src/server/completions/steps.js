@@ -1,14 +1,33 @@
-import { DATA_TYPE, STRING_METHODS } from "embedito95-core";
+import {
+	ARRAY_METHODS,
+	AST_NODE,
+	DATA_TYPE,
+	isAsyncTaskType,
+	parseArrayType,
+	resolveArrayMethod,
+	resolveReceiverType,
+	STRING_METHODS,
+	unwrapAsyncTaskType,
+} from "embedito95-core";
+import { formatMethodParameterList } from "../hover/formatting.js";
 import { getImportSpecifiers, getLibraryName } from "../shared/libraries.js";
 import { findEnclosingObjectType } from "./ast.js";
 import { buildAutoImportEdits } from "./auto-import.js";
+import { findDotReceiver } from "./receivers.js";
 import {
 	getEnumMembers,
+	getObjectTypeMembers,
 	getTypeCompletions,
 	getTypeMembers,
 } from "./type-completions.js";
 
 export const NOT_HANDLED = Symbol("notHandled");
+
+const METHOD_COMPLETION_KIND = 3;
+const FIELD_COMPLETION_KIND = 6;
+const ENUM_MEMBER_COMPLETION_KIND = 21;
+const DEFAULT_ENUM_MEMBER_DETAIL = "pin";
+const ASYNC_TASK_VALUE_FIELD = "value";
 
 const formatFunctionSignature = (parameters, returnType) => {
 	const parameterNames = (parameters ?? [])
@@ -26,14 +45,14 @@ const buildMemberCompletionItems = (members, prefix) => {
 		if (member.kind === "method") {
 			return {
 				label: member.name,
-				kind: 3,
+				kind: METHOD_COMPLETION_KIND,
 				detail: formatFunctionSignature(member.params, member.returnType),
 			};
 		}
 
 		return {
 			label: member.name,
-			kind: 6,
+			kind: FIELD_COMPLETION_KIND,
 			detail: member.returnType ?? "unknown",
 		};
 	});
@@ -209,11 +228,15 @@ export const resolveThisMemberCompletions = (context) => {
 	return buildMemberCompletionItems(members, prefix);
 };
 
-const buildTypeMethodCompletionItems = (typeMethods) => {
-	return Object.entries(typeMethods).map(([name, method]) => {
+const buildTypeMethodCompletionItems = (typeMethods, prefix) => {
+	const members = Object.entries(typeMethods).filter(([name]) => {
+		return !prefix || name.toLowerCase().startsWith(prefix);
+	});
+
+	return members.map(([name, method]) => {
 		return {
 			label: name,
-			kind: 3,
+			kind: METHOD_COMPLETION_KIND,
 			detail: formatFunctionSignature(method.params, method.returnType),
 		};
 	});
@@ -224,7 +247,13 @@ const buildStringMethodCompletionItems = (objectTypeName, prefix) => {
 		return null;
 	}
 
-	const members = Object.entries(STRING_METHODS).filter(([name]) => {
+	const items = buildTypeMethodCompletionItems(STRING_METHODS, prefix);
+
+	return items.length > 0 ? items : null;
+};
+
+const buildArrayMethodCompletionItems = (elementType, prefix) => {
+	const members = Object.entries(ARRAY_METHODS).filter(([name]) => {
 		return !prefix || name.toLowerCase().startsWith(prefix);
 	});
 
@@ -232,7 +261,78 @@ const buildStringMethodCompletionItems = (objectTypeName, prefix) => {
 		return null;
 	}
 
-	return buildTypeMethodCompletionItems(Object.fromEntries(members));
+	return members.map(([name]) => {
+		const method = resolveArrayMethod(name, elementType);
+		return {
+			label: name,
+			kind: METHOD_COMPLETION_KIND,
+			detail: `(${formatMethodParameterList(method.params)}) => ${method.returnType}`,
+		};
+	});
+};
+
+const buildAsyncTaskValueCompletionItems = (typeName, prefix) => {
+	if (prefix && !ASYNC_TASK_VALUE_FIELD.startsWith(prefix)) {
+		return null;
+	}
+
+	return [
+		{
+			label: ASYNC_TASK_VALUE_FIELD,
+			kind: FIELD_COMPLETION_KIND,
+			detail: unwrapAsyncTaskType(typeName),
+		},
+	];
+};
+
+const buildObjectMemberCompletionItems = (typeName, prefix, objectTypes) => {
+	const members = getObjectTypeMembers(objectTypes?.[typeName]);
+
+	if (members.length === 0) {
+		return null;
+	}
+
+	const items = buildMemberCompletionItems(members, prefix);
+	return items.length > 0 ? items : null;
+};
+
+// Resolves the method/field surface of the receiver by category, so
+// identifiers, literals and composite expressions share the same
+// string/array/object lookup. Nullable receivers are narrowed by the resolver
+// when the access sits inside a narrowing region; outside one, the wide union
+// has no member surface.
+const buildReceiverMemberCompletionItems = (
+	objectTypeName,
+	prefix,
+	objectTypes,
+) => {
+	if (!objectTypeName) {
+		return null;
+	}
+
+	const stringCompletions = buildStringMethodCompletionItems(
+		objectTypeName,
+		prefix,
+	);
+
+	if (stringCompletions) {
+		return stringCompletions;
+	}
+
+	const arrayType = parseArrayType(objectTypeName);
+	const arrayCompletions = arrayType
+		? buildArrayMethodCompletionItems(arrayType.elementType, prefix)
+		: null;
+
+	if (arrayCompletions) {
+		return arrayCompletions;
+	}
+
+	if (isAsyncTaskType(objectTypeName)) {
+		return buildAsyncTaskValueCompletionItems(objectTypeName, prefix);
+	}
+
+	return buildObjectMemberCompletionItems(objectTypeName, prefix, objectTypes);
 };
 
 const buildEnumMemberCompletionItems = (memberNames, allExports) => {
@@ -242,107 +342,93 @@ const buildEnumMemberCompletionItems = (memberNames, allExports) => {
 		);
 		return {
 			label: name,
-			kind: 21,
-			detail: exportItem?.type ?? "pin",
+			kind: ENUM_MEMBER_COMPLETION_KIND,
+			detail: exportItem?.type ?? DEFAULT_ENUM_MEMBER_DETAIL,
 		};
 	});
 };
 
-export const resolveDotMemberCompletions = (context) => {
-	const { beforeCursor, allExports, platform, resolveNameType } = context;
-	const dotMatch = beforeCursor.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\.$/);
+const resolveReceiverCompletionItems = (context, prefix) => {
+	const {
+		syntaxTree,
+		beforeCursor,
+		position,
+		allExports,
+		platform,
+		resolveNameType,
+		resolveCallType,
+		wordSize,
+		wordType,
+		objectTypes,
+	} = context;
+	const dotReceiver = findDotReceiver(syntaxTree, beforeCursor, position);
 
-	if (!dotMatch) {
+	if (!dotReceiver) {
 		return NOT_HANDLED;
 	}
 
-	const objectTypeName = resolveNameType
-		? resolveNameType(dotMatch[1], null)
-		: null;
-	const stringCompletions = buildStringMethodCompletionItems(
-		objectTypeName,
-		"",
+	const receiverType = resolveReceiverType(
+		dotReceiver.receiverNode,
+		resolveNameType,
+		resolveCallType,
+		wordSize,
+		objectTypes,
+		{ ast: syntaxTree, wordType },
+	);
+	const methodCompletions = buildReceiverMemberCompletionItems(
+		receiverType,
+		prefix,
+		objectTypes,
 	);
 
-	if (stringCompletions) {
-		return stringCompletions;
+	if (methodCompletions) {
+		return methodCompletions;
 	}
 
-	const typeMethods = objectTypeName
-		? allExports.objectTypes?.[objectTypeName]
-		: null;
+	const receiverName =
+		dotReceiver.receiverNode.type === AST_NODE.identifier
+			? dotReceiver.receiverNode.name
+			: null;
 
-	if (typeMethods) {
-		return buildTypeMethodCompletionItems(typeMethods);
+	if (!receiverName) {
+		return NOT_HANDLED;
 	}
 
-	const members = getEnumMembers(dotMatch[1], allExports, platform);
+	const members = getEnumMembers(receiverName, allExports, platform);
 
-	if (members && members.length > 0) {
-		return buildEnumMemberCompletionItems(members, allExports);
+	if (!members || members.length === 0) {
+		return NOT_HANDLED;
 	}
 
-	return NOT_HANDLED;
+	const filtered = prefix
+		? members.filter((name) => name.toLowerCase().startsWith(prefix))
+		: members;
+
+	if (filtered.length === 0) {
+		return NOT_HANDLED;
+	}
+
+	return buildEnumMemberCompletionItems(filtered, allExports);
+};
+
+export const resolveDotMemberCompletions = (context) => {
+	if (!context.beforeCursor.endsWith(".")) {
+		return NOT_HANDLED;
+	}
+
+	return resolveReceiverCompletionItems(context, "");
 };
 
 export const resolveDotPartialCompletions = (context) => {
-	const { beforeCursor, allExports, platform, resolveNameType } = context;
-	const dotPartialMatch = beforeCursor.match(
-		/([a-zA-Z_$][a-zA-Z0-9_$]*)\.([a-zA-Z0-9_]*)$/,
+	const dotReceiver = findDotReceiver(
+		context.syntaxTree,
+		context.beforeCursor,
+		context.position,
 	);
 
-	if (!dotPartialMatch) {
+	if (!dotReceiver) {
 		return NOT_HANDLED;
 	}
 
-	const objectTypeName = resolveNameType
-		? resolveNameType(dotPartialMatch[1], null)
-		: null;
-	const stringCompletions = buildStringMethodCompletionItems(
-		objectTypeName,
-		dotPartialMatch[2].toLowerCase(),
-	);
-
-	if (stringCompletions) {
-		return stringCompletions;
-	}
-
-	const typeMethods = objectTypeName
-		? allExports.objectTypes?.[objectTypeName]
-		: null;
-
-	if (typeMethods) {
-		const prefix = dotPartialMatch[2].toLowerCase();
-		const filtered = prefix
-			? Object.entries(typeMethods).filter(([name]) =>
-					name.toLowerCase().startsWith(prefix),
-				)
-			: Object.entries(typeMethods);
-
-		if (filtered.length > 0) {
-			return filtered.map(([name, method]) => {
-				return {
-					label: name,
-					kind: 3,
-					detail: formatFunctionSignature(method.params, method.returnType),
-				};
-			});
-		}
-	}
-
-	const typeName = dotPartialMatch[1];
-	const prefix = dotPartialMatch[2].toLowerCase();
-	const members = getEnumMembers(typeName, allExports, platform);
-
-	if (members && members.length > 0) {
-		const filtered = prefix
-			? members.filter((name) => name.toLowerCase().startsWith(prefix))
-			: members;
-
-		if (filtered.length > 0) {
-			return buildEnumMemberCompletionItems(filtered, allExports);
-		}
-	}
-
-	return NOT_HANDLED;
+	return resolveReceiverCompletionItems(context, dotReceiver.prefix);
 };

@@ -140,3 +140,16 @@ diagnostics:
 - error error.wrongArgumentCount @ 16:12: 'box.accumulator.add' expects 1 argument(s) but got 0
 types:
 - none
+
+// array literal receiver resolves its element array type
+diagnostics:
+- none
+types:
+- [1, 2] => i16[]
+- [1, 2].length() => u16
+
+// string literal receiver resolves the string method surface
+diagnostics:
+- none
+types:
+- "abc".length() => u16
