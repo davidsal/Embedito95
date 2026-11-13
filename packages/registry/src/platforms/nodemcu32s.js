@@ -1,4 +1,10 @@
-import { DATA_TYPE, DEFAULT_TYPES, FLOAT64_MODE } from "./enums.js";
+import {
+	DATA_TYPE,
+	DEFAULT_TYPES,
+	FLOAT64_MODE,
+	INT128_MODE,
+	PLATFORM_CATEGORY,
+} from "./enums.js";
 import {
 	adc,
 	dac,
@@ -17,9 +23,12 @@ export const platform = {
 	version: "0.1.0",
 	strategy: "arduino",
 	displayName: "NodeMCU-32S",
+	category: PLATFORM_CATEGORY.BOARD,
+	order: 40,
 	supported: false,
 	types: [...DEFAULT_TYPES, DATA_TYPE.f64],
 	float64: FLOAT64_MODE.NATIVE,
+	int128: INT128_MODE.SOFTWARE,
 	pins,
 	pinModes,
 	spi,

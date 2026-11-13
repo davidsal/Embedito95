@@ -18,9 +18,11 @@ import {
 const FAKE_LIBRARY_PACKAGE = "@embedito95/fake";
 const AVR_WORD_SIZE = 16;
 const STM32_WORD_SIZE = 32;
+const HOST_WORD_SIZE = 64;
 const WORD_SIZE_EXPECTATIONS = [
 	{ wordSize: AVR_WORD_SIZE, wordType: "i16" },
 	{ wordSize: STM32_WORD_SIZE, wordType: "i32" },
+	{ wordSize: HOST_WORD_SIZE, wordType: "i64" },
 ];
 // The generated `packages/test/testers/**` projects are gitignored, so a fresh
 // checkout has no `main.e95` when the unit checks run. Prefer the real tester

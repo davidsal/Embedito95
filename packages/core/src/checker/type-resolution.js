@@ -23,9 +23,17 @@ import {
 } from "./types.js";
 
 const FLOAT_EXPONENT_PATTERN = /[eE]/;
+const WORD_SIZE_32_BITS = 32;
+const WORD_SIZE_64_BITS = 64;
 
 export const resolveWordDataType = (wordSize) => {
-	return wordSize >= 32 ? DATA_TYPE.i32 : DATA_TYPE.i16;
+	if (wordSize >= WORD_SIZE_64_BITS) {
+		return DATA_TYPE.i64;
+	}
+	if (wordSize >= WORD_SIZE_32_BITS) {
+		return DATA_TYPE.i32;
+	}
+	return DATA_TYPE.i16;
 };
 
 export const resolveIntegerType = (min, max, preferSigned = false) => {

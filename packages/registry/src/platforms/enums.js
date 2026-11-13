@@ -1,3 +1,8 @@
+export const PLATFORM_CATEGORY = {
+	BOARD: "board",
+	HOST: "host",
+};
+
 export const PIN_MODE = {
 	INPUT: "INPUT",
 	OUTPUT: "OUTPUT",
@@ -29,6 +34,19 @@ export const DATA_TYPE = {
 export const FLOAT64_MODE = {
 	NATIVE: "native",
 	SOFTWARE: "software",
+};
+
+export const INT128_MODE = {
+	NATIVE: "native",
+	SOFTWARE: "software",
+};
+
+export const CONSOLE_OUTPUT = {
+	STDOUT: "stdout",
+};
+
+export const ASYNC_MODE = {
+	SCHEDULER: "scheduler",
 };
 
 export const RESTRICTION = {
