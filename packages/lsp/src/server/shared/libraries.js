@@ -290,9 +290,10 @@ export const loadProjectLibraryExports = (documentUri) => {
 			for (const [typeName, definition] of Object.entries(types)) {
 				objectTypeDefinitions[typeName] = definition;
 				objectTypeLibraries[typeName] = libraryName;
-				objectTypes[typeName] = Object.fromEntries(
-					Object.entries(definition?.methods ?? {}),
-				);
+				objectTypes[typeName] = {
+					methods: definition?.methods ?? {},
+					fields: definition?.fields ?? {},
+				};
 			}
 		}
 

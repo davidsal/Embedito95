@@ -4,6 +4,26 @@ const TYPE_COMPLETION_KIND = 7;
 const TYPE_COMPLETION_DETAIL = "type";
 const ENUM_COMPLETION_DETAIL = "enum";
 
+export const getObjectTypeMembers = (typeInfo) => {
+	const methods = Object.entries(typeInfo?.methods ?? {}).map(
+		([name, method]) => ({
+			name,
+			kind: "method",
+			params: method.params ?? [],
+			returnType: method.returnType ?? null,
+		}),
+	);
+	const fields = Object.entries(typeInfo?.fields ?? {}).map(
+		([name, field]) => ({
+			name,
+			kind: "field",
+			returnType: field.type ?? null,
+		}),
+	);
+
+	return [...methods, ...fields];
+};
+
 export const getTypeMembers = (syntaxTree, typeName, allExports) => {
 	const typeDeclaration = syntaxTree.body.find(
 		(statement) =>
@@ -15,13 +35,7 @@ export const getTypeMembers = (syntaxTree, typeName, allExports) => {
 		return typeDeclaration.members;
 	}
 
-	const methods = allExports.objectTypes?.[typeName] ?? {};
-	return Object.entries(methods).map(([name, method]) => ({
-		name,
-		kind: "method",
-		params: method.params ?? [],
-		returnType: method.returnType ?? null,
-	}));
+	return getObjectTypeMembers(allExports.objectTypes?.[typeName]);
 };
 
 export const getEnumMembers = (typeName, allExports, currentPlatform) => {

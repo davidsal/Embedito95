@@ -138,6 +138,104 @@ const ASYNC_TASK_INVALID_AWAIT_SOURCE = [
 ].join("\n");
 const ASYNC_TASK_USER_GENERIC_SOURCE = "const x: Foo<i8> = 1";
 
+const OBJECT_COMPLETION_SOURCE = [
+	"type Reading = {",
+	"    getValue: () => i8",
+	"    value: i8",
+	"}",
+	"const reading: Reading = { getValue: () => 1, value: 1 }",
+	"reading.",
+].join("\n");
+const OBJECT_COMPLETION_LABELS = "getValue,value";
+// Narrowing is only observable through the receiver surface: inside the branch
+// the nullable union collapses to its non-null member, while the wide union has
+// no member surface outside it.
+const NARROWED_STRING_COMPLETION_SOURCE = [
+	"const inspect = (value: string | null): void => {",
+	"    if (value != null) {",
+	"        value.",
+	"    }",
+	"}",
+].join("\n");
+const NARROWED_OBJECT_COMPLETION_SOURCE = [
+	"type Reading = {",
+	"    getValue: () => i8",
+	"    value: i8",
+	"}",
+	"const inspect = (reading: Reading | null): void => {",
+	"    if (reading != null) {",
+	"        reading.",
+	"    }",
+	"}",
+].join("\n");
+const WIDE_NULLABLE_OBJECT_COMPLETION_SOURCE = [
+	"type Reading = {",
+	"    getValue: () => i8",
+	"}",
+	"const inspect = (reading: Reading | null): void => {",
+	"    reading.",
+	"}",
+].join("\n");
+const FUNCTION_RECEIVER_COMPLETION_SOURCE = [
+	"type Reading = {",
+	"    getValue: () => i8",
+	"    value: i8",
+	"}",
+	"const makeReading = (): Reading => {",
+	"    return { getValue: () => 1, value: 1 }",
+	"}",
+	"makeReading().",
+].join("\n");
+const INDEX_RECEIVER_COMPLETION_SOURCE = [
+	"type Reading = {",
+	"    getValue: () => i8",
+	"    value: i8",
+	"}",
+	"const readings: Reading[] = []",
+	"readings[0].",
+].join("\n");
+const STRING_INDEX_RECEIVER_COMPLETION_SOURCE = [
+	'const words: string[] = ["a"]',
+	"words[0].",
+].join("\n");
+const CAST_RECEIVER_COMPLETION_SOURCE = [
+	"const value: string | null = null",
+	"(value as string).",
+].join("\n");
+// An indexed array is not an array literal: `bytes [0].` must resolve the
+// element type rather than offer the array surface.
+const INDEXED_ARRAY_FALSE_POSITIVE_SOURCE = [
+	"const bytes: u8[] = [1, 2]",
+	"bytes [0].",
+].join("\n");
+const ASYNC_TASK_COMPLETION_SOURCE = [
+	"const getNumberAsync = async () => {",
+	"    return 20",
+	"}",
+	"const task: AsyncTask<i8> = getNumberAsync()",
+	"task.",
+].join("\n");
+const ASYNC_TASK_COMPLETION_LABELS = "value";
+const SSD1306_DOCUMENT_URI = pathToFileURL(
+	join(
+		REPOSITORY_ROOT,
+		"packages",
+		"registry",
+		"src",
+		"libraries",
+		"ssd1306",
+		"main.e95",
+	),
+).href;
+const LIBRARY_FIELD_COMPLETION_SOURCE = [
+	"const transport: DisplayTransport = { i2cChannel: 0, spiChannel: 0, chipSelectChannel: 0, dataCommandChannel: 0, usesSpi: false }",
+	"transport.",
+].join("\n");
+const LIBRARY_FIELD_COMPLETION_LABELS =
+	"i2cChannel,spiChannel,chipSelectChannel,dataCommandChannel,usesSpi";
+const METHOD_COMPLETION_KIND = 3;
+const FIELD_COMPLETION_KIND = 6;
+
 const AVR_F64_DOCUMENT_URI = pathToFileURL(
 	join(ASYNC_AVR_FIXTURE_PROJECT_DIRECTORY, "f64-hover.e95"),
 ).href;
@@ -294,6 +392,84 @@ const STRING_NESTED_COMPLETION_SOURCE = [
 const STRING_COMPLETION_LABELS =
 	"length,push,pop,getCharacter,getSlice,findTextFrom,findLastTextFrom,hasPrefix,hasSuffix,matchesText,matchesTextIgnoringCase,setCharacter,appendText,replaceText,removeRange,trimWhitespace,toUpperCase,toLowerCase,parseInteger,parseFloat32,parseFloat64,toByteArray,toCharacterArray,reserveCapacity";
 
+const ARRAY_COMPLETION_LABELS =
+	"length,capacity,pop,push,reserve,shrink,truncate";
+
+const ARRAY_SOURCE = [
+	"/** Bytes read from the bus. */",
+	"const bytes: u8[] = [1, 2]",
+	"bytes.length()",
+	"bytes.capacity()",
+	"bytes.push(3)",
+	"const numbers = [10, 20]",
+	"numbers.length()",
+	"const literalSize = [1, 2].length()",
+	"const emptyCapacity = [].capacity()",
+	"/** Greeting text. */",
+	'const text: string = "Hello"',
+	"text.length()",
+	'"".length()',
+	'"abc".length()',
+].join("\n");
+
+const ARRAY_METHOD_HOVER_CASES = [
+	{
+		description: "length of a typed array variable returns u16",
+		marker: "bytes.length",
+		offset: "bytes.".length,
+		expected: "```e95\nlength: () => u16\n```",
+	},
+	{
+		description: "capacity of a typed array variable returns u16",
+		marker: "bytes.capacity",
+		offset: "bytes.".length,
+		expected: "```e95\ncapacity: () => u16\n```",
+	},
+	{
+		description: "push of a typed array variable substitutes the element type",
+		marker: "bytes.push",
+		offset: "bytes.".length,
+		expected: "```e95\npush: (value: u8) => void\n```",
+	},
+	{
+		description: "length of an inferred array variable returns u16",
+		marker: "numbers.length",
+		offset: "numbers.".length,
+		expected: "```e95\nlength: () => u16\n```",
+	},
+	{
+		description: "length of an array literal receiver returns u16",
+		marker: "[1, 2].length",
+		offset: "[1, 2].".length,
+		expected: "```e95\nlength: () => u16\n```",
+	},
+	{
+		description: "capacity of an empty array literal receiver returns u16",
+		marker: "[].capacity",
+		offset: "[].".length,
+		expected: "```e95\ncapacity: () => u16\n```",
+	},
+	{
+		description: "length of a string literal receiver returns u16",
+		marker: '"".length',
+		offset: '"".'.length,
+		expected: "```e95\nlength: () => u16\n```",
+	},
+	{
+		description: "length of a non-empty string literal receiver returns u16",
+		marker: '"abc".length',
+		offset: '"abc".'.length,
+		expected: "```e95\nlength: () => u16\n```",
+	},
+];
+
+const ARRAY_VARIABLE_SOURCE = [
+	"/** Bytes read from the bus. */",
+	"const bytes: u8[] = [1, 2]",
+	"/** Greeting text. */",
+	'const text: string = "Hello"',
+].join("\n");
+
 const STRING_METHOD_HOVER_CASES = [
 	{
 		description: "getCharacter returns char from a u16 index",
@@ -341,17 +517,25 @@ const STRING_METHOD_HOVER_CASES = [
 	},
 ];
 
-const completeAt = async (source, position) => {
+const completeItemsAt = async (
+	source,
+	position,
+	documentUri = DOCUMENT_URI,
+) => {
 	const documents = new Map([
-		[DOCUMENT_URI, { uri: DOCUMENT_URI, getText: () => source }],
+		[documentUri, { uri: documentUri, getText: () => source }],
 	]);
-	const items = await onCompletion(
+	return onCompletion(
 		{
-			textDocument: { uri: DOCUMENT_URI },
+			textDocument: { uri: documentUri },
 			position,
 		},
 		documents,
 	);
+};
+
+const completeAt = async (source, position, documentUri = DOCUMENT_URI) => {
+	const items = await completeItemsAt(source, position, documentUri);
 	return items.map((item) => item.label).join(",");
 };
 
@@ -435,6 +619,329 @@ const checkStringNestedBlockCompletions = async () => {
 		"LSP completions on a string const inside a nested block list the STRING_METHODS surface",
 		labels,
 		STRING_COMPLETION_LABELS,
+	);
+};
+
+const checkArrayMethodHovers = () => {
+	return Promise.all(
+		ARRAY_METHOD_HOVER_CASES.map(async (testCase) => {
+			const position = findPosition(
+				ARRAY_SOURCE,
+				testCase.marker,
+				testCase.offset,
+			);
+			const hover = await hoverInDocument(DOCUMENT_URI, ARRAY_SOURCE, position);
+			return expectEqual(
+				`LSP hover at ${position.line}:${position.character} of an array method shows its signature (${testCase.description})`,
+				hover,
+				testCase.expected,
+			);
+		}),
+	);
+};
+
+const checkArrayVariableHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		ARRAY_VARIABLE_SOURCE,
+		findPosition(ARRAY_VARIABLE_SOURCE, "const bytes", "const ".length),
+	);
+	return expectEqual(
+		"LSP hover of a typed array variable shows its type and doc comment",
+		hover,
+		"```e95\nconst bytes: u8[]\n```\n\nBytes read from the bus.",
+	);
+};
+
+const checkStringVariableHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		ARRAY_VARIABLE_SOURCE,
+		findPosition(ARRAY_VARIABLE_SOURCE, "const text", "const ".length),
+	);
+	return expectEqual(
+		"LSP hover of a string variable shows its type, value and doc comment",
+		hover,
+		'```e95\nconst text: string = "Hello"\n```\n\nGreeting text.',
+	);
+};
+
+const checkArrayVariableCompletions = async () => {
+	const labels = await completeAt(
+		["const values: u8[] = [1, 2]", "values."].join("\n"),
+		{ line: 1, character: "values.".length },
+	);
+	return expectEqual(
+		"LSP completions on a typed array variable list the ARRAY_METHODS surface",
+		labels,
+		ARRAY_COMPLETION_LABELS,
+	);
+};
+
+const checkArrayVariablePrefixCompletions = async () => {
+	const labels = await completeAt(
+		["const values: u8[] = [1, 2]", "values.pu"].join("\n"),
+		{ line: 1, character: "values.pu".length },
+	);
+	return expectEqual(
+		"LSP completions on an array variable prefix filter the array methods",
+		labels,
+		"push",
+	);
+};
+
+const checkArrayLiteralCompletions = async () => {
+	const labels = await completeAt("[].", {
+		line: 0,
+		character: "[].".length,
+	});
+	return expectEqual(
+		"LSP completions on an array literal receiver list the ARRAY_METHODS surface",
+		labels,
+		ARRAY_COMPLETION_LABELS,
+	);
+};
+
+const checkArrayLiteralPrefixCompletions = async () => {
+	const labels = await completeAt("[].pu", {
+		line: 0,
+		character: "[].pu".length,
+	});
+	return expectEqual(
+		"LSP completions on an array literal prefix filter the array methods",
+		labels,
+		"push",
+	);
+};
+
+const checkStringLiteralCompletions = async () => {
+	const labels = await completeAt('"".', {
+		line: 0,
+		character: '"".'.length,
+	});
+	return expectEqual(
+		"LSP completions on a string literal receiver list the STRING_METHODS surface",
+		labels,
+		STRING_COMPLETION_LABELS,
+	);
+};
+
+const checkStringLiteralPrefixCompletions = async () => {
+	const labels = await completeAt('"".len', {
+		line: 0,
+		character: '"".len'.length,
+	});
+	return expectEqual(
+		"LSP completions on a string literal prefix filter the string methods",
+		labels,
+		"length",
+	);
+};
+
+const checkObjectVariableCompletions = async () => {
+	const labels = await completeAt(OBJECT_COMPLETION_SOURCE, {
+		line: 5,
+		character: "reading.".length,
+	});
+	return expectEqual(
+		"LSP completions on a user-defined object variable list its methods and fields",
+		labels,
+		OBJECT_COMPLETION_LABELS,
+	);
+};
+
+const checkObjectCompletionItemDetails = async () => {
+	const items = await completeItemsAt(OBJECT_COMPLETION_SOURCE, {
+		line: 5,
+		character: "reading.".length,
+	});
+	const method = items.find((item) => item.label === "getValue");
+	const field = items.find((item) => item.label === "value");
+
+	return Promise.all([
+		expectEqual(
+			"LSP object method completion reports the function kind",
+			method?.kind,
+			METHOD_COMPLETION_KIND,
+		),
+		expectEqual(
+			"LSP object method completion reports its signature",
+			method?.detail,
+			"() => i8",
+		),
+		expectEqual(
+			"LSP object field completion reports the field kind",
+			field?.kind,
+			FIELD_COMPLETION_KIND,
+		),
+		expectEqual(
+			"LSP object field completion reports its type",
+			field?.detail,
+			"i8",
+		),
+	]);
+};
+
+const checkNarrowedStringCompletions = async () => {
+	const labels = await completeAt(NARROWED_STRING_COMPLETION_SOURCE, {
+		line: 2,
+		character: "        value.".length,
+	});
+	return expectEqual(
+		"LSP completions narrow a nullable string inside a null check",
+		labels,
+		STRING_COMPLETION_LABELS,
+	);
+};
+
+const checkNarrowedObjectCompletions = async () => {
+	const items = await completeItemsAt(NARROWED_OBJECT_COMPLETION_SOURCE, {
+		line: 6,
+		character: "        reading.".length,
+	});
+	const method = items.find((item) => item.label === "getValue");
+
+	return Promise.all([
+		expectEqual(
+			"LSP completions narrow a nullable object inside a null check",
+			items.map((item) => item.label).join(","),
+			OBJECT_COMPLETION_LABELS,
+		),
+		expectEqual(
+			"LSP narrowed object method completion reports the function kind",
+			method?.kind,
+			METHOD_COMPLETION_KIND,
+		),
+		expectEqual(
+			"LSP narrowed object method completion reports its signature",
+			method?.detail,
+			"() => i8",
+		),
+	]);
+};
+
+const checkWideNullableObjectCompletions = async () => {
+	const labels = await completeAt(WIDE_NULLABLE_OBJECT_COMPLETION_SOURCE, {
+		line: 4,
+		character: "    reading.".length,
+	});
+	return expectEqual(
+		"LSP completions outside a null check do not expose narrowed members",
+		labels.includes("getValue"),
+		false,
+	);
+};
+
+const checkFunctionReceiverCompletions = async () => {
+	const items = await completeItemsAt(FUNCTION_RECEIVER_COMPLETION_SOURCE, {
+		line: 7,
+		character: "makeReading().".length,
+	});
+	const method = items.find((item) => item.label === "getValue");
+
+	return Promise.all([
+		expectEqual(
+			"LSP completions on a call receiver use the function return type",
+			items.map((item) => item.label).join(","),
+			OBJECT_COMPLETION_LABELS,
+		),
+		expectEqual(
+			"LSP call receiver method completion reports the function kind",
+			method?.kind,
+			METHOD_COMPLETION_KIND,
+		),
+		expectEqual(
+			"LSP call receiver method completion reports its signature",
+			method?.detail,
+			"() => i8",
+		),
+	]);
+};
+
+const checkIndexReceiverCompletions = async () => {
+	const items = await completeItemsAt(INDEX_RECEIVER_COMPLETION_SOURCE, {
+		line: 5,
+		character: "readings[0].".length,
+	});
+	const field = items.find((item) => item.label === "value");
+
+	return Promise.all([
+		expectEqual(
+			"LSP completions on an index receiver use the array element type",
+			items.map((item) => item.label).join(","),
+			OBJECT_COMPLETION_LABELS,
+		),
+		expectEqual(
+			"LSP index receiver field completion reports the field kind",
+			field?.kind,
+			FIELD_COMPLETION_KIND,
+		),
+		expectEqual(
+			"LSP index receiver field completion reports its type",
+			field?.detail,
+			"i8",
+		),
+	]);
+};
+
+const checkStringIndexReceiverCompletions = async () => {
+	const labels = await completeAt(STRING_INDEX_RECEIVER_COMPLETION_SOURCE, {
+		line: 1,
+		character: "words[0].".length,
+	});
+	return expectEqual(
+		"LSP completions on a string array index receiver list the string surface",
+		labels,
+		STRING_COMPLETION_LABELS,
+	);
+};
+
+const checkCastReceiverCompletions = async () => {
+	const labels = await completeAt(CAST_RECEIVER_COMPLETION_SOURCE, {
+		line: 1,
+		character: "(value as string).".length,
+	});
+	return expectEqual(
+		"LSP completions on a cast receiver use the cast target type",
+		labels,
+		STRING_COMPLETION_LABELS,
+	);
+};
+
+const checkIndexedArrayFalsePositiveCompletions = async () => {
+	const labels = await completeAt(INDEXED_ARRAY_FALSE_POSITIVE_SOURCE, {
+		line: 1,
+		character: "bytes [0].".length,
+	});
+	return expectEqual(
+		"LSP completions on an indexed array receiver do not offer the array surface",
+		labels.includes("capacity"),
+		false,
+	);
+};
+
+const checkAsyncTaskCompletions = async () => {
+	const labels = await completeAt(ASYNC_TASK_COMPLETION_SOURCE, {
+		line: 4,
+		character: "task.".length,
+	});
+	return expectEqual(
+		"LSP completions on an AsyncTask variable list the value field",
+		labels,
+		ASYNC_TASK_COMPLETION_LABELS,
+	);
+};
+
+const checkLibraryFieldCompletions = async () => {
+	const labels = await completeAt(
+		LIBRARY_FIELD_COMPLETION_SOURCE,
+		{ line: 1, character: "transport.".length },
+		SSD1306_DOCUMENT_URI,
+	);
+	return expectEqual(
+		"LSP completions on a library object type list its declared fields",
+		labels,
+		LIBRARY_FIELD_COMPLETION_LABELS,
 	);
 };
 
@@ -894,6 +1401,27 @@ export const runLspHoverChecks = async () => {
 		await checkStringParameterCompletions(),
 		await checkStringLocalCompletions(),
 		await checkStringNestedBlockCompletions(),
+		...(await checkArrayMethodHovers()),
+		await checkArrayVariableHover(),
+		await checkStringVariableHover(),
+		await checkArrayVariableCompletions(),
+		await checkArrayVariablePrefixCompletions(),
+		await checkArrayLiteralCompletions(),
+		await checkArrayLiteralPrefixCompletions(),
+		await checkStringLiteralCompletions(),
+		await checkStringLiteralPrefixCompletions(),
+		await checkObjectVariableCompletions(),
+		...(await checkObjectCompletionItemDetails()),
+		await checkNarrowedStringCompletions(),
+		...(await checkNarrowedObjectCompletions()),
+		await checkWideNullableObjectCompletions(),
+		...(await checkFunctionReceiverCompletions()),
+		...(await checkIndexReceiverCompletions()),
+		await checkStringIndexReceiverCompletions(),
+		await checkCastReceiverCompletions(),
+		await checkIndexedArrayFalsePositiveCompletions(),
+		await checkAsyncTaskCompletions(),
+		await checkLibraryFieldCompletions(),
 		checkStringMethodNestedDiagnostics(),
 		checkStringMethodArgumentTypeDiagnostics(),
 		checkStringMethodNestedNoFalsePositives(),

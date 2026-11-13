@@ -1,5 +1,5 @@
 export { UNRESOLVED_TYPE } from "../constants.js";
-export { resolveArrayMethod } from "./array-methods.js";
+export { ARRAY_METHODS, resolveArrayMethod } from "./array-methods.js";
 export {
 	inferArrayElementType,
 	parseArrayType,
