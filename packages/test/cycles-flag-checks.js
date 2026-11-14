@@ -1,9 +1,17 @@
-// F-008: the refcount cycle collector switch must reach every translation unit
-// as a compile argument, not only the generated project headers. A unit that
-// keeps the `1` default from `ref.h` while the project defines `E95_CYCLES 0`
-// gets a different body for the shared inline functions (ODR violation), and
-// `enableCycleCollector: false` behaves like `true`.
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+// T-036: the refcount cycle collector switch reaches every translation unit
+// through the generated `e95_config.h`, not through a `-DE95_CYCLES=0|1`
+// compile argument. The platform compile strategies no longer inject the define
+// (that would still leave one body per argument and bypass the config header);
+// they rely on the header the build writes into the project, core, libraries
+// and modules directories. These checks lock in the header rendering, the tree
+// writer and the absence of the define argument in posix, arduino and stm32.
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { shared, UTF8 } from "embedito95-core";
@@ -12,9 +20,11 @@ import { compile } from "../registry/src/strategies/stm32-ll/compile.js";
 import { checkCollectorIsCompiledOutWhenDisabled } from "./cycles-runtime-checks.js";
 import { expectEqual } from "./reporting.js";
 
-const CYCLES_OFF_ARGUMENT = "-DE95_CYCLES=0";
-const CYCLES_ON_ARGUMENT = "-DE95_CYCLES=1";
+const CYCLES_CONFIG_FILE_NAME = shared.CYCLES_CONFIG_FILE_NAME;
 const CYCLES_ARGUMENT_PREFIX = "-DE95_CYCLES=";
+const CYCLES_OFF_DEFINE = "#define E95_CYCLES 0";
+const CYCLES_ON_DEFINE = "#define E95_CYCLES 1";
+const CYCLES_GUARD_DEFINE = "#define E95_CONFIG_H";
 const TEMPORARY_DIRECTORY_PREFIX = "embedito95-cycles-";
 const EXECUTABLE_FILE_MODE = 0o755;
 const HOST_PROJECT_NAME = "cycles-project";
@@ -30,6 +40,11 @@ const CORE_MODULE_DIRECTORY_NAME = "mem";
 const LIBRARY_MODULE_DIRECTORY_NAME = "math";
 const USER_MODULE_DIRECTORY_NAME = "user";
 const ASYNC_MODULE_DIRECTORY_NAME = "async-task";
+const CONFIG_TREE_DIRECTORY_NAMES = [
+	`${CORE_DIRECTORY_NAME}/a`,
+	`${LIBRARIES_DIRECTORY_NAME}/b`,
+	`${MODULES_DIRECTORY_NAME}/c`,
+];
 const STM32_PROJECT_NAME = "cycles-stm32";
 const STM32_TOOLCHAIN_DIRECTORY_NAME = "toolchain";
 const STM32_FIRMWARE_DIRECTORY_NAME = "firmware";
@@ -46,6 +61,7 @@ const ARDUINO_COMPILE_SIZES_OUTPUT = JSON.stringify({
 		],
 	},
 });
+
 const writeUnitSource = (filePath) => {
 	mkdirSync(dirname(filePath), { recursive: true });
 	writeFileSync(filePath, "int unit() { return 0; }\n", UTF8);
@@ -103,19 +119,17 @@ const createRecordingSpawn = () => {
 	return { calls, runSpawnedProcess };
 };
 
-const runPosixCompile = async ({ outputDirectory, cycles }) => {
+const runPosixCompile = async ({ outputDirectory }) => {
 	const recording = createRecordingSpawn();
 	await strategies.posix.compile({
 		outputDir: outputDirectory,
 		projectName: HOST_PROJECT_NAME,
 		shared: {
-			renderCyclesDefineArgument: shared.renderCyclesDefineArgument,
 			runSpawnedProcess: recording.runSpawnedProcess,
 		},
 		spawnSync: () => {
 			return { status: 0 };
 		},
-		cycles,
 		log: () => {},
 	});
 	return recording.calls[0]?.args ?? [];
@@ -127,53 +141,45 @@ const countCyclesArguments = (argumentsList) => {
 	}).length;
 };
 
-const checkPosixUnitsReceiveTheDefine = async (rootDirectory) => {
+const checkPosixUnitsSkipTheDefine = async (rootDirectory) => {
 	const results = [];
+	const { outputDirectory, unitPaths } = createHostProject(
+		join(rootDirectory, "posix"),
+	);
+	const argumentsList = await runPosixCompile({ outputDirectory });
 
-	for (const { cycles, expected } of [
-		{ cycles: false, expected: CYCLES_OFF_ARGUMENT },
-		{ cycles: true, expected: CYCLES_ON_ARGUMENT },
-	]) {
-		const { outputDirectory, unitPaths } = createHostProject(
-			join(rootDirectory, `posix-${cycles}`),
-		);
-		const argumentsList = await runPosixCompile({ outputDirectory, cycles });
-
-		for (const [unit, filePath] of Object.entries(unitPaths)) {
-			results.push(
-				expectEqual(
-					`posix compiles the ${unit} unit with ${expected}`,
-					argumentsList.includes(filePath) && argumentsList.includes(expected),
-					true,
-				),
-			);
-		}
+	for (const [unit, filePath] of Object.entries(unitPaths)) {
 		results.push(
 			expectEqual(
-				`posix passes a single cycles define for every unit (${cycles})`,
-				countCyclesArguments(argumentsList),
-				1,
+				`posix compiles the ${unit} unit`,
+				argumentsList.includes(filePath),
+				true,
 			),
 		);
 	}
+	results.push(
+		expectEqual(
+			"posix does not pass a cycles define argument",
+			countCyclesArguments(argumentsList),
+			0,
+		),
+	);
 
 	return results;
 };
 
-const runArduinoCompile = async ({ outputDirectory, cycles }) => {
+const runArduinoCompile = async ({ outputDirectory }) => {
 	const calls = [];
 	await strategies.arduino.compile({
 		outputDir: outputDirectory,
 		projectName: HOST_PROJECT_NAME,
 		platform: { name: ARDUINO_PLATFORM_NAME },
 		shared: {
-			renderCyclesDefineArgument: shared.renderCyclesDefineArgument,
 			runTool: async (tool, args) => {
 				calls.push({ tool, args });
 				return ARDUINO_COMPILE_SIZES_OUTPUT;
 			},
 		},
-		cycles,
 	});
 	return calls[0]?.args ?? [];
 };
@@ -185,35 +191,24 @@ const findExtraFlags = (argumentsList) => {
 	return propertyIndex === -1 ? null : argumentsList[propertyIndex];
 };
 
-const checkArduinoReceivesTheDefine = async (rootDirectory) => {
-	const results = [];
+const checkArduinoKeepsFwrapvWithoutTheDefine = async (rootDirectory) => {
+	const outputDirectory = join(rootDirectory, "arduino");
+	mkdirSync(outputDirectory, { recursive: true });
+	const argumentsList = await runArduinoCompile({ outputDirectory });
+	const extraFlags = findExtraFlags(argumentsList);
 
-	for (const { cycles, expected } of [
-		{ cycles: false, expected: CYCLES_OFF_ARGUMENT },
-		{ cycles: true, expected: CYCLES_ON_ARGUMENT },
-	]) {
-		const outputDirectory = join(rootDirectory, `arduino-${cycles}`);
-		mkdirSync(outputDirectory, { recursive: true });
-		const argumentsList = await runArduinoCompile({ outputDirectory, cycles });
-		const extraFlags = findExtraFlags(argumentsList);
-
-		results.push(
-			expectEqual(
-				`arduino forwards ${expected} to build.extra_flags`,
-				extraFlags?.includes(expected) ?? false,
-				true,
-			),
-		);
-		results.push(
-			expectEqual(
-				`arduino keeps -fwrapv next to the cycles define (${cycles})`,
-				extraFlags?.includes(ARDUINO_FWRAPV_FLAG) ?? false,
-				true,
-			),
-		);
-	}
-
-	return results;
+	return [
+		expectEqual(
+			"arduino keeps -fwrapv in build.extra_flags",
+			extraFlags?.includes(ARDUINO_FWRAPV_FLAG) ?? false,
+			true,
+		),
+		expectEqual(
+			"arduino build.extra_flags does not carry the cycles define",
+			extraFlags?.includes(CYCLES_ARGUMENT_PREFIX) ?? false,
+			false,
+		),
+	];
 };
 
 const createStm32Shared = ({
@@ -226,7 +221,6 @@ const createStm32Shared = ({
 		ARM_COMPILER_EXECUTABLE: shared.ARM_COMPILER_EXECUTABLE,
 		ARM_OBJCOPY_EXECUTABLE: shared.ARM_OBJCOPY_EXECUTABLE,
 		ARM_SIZE_EXECUTABLE: shared.ARM_SIZE_EXECUTABLE,
-		renderCyclesDefineArgument: shared.renderCyclesDefineArgument,
 		findStm32FirmwareCache: () => {
 			return firmwareDirectory;
 		},
@@ -242,7 +236,7 @@ const createStm32Shared = ({
 	};
 };
 
-const runStm32Compile = async ({ outputDirectory, cycles }) => {
+const runStm32Compile = async ({ outputDirectory }) => {
 	const compileCalls = [];
 	const toolchainDirectory = join(
 		outputDirectory,
@@ -263,45 +257,31 @@ const runStm32Compile = async ({ outputDirectory, cycles }) => {
 			firmwareDirectory,
 			compileCalls,
 		}),
-		cycles,
 		log: () => {},
 	});
 
 	return compileCalls;
 };
 
-const checkStm32TranslationUnitsReceiveTheDefine = async (rootDirectory) => {
-	const results = [];
+const checkStm32TranslationUnitsSkipTheDefine = async (rootDirectory) => {
+	const { outputDirectory } = createHostProject(join(rootDirectory, "stm32"));
+	const compileCalls = await runStm32Compile({ outputDirectory });
+	const cyclesArgumentCount = compileCalls.reduce((count, argumentsList) => {
+		return count + countCyclesArguments(argumentsList);
+	}, 0);
 
-	for (const { cycles, expected } of [
-		{ cycles: false, expected: CYCLES_OFF_ARGUMENT },
-		{ cycles: true, expected: CYCLES_ON_ARGUMENT },
-	]) {
-		const { outputDirectory } = createHostProject(
-			join(rootDirectory, `stm32-${cycles}`),
-		);
-		const compileCalls = await runStm32Compile({ outputDirectory, cycles });
-		const allUnitsHaveTheDefine = compileCalls.every((argumentsList) => {
-			return argumentsList.includes(expected);
-		});
-
-		results.push(
-			expectEqual(
-				`stm32 compiles one translation unit per source (${cycles})`,
-				compileCalls.length,
-				5,
-			),
-		);
-		results.push(
-			expectEqual(
-				`stm32 compiles every translation unit with ${expected}`,
-				allUnitsHaveTheDefine,
-				true,
-			),
-		);
-	}
-
-	return results;
+	return [
+		expectEqual(
+			"stm32 compiles one translation unit per source",
+			compileCalls.length,
+			5,
+		),
+		expectEqual(
+			"stm32 does not pass a cycles define argument",
+			cyclesArgumentCount,
+			0,
+		),
+	];
 };
 
 const checkCyclesHelper = () => {
@@ -317,16 +297,57 @@ const checkCyclesHelper = () => {
 			false,
 		),
 		expectEqual(
-			"cycles define argument for disabled",
-			shared.renderCyclesDefineArgument(false),
-			CYCLES_OFF_ARGUMENT,
+			"cycles config header for disabled contains the off define",
+			shared.renderCyclesConfigHeader(false).includes(CYCLES_OFF_DEFINE),
+			true,
 		),
 		expectEqual(
-			"cycles define argument for enabled",
-			shared.renderCyclesDefineArgument(true),
-			CYCLES_ON_ARGUMENT,
+			"cycles config header for enabled contains the on define",
+			shared.renderCyclesConfigHeader(true).includes(CYCLES_ON_DEFINE),
+			true,
+		),
+		expectEqual(
+			"cycles config header carries the include guard",
+			shared.renderCyclesConfigHeader(true).includes(CYCLES_GUARD_DEFINE),
+			true,
 		),
 	];
+};
+
+const readConfigHeader = (directory) => {
+	return readFileSync(join(directory, CYCLES_CONFIG_FILE_NAME), UTF8);
+};
+
+const checkWriteCyclesConfigHeaders = (rootDirectory) => {
+	const results = [];
+
+	for (const cycles of [false, true]) {
+		const expectedDefine = cycles ? CYCLES_ON_DEFINE : CYCLES_OFF_DEFINE;
+		const treeDirectory = join(rootDirectory, `config-tree-${cycles}`);
+		const directories = [
+			treeDirectory,
+			...CONFIG_TREE_DIRECTORY_NAMES.map((directoryName) => {
+				return join(treeDirectory, directoryName);
+			}),
+		];
+		for (const directoryName of CONFIG_TREE_DIRECTORY_NAMES) {
+			mkdirSync(join(treeDirectory, directoryName), { recursive: true });
+		}
+
+		shared.writeCyclesConfigHeaders(treeDirectory, cycles);
+
+		for (const directory of directories) {
+			results.push(
+				expectEqual(
+					`config tree ${directory.replace(treeDirectory, "") || "/"} has ${expectedDefine}`,
+					readConfigHeader(directory).includes(expectedDefine),
+					true,
+				),
+			);
+		}
+	}
+
+	return results;
 };
 
 export const runCyclesFlagChecks = async () => {
@@ -334,9 +355,10 @@ export const runCyclesFlagChecks = async () => {
 	try {
 		return [
 			...checkCyclesHelper(),
-			...(await checkPosixUnitsReceiveTheDefine(rootDirectory)),
-			...(await checkArduinoReceivesTheDefine(rootDirectory)),
-			...(await checkStm32TranslationUnitsReceiveTheDefine(rootDirectory)),
+			...checkWriteCyclesConfigHeaders(rootDirectory),
+			...(await checkPosixUnitsSkipTheDefine(rootDirectory)),
+			...(await checkArduinoKeepsFwrapvWithoutTheDefine(rootDirectory)),
+			...(await checkStm32TranslationUnitsSkipTheDefine(rootDirectory)),
 			...checkCollectorIsCompiledOutWhenDisabled(),
 		];
 	} finally {

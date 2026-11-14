@@ -1,6 +1,6 @@
 import { tokenize } from "../lexer/index.js";
 import { parse } from "../parser/index.js";
-import { CYCLES_OFF_DEFINE, generateCode } from "./codegen.js";
+import { generateCode } from "./codegen.js";
 
 const PROJECT_LIBRARY_INCLUDE_PATTERN = /^#include "libraries\/([^"]+)"$/;
 const CORE_INCLUDE_PATTERN = /^#include "core\/([^"]+)"$/;
@@ -90,9 +90,6 @@ export const compileProjectLibrary = ({
 		.map(rewriteLibraryHeaderInclude)
 		.join("\n");
 	const headerSections = [`#ifndef ${guardPrefix}\n#define ${guardPrefix}`];
-	if (cycles === false) {
-		headerSections.push(CYCLES_OFF_DEFINE);
-	}
 	if (headerGlobal) {
 		headerSections.push(headerGlobal);
 	}

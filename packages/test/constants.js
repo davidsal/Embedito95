@@ -208,6 +208,7 @@ export const FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP = "function-type-parser";
 export const CLI_PROJECT_UNIT_CHECKS_GROUP = "cli-project";
 export const MONITOR_STATE_UNIT_CHECKS_GROUP = "monitor-state";
 export const CYCLES_FLAG_UNIT_CHECKS_GROUP = "cycles-flag";
+export const CONFIG_INCLUDE_UNIT_CHECKS_GROUP = "config-include";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";
 export const CLOSURE_FACTORY_UNIT_CHECKS_GROUP = "closure-factory";
 export const REGISTRY_DOC_COMMENT_UNIT_CHECKS_GROUP = "registry-doc-comments";

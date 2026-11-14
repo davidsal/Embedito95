@@ -13,12 +13,14 @@ import {
 } from "./case-discovery.js";
 import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
+import { runConfigIncludeChecks } from "./config-include-checks.js";
 import { runConsoleChecks } from "./console-checks.js";
 import {
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
+	CONFIG_INCLUDE_UNIT_CHECKS_GROUP,
 	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	CYCLES_FLAG_UNIT_CHECKS_GROUP,
@@ -224,6 +226,10 @@ export const run = async () => {
 	const cyclesFlagResults = await runCyclesFlagChecks();
 	reportUnitChecks(CYCLES_FLAG_UNIT_CHECKS_GROUP, cyclesFlagResults);
 	collectMismatches(cyclesFlagResults, mismatches);
+
+	const configIncludeResults = await runConfigIncludeChecks();
+	reportUnitChecks(CONFIG_INCLUDE_UNIT_CHECKS_GROUP, configIncludeResults);
+	collectMismatches(configIncludeResults, mismatches);
 
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);

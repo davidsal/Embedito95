@@ -20,7 +20,6 @@ import {
 	JSON_INDENTATION,
 	PROJECT_TYPE,
 	SOURCE_EXTENSION,
-	shared,
 	UTF8,
 } from "embedito95-core";
 import { platforms } from "embedito95-registry/platforms";
@@ -839,7 +838,6 @@ const writeHermeticProject = (projectDirectory) => {
 
 const createHermeticShared = ({ calls }) => {
 	return {
-		renderCyclesDefineArgument: shared.renderCyclesDefineArgument,
 		runSpawnedProcess: async (command, args) => {
 			calls.push({ command, args });
 			const outputIndex = args.indexOf(OUTPUT_FLAG);
@@ -852,7 +850,6 @@ const createHermeticShared = ({ calls }) => {
 
 const createFailingShared = ({ stderr }) => {
 	return {
-		renderCyclesDefineArgument: shared.renderCyclesDefineArgument,
 		runSpawnedProcess: async () => {
 			return { code: 1, stdout: "", stderr };
 		},

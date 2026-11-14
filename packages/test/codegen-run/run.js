@@ -262,7 +262,7 @@ const buildFixture = (temporaryDirectory, scenario) => {
 		TYPE_DIRECTORY_NAME,
 		BUILD_DIRECTORY_NAME,
 	);
-	return {
+	const fixture = {
 		projectDirectory,
 		translationUnitPath: join(buildDirectory, translationUnit),
 		moduleSources: existsSync(modulesDirectory)
@@ -279,6 +279,21 @@ const buildFixture = (temporaryDirectory, scenario) => {
 				)
 			: [],
 	};
+	writeFixtureCyclesConfigHeaders(fixture);
+	return fixture;
+};
+
+const writeFixtureCyclesConfigHeaders = (fixture) => {
+	const configuration = JSON.parse(
+		readFileSync(join(fixture.projectDirectory, CONFIG_FILE), UTF8),
+	);
+	const cycles = shared.resolveCyclesEnabled(configuration);
+	for (const directory of [
+		...listCoreIncludeDirectories(fixture.projectDirectory),
+		...fixture.moduleIncludeDirectories,
+	]) {
+		shared.writeCyclesConfigHeader(directory, cycles);
+	}
 };
 
 const isRejectedScenario = (scenario) => {
@@ -439,9 +454,6 @@ int main() {
 };
 
 const buildCompileArguments = (fixture, driverPath, binary) => {
-	const configuration = JSON.parse(
-		readFileSync(join(fixture.projectDirectory, CONFIG_FILE), UTF8),
-	);
 	const includeArguments = [
 		INCLUDE_ARGUMENT,
 		HOST_INCLUDE_DIRECTORY,
@@ -459,9 +471,6 @@ const buildCompileArguments = (fixture, driverPath, binary) => {
 		SANITIZER_ARGUMENTS,
 		FRAME_POINTER_ARGUMENT,
 		"-g",
-		shared.renderCyclesDefineArgument(
-			shared.resolveCyclesEnabled(configuration),
-		),
 		...includeArguments,
 		LANGUAGE_ARGUMENT,
 		CPP_LANGUAGE,

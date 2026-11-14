@@ -69,7 +69,6 @@ const buildCompilerArguments = ({
 	includeDirectories,
 	sourceFiles,
 	executablePath,
-	cyclesDefineArgument,
 }) => {
 	const includeArguments = includeDirectories.flatMap((directory) => {
 		return [INCLUDE_DIRECTORY_FLAG, directory];
@@ -77,7 +76,6 @@ const buildCompilerArguments = ({
 
 	return [
 		...COMPILER_BASE_ARGUMENTS,
-		cyclesDefineArgument,
 		...includeArguments,
 		...sourceFiles,
 		OUTPUT_FLAG,
@@ -89,7 +87,6 @@ export const compile = async ({
 	outputDir,
 	projectName,
 	shared,
-	cycles = true,
 	spawnSync: runSpawnSync = spawnSync,
 	log = console.log,
 }) => {
@@ -113,7 +110,6 @@ export const compile = async ({
 			includeDirectories,
 			sourceFiles,
 			executablePath,
-			cyclesDefineArgument: shared.renderCyclesDefineArgument(cycles),
 		}),
 		{ timeout: COMPILE_TIMEOUT_MILLISECONDS },
 	);

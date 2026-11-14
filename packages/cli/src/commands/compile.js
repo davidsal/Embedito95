@@ -51,6 +51,8 @@ export const run = async () => {
 		process.exit(1);
 	}
 
+	shared.writeCyclesConfigHeaders(outputDirectory, cycles);
+
 	await strategy.compile({
 		outputDir: outputDirectory,
 		projectName,

@@ -183,6 +183,7 @@ const writeBuildOutput = ({
 	asyncTaskModule,
 	libraryModules,
 	buildDirectory,
+	cycles,
 }) => {
 	mkdirSync(join(buildDirectory, MODULES_DIRECTORY_NAME), { recursive: true });
 
@@ -199,6 +200,7 @@ const writeBuildOutput = ({
 		buildDirectory,
 	);
 	copyCoreLibraries(libraryModules, buildDirectory, CURRENT_WORKING_DIRECTORY);
+	shared.writeCyclesConfigHeaders(buildDirectory, cycles);
 
 	writeLine(`${green("✔")} Built ${projectName}${strategy.extension}`);
 };
@@ -316,5 +318,6 @@ export const run = async () => {
 		asyncTaskModule,
 		libraryModules,
 		buildDirectory,
+		cycles,
 	});
 };

@@ -182,12 +182,11 @@ const compile = async ({
 	projectName: _projectName,
 	platform,
 	shared,
-	cycles = true,
 }) => {
 	const { join } = await import("node:path");
 	const { existsSync } = await import("node:fs");
 	const fqbn = getCompileFqbn({ platform });
-	const extraFlags = [FWRAPV_FLAG, shared.renderCyclesDefineArgument(cycles)];
+	const extraFlags = [FWRAPV_FLAG];
 	const librariesDirectory = join(outputDir, LIBRARIES_DIRECTORY_NAME);
 	const coreLibrariesDirectory = join(outputDir, CORE_LIBRARIES_DIRECTORY_NAME);
 	const modulesDirectory = join(outputDir, MODULES_DIRECTORY_NAME);

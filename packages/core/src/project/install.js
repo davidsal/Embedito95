@@ -19,8 +19,20 @@ import {
 	SOURCE_EXTENSION,
 	UTF8,
 } from "../constants.js";
-import { renderLibraryBuildArtifacts } from "../strategy-shared/index.js";
+import {
+	renderLibraryBuildArtifacts,
+	resolveCyclesEnabled,
+	writeCyclesConfigHeader,
+} from "../strategy-shared/index.js";
 import { collectLibraryEnumInfo } from "./libraries.js";
+
+const readProjectConfiguration = (projectPath) => {
+	const configPath = join(projectPath, CONFIG_FILE);
+	if (!existsSync(configPath)) {
+		return {};
+	}
+	return JSON.parse(readFileSync(configPath, UTF8));
+};
 
 export const findEnclosingProjectRoot = (startDirectory, options = {}) => {
 	const { requireEnclosingLibrary = false } = options;
@@ -222,6 +234,11 @@ export const installLibrary = async ({
 			enumStyle,
 		});
 	}
+
+	writeCyclesConfigHeader(
+		buildDirectory,
+		resolveCyclesEnabled(readProjectConfiguration(projectPath)),
+	);
 
 	return { packageName };
 };

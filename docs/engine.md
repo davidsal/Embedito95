@@ -95,9 +95,16 @@ compile-time knob, not a correctness constraint.
 
 Enabling and disabling:
 
-- `E95_CYCLES` (default `1`) compiles the collector in. `enableCycleCollector:
-  false` in `config.json` emits `E95_CYCLES 0`: no candidate list, no `trace`
-  calls and no collector code, at the cost of leaking real cycles.
+- `E95_CYCLES` (default `1`) compiles the collector in. Its single source of
+  truth is a generated `e95_config.h` header: the build writes it (from
+  `enableCycleCollector` in `config.json`) at the build root and in each core,
+  library, module and async unit directory. `ref.h` includes it with
+  `__has_include("e95_config.h")` and falls back to `1` when it is absent, so
+  every translation unit sees the same value. Setting `enableCycleCollector:
+  false` yields `E95_CYCLES 0`: no candidate list, no `trace` calls and no
+  collector code, at the cost of leaking real cycles. Passing `-DE95_CYCLES=0`
+  (or `1`) by hand is only a manual override for host probes and one-off
+  measurements, not the product mechanism.
 - Colors share the `uint16_t` refcount word (2 high bits), so a box does not grow
   by a single byte. The count saturates at 16383 instead of spilling into the
   color bits.

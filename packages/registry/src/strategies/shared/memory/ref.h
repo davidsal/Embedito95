@@ -26,9 +26,12 @@
 // The generated object types wire into this collector through the
 // `core_mem::TypeInfoOf<T>` specializations the codegen emits for every object
 // that owns handle fields (see type-info.js); objects without handle fields
-// keep the default leaf TypeInfo. `cycles: "off"` emits E95_CYCLES 0 and no
-// collector wiring: no candidate list, no trace calls and no collector code,
-// at the cost of leaking real cycles.
+// keep the default leaf TypeInfo. The switch itself lives in the generated
+// `e95_config.h` header: the build writes it (at the project root, core,
+// libraries and modules) from `enableCycleCollector` in `config.json`, and this
+// file includes it when available via `__has_include`, falling back to the
+// default `1`. Turning it off removes the candidate list, the trace calls and
+// the collector code, at the cost of leaking real cycles.
 //
 // Colors share the uint16_t `refs` word (2 high bits), so a box grows by 0
 // bytes: BLACK (in use), PURPLE (candidate), GRAY (possible cycle member),
@@ -42,6 +45,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#if defined(__has_include)
+#if __has_include("e95_config.h")
+#include "e95_config.h"
+#endif
+#endif
 
 #ifndef E95_CYCLES
 #define E95_CYCLES 1
