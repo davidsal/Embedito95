@@ -1,0 +1,27 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// With `cycles: "off"` in config.json the collector is compiled out. The same
+// cyclic program must still build and run: the cycles leak, but nothing may
+// crash (no double free, no use-after-free) and the rest of the program behaves
+// normally.
+type Node = {
+    next?: Node
+}
+
+const link = (node: Node, target: Node) => {
+    node.next = target
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const node: Node = {}
+        link(node, node)
+    }
+    setAnalog(Pin.7, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

@@ -45,4 +45,23 @@ u8 pow2(u8 exponent);
 
 }
 
+inline void _e95Trace_lib_max7219_LedMatrix(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<lib_max7219::LedMatrix> *typed = (core_mem::RefBox<lib_max7219::LedMatrix> *)box;
+	lib_max7219::LedMatrix *value = &typed->value;
+	value->rows.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<lib_max7219::LedMatrix> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<lib_max7219::LedMatrix>,
+			&_e95Trace_lib_max7219_LedMatrix,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 #endif

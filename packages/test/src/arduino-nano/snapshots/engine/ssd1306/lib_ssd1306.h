@@ -92,4 +92,23 @@ core_object::Object<Ssd1306Display> getDisplaySPI(core_spi::SPI spi, core_gpio::
 
 }
 
+inline void _e95Trace_lib_ssd1306_Ssd1306Display(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<lib_ssd1306::Ssd1306Display> *typed = (core_mem::RefBox<lib_ssd1306::Ssd1306Display> *)box;
+	lib_ssd1306::Ssd1306Display *value = &typed->value;
+	value->transport.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<lib_ssd1306::Ssd1306Display> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<lib_ssd1306::Ssd1306Display>,
+			&_e95Trace_lib_ssd1306_Ssd1306Display,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 #endif

@@ -1,0 +1,30 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A tree with a `parent` back-pointer: the child points up to the root while
+// the root points down to the child. Dropping the root handle leaves the pair
+// unreachable but mutually referenced, so it must be collected.
+type TreeNode = {
+    parent?: TreeNode
+    left?: TreeNode
+    right?: TreeNode
+}
+
+const attachLeft = (parent: TreeNode, child: TreeNode) => {
+    child.parent = parent
+    parent.left = child
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const root: TreeNode = {}
+        const child: TreeNode = {}
+        attachLeft(root, child)
+    }
+    setAnalog(Pin.5, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

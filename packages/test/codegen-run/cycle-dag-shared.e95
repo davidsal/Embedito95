@@ -1,0 +1,44 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Two parents share one child. Dropping one parent's reference and forcing a
+// collection must NOT free the child: the other parent still owns it. The pin
+// event proves the child handle stayed usable after the collector ran.
+type Child = {
+    value: u8
+}
+
+type Parent = {
+    child: Child
+}
+
+const makeParent = (child: Child): Parent => {
+    return { child: child }
+}
+
+const fillWithCycles = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        let first: Parent = makeParent({ value: 0 })
+        let second: Parent = makeParent({ value: 0 })
+        first = makeParent({ value: 1 })
+        second = makeParent({ value: 2 })
+    }
+}
+
+const setup = () => {
+    let kept: Parent = makeParent({ value: 0 })
+    let dropped: Parent = makeParent({ value: 0 })
+    if (true) {
+        const child: Child = { value: 42 }
+        kept = makeParent(child)
+        dropped = makeParent(child)
+    }
+    dropped = makeParent({ value: 0 })
+    fillWithCycles()
+    setAnalog(Pin.2, kept.child.value)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

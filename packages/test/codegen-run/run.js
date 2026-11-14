@@ -65,6 +65,8 @@ const MODULE_SOURCE_EXTENSION = ".cpp";
 const MODULE_HEADER_EXTENSION = ".h";
 const EVENTS_EXTENSION = ".events";
 const ERRORS_EXTENSION = ".errors";
+const SCENARIO_CONFIG_EXTENSION = ".config.json";
+const ABSENT_EXTENSION = ".absent";
 const REJECTED_SUFFIX = ".rejected.e95";
 const REJECTED_PROJECT_DIRECTORY_NAME = "project-rejected";
 const PROJECT_DIRECTORY_NAME = "project";
@@ -138,6 +140,43 @@ const parseEvents = (scenario) => {
 		});
 };
 
+// A scenario may forbid generated tokens with a sidecar `<scenario>.absent`
+// file (one substring per line). This lets a config-driven scenario pin that
+// codegen left something out of the translation unit (e.g. `enableCycleCollector:
+// false` must not emit `_e95Trace_*`), not just that the program still runs.
+const parseAbsentTokens = (scenario) => {
+	const absentPath = join(
+		MODULE_DIRECTORY,
+		scenario.replace(ENTRY_SUFFIX_PATTERN, ABSENT_EXTENSION),
+	);
+	if (!existsSync(absentPath)) {
+		return [];
+	}
+	return readFileSync(absentPath, UTF8)
+		.split("\n")
+		.map((line) => {
+			return line.trim();
+		})
+		.filter((line) => {
+			return line.length > 0 && !line.startsWith("#");
+		});
+};
+
+const assertAbsentTokens = (translationUnitPath, scenario) => {
+	const tokens = parseAbsentTokens(scenario);
+	if (tokens.length === 0) {
+		return;
+	}
+	const content = readFileSync(translationUnitPath, UTF8);
+	for (const token of tokens) {
+		if (content.includes(token)) {
+			throw new Error(
+				`${scenario}: generated translation unit must not contain "${token}"`,
+			);
+		}
+	}
+};
+
 const createProjectDirectory = (projectDirectory) => {
 	mkdirSync(projectDirectory, { recursive: true });
 	for (const child of [
@@ -155,9 +194,32 @@ const createProjectDirectory = (projectDirectory) => {
 	writeFileSync(join(projectDirectory, GITIGNORE_FILE), GITIGNORE_CONTENT);
 };
 
+// A scenario may override config.json fields (e.g. `enableCycleCollector:
+// false`) with a sidecar `<scenario>.config.json`. The base config is copied
+// first, then the overrides are merged on top so existing scenarios keep the
+// default.
+const applyScenarioConfiguration = (projectDirectory, scenario) => {
+	const configurationPath = join(
+		MODULE_DIRECTORY,
+		scenario.replace(ENTRY_SUFFIX_PATTERN, SCENARIO_CONFIG_EXTENSION),
+	);
+	if (!existsSync(configurationPath)) {
+		return;
+	}
+	const projectConfigPath = join(projectDirectory, CONFIG_FILE);
+	const baseConfiguration = JSON.parse(readFileSync(projectConfigPath, UTF8));
+	const overrides = JSON.parse(readFileSync(configurationPath, UTF8));
+	writeFileSync(
+		projectConfigPath,
+		JSON.stringify({ ...baseConfiguration, ...overrides }, null, "\t"),
+		UTF8,
+	);
+};
+
 const prepareProject = (temporaryDirectory, scenario, directoryName) => {
 	const projectDirectory = join(temporaryDirectory, directoryName);
 	createProjectDirectory(projectDirectory);
+	applyScenarioConfiguration(projectDirectory, scenario);
 	writeFileSync(
 		join(projectDirectory, ENTRY_FILE_NAME),
 		readFileSync(join(MODULE_DIRECTORY, scenario), UTF8),
@@ -410,6 +472,7 @@ const buildCompileArguments = (fixture, driverPath, binary) => {
 const runScenario = (temporaryDirectory, scenario) => {
 	const events = parseEvents(scenario);
 	const fixture = buildFixture(temporaryDirectory, scenario);
+	assertAbsentTokens(fixture.translationUnitPath, scenario);
 	const driverPath = join(temporaryDirectory, `${scenario}.driver.cpp`);
 	const binary = join(temporaryDirectory, `${scenario}.bin`);
 	writeFileSync(driverPath, buildDriverSource(events), UTF8);

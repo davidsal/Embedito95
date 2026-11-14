@@ -18,6 +18,63 @@ struct Screen {
 	core_object::Object<Counter> writer;
 };
 
+inline void _e95Trace_Reader(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Reader> *typed = (core_mem::RefBox<Reader> *)box;
+	Reader *value = &typed->value;
+	value->counter.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Reader> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Reader>,
+			&_e95Trace_Reader,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
+inline void _e95Trace_Box(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Box> *typed = (core_mem::RefBox<Box> *)box;
+	Box *value = &typed->value;
+	value->counter.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Box> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Box>,
+			&_e95Trace_Box,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
+inline void _e95Trace_Screen(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Screen> *typed = (core_mem::RefBox<Screen> *)box;
+	Screen *value = &typed->value;
+	value->writer.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Screen> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Screen>,
+			&_e95Trace_Screen,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 i16 value(core_object::Object<Counter> &self);
 void increment(core_object::Object<Counter> &self);
 i16 read(core_object::Object<Reader> &self);

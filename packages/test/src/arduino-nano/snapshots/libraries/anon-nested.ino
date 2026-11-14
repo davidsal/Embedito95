@@ -15,6 +15,25 @@ struct makeRectReturn {
 	i8 h;
 };
 
+inline void _e95Trace_makeRectReturn(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<makeRectReturn> *typed = (core_mem::RefBox<makeRectReturn> *)box;
+	makeRectReturn *value = &typed->value;
+	value->origin.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<makeRectReturn> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<makeRectReturn>,
+			&_e95Trace_makeRectReturn,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 core_serial::SerialPort serial = core_serial::getSerial(core_serial::Serial::SERIAL_1);
 
 core_object::Object<makeRectReturn> makeRect() {

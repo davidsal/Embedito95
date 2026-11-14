@@ -1,0 +1,30 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Two nodes pointing at each other (`prev`/`next`) form a cycle the collector
+// must break once the external handles go out of scope.
+type Node = {
+    value: u8
+    prev?: Node
+    next?: Node
+}
+
+const connect = (left: Node, right: Node) => {
+    left.next = right
+    right.prev = left
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const first: Node = { value: 1 }
+        const second: Node = { value: 2 }
+        connect(first, second)
+        connect(second, first)
+    }
+    setAnalog(Pin.4, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

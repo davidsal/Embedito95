@@ -26,6 +26,82 @@ struct PrivateScreen {
 	core_object::Object<Writer> writer;
 };
 
+inline void _e95Trace_Screen(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Screen> *typed = (core_mem::RefBox<Screen> *)box;
+	Screen *value = &typed->value;
+	value->writer.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Screen> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Screen>,
+			&_e95Trace_Screen,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
+inline void _e95Trace_MappedScreen(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<MappedScreen> *typed = (core_mem::RefBox<MappedScreen> *)box;
+	MappedScreen *value = &typed->value;
+	value->writer.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<MappedScreen> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<MappedScreen>,
+			&_e95Trace_MappedScreen,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
+inline void _e95Trace_CollisionScreen(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<CollisionScreen> *typed = (core_mem::RefBox<CollisionScreen> *)box;
+	CollisionScreen *value = &typed->value;
+	value->writer.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<CollisionScreen> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<CollisionScreen>,
+			&_e95Trace_CollisionScreen,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
+inline void _e95Trace_PrivateScreen(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<PrivateScreen> *typed = (core_mem::RefBox<PrivateScreen> *)box;
+	PrivateScreen *value = &typed->value;
+	value->writer.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<PrivateScreen> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<PrivateScreen>,
+			&_e95Trace_PrivateScreen,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 void paint(core_object::Object<Screen> &self);
 void paint(core_object::Object<MappedScreen> &self);
 void paint(core_object::Object<CollisionScreen> &self);

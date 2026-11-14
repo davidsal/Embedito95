@@ -15,6 +15,25 @@ struct Outer {
 	core_object::Object<Inner> inner;
 };
 
+inline void _e95Trace_Outer(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Outer> *typed = (core_mem::RefBox<Outer> *)box;
+	Outer *value = &typed->value;
+	value->inner.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Outer> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Outer>,
+			&_e95Trace_Outer,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 core_serial::SerialPort serial = core_serial::getSerial(core_serial::Serial::SERIAL_1);
 
 void shift(core_object::Object<Outer> o, i16 dx) {

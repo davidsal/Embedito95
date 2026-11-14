@@ -15,6 +15,27 @@ struct _BlinkAsyncTask {
 	u8 value;
 };
 
+inline void _e95Trace__BlinkAsyncTask(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<_BlinkAsyncTask> *typed = (core_mem::RefBox<_BlinkAsyncTask> *)box;
+	_BlinkAsyncTask *value = &typed->value;
+	if (!value->childReadSensor.isNull) {
+		value->childReadSensor.value.traceChild(visit);
+	}
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<_BlinkAsyncTask> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<_BlinkAsyncTask>,
+			&_e95Trace__BlinkAsyncTask,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 core_object::Object<mod_async_task::_AsyncTaskItem> _readSensorAsyncAdd(boolean isChild) {
 	core_object::Object<_ReadSensorAsyncTask> task = core_object::Object<_ReadSensorAsyncTask>(_ReadSensorAsyncTask{ 0 });
 	return mod_async_task::_addAsyncTask(task, mod_async_task::_AsyncTask::READ_SENSOR, isChild);
