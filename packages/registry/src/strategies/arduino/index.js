@@ -130,6 +130,7 @@ const generate = ({
 	libraryParts,
 	moduleParts,
 	libraryNamespaces,
+	cycles = true,
 }) => {
 	const { renderStringLiteral, flashStrings } =
 		shared.resolvePlatformRenderOptions(platform);
@@ -150,6 +151,7 @@ const generate = ({
 		libraryParts,
 		moduleParts,
 		libraryNamespaces,
+		cycles,
 	});
 };
 

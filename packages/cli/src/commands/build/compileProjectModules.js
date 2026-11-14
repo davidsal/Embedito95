@@ -50,6 +50,7 @@ const compileModule = (
 	projectLibraries,
 	libraryModules,
 	headerIncludes,
+	cycles,
 ) => {
 	const libraries = mergeModuleLibraries(projectLibraries, overlay);
 	const compiled = shared.compileProjectLibrary({
@@ -63,6 +64,7 @@ const compileModule = (
 		libraryNamespaces: libraries.libraryNamespaces,
 		namespace: moduleInfo.namespace,
 		headerIncludes,
+		cycles,
 		...shared.resolvePlatformRenderOptions(platform),
 	});
 
@@ -118,6 +120,7 @@ export const compileProjectModules = (
 	libraryModules,
 	defaultWordSize,
 	projectLibraryFiles = [],
+	cycles = true,
 ) => {
 	const includes = [];
 	const files = [];
@@ -150,6 +153,7 @@ export const compileProjectModules = (
 				projectLibraryFiles,
 				strategy,
 			),
+			cycles,
 		);
 
 		includes.push(include);

@@ -72,6 +72,7 @@ const compileProjectLibrary = (
 		libraryObjectTypes: compileParameters.projectLibraries.libraryObjectTypes,
 		libraryNamespaces: compileParameters.projectLibraries.libraryNamespaces,
 		namespace,
+		cycles: compileParameters.cycles,
 		...shared.resolvePlatformRenderOptions(platform),
 	});
 };
@@ -131,6 +132,7 @@ export const compileProjectLibraries = (
 	projectLibraries,
 	libraryModules,
 	defaultWordSize,
+	cycles = true,
 ) => {
 	const outputs = {
 		parts: [],
@@ -157,6 +159,7 @@ export const compileProjectLibraries = (
 				projectLibraries,
 				libraryModules,
 				defaultWordSize,
+				cycles,
 			},
 		);
 

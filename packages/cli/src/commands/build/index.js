@@ -35,6 +35,15 @@ import {
 } from "./write-artifacts.js";
 
 const CURRENT_WORKING_DIRECTORY = getCurrentWorkingDirectory();
+const ENABLE_CYCLE_COLLECTOR_OPTION = "enableCycleCollector";
+const DEFAULT_ENABLE_CYCLE_COLLECTOR = true;
+
+export const resolveCyclesEnabled = (configuration) => {
+	return (
+		configuration[ENABLE_CYCLE_COLLECTOR_OPTION] ??
+		DEFAULT_ENABLE_CYCLE_COLLECTOR
+	);
+};
 
 const validateProjectConfiguration = (configuration) => {
 	if (!configuration.name) {
@@ -44,6 +53,17 @@ const validateProjectConfiguration = (configuration) => {
 
 	if (configuration.type === LIBRARY_PROJECT_TYPE) {
 		writeErrorLine(`${red("✖")} Cannot build a library. Use 'publish' instead`);
+		process.exit(1);
+	}
+
+	const enableCycleCollector = configuration[ENABLE_CYCLE_COLLECTOR_OPTION];
+	if (
+		enableCycleCollector !== undefined &&
+		typeof enableCycleCollector !== "boolean"
+	) {
+		writeErrorLine(
+			`${red("✖")} Invalid "${ENABLE_CYCLE_COLLECTOR_OPTION}" in config.json: expected true or false`,
+		);
 		process.exit(1);
 	}
 };
@@ -110,6 +130,7 @@ const compileAsyncModule = (
 	platform,
 	libraryModules,
 	projectLibraries,
+	cycles,
 ) => {
 	if (!intermediate.async) {
 		return null;
@@ -119,6 +140,7 @@ const compileAsyncModule = (
 		platform,
 		libraryModules,
 		projectLibraries.libraryNamespaces,
+		cycles,
 	);
 };
 
@@ -194,6 +216,7 @@ export const run = async () => {
 	validateProjectConfiguration(configuration);
 
 	const projectName = configuration.name;
+	const cycles = resolveCyclesEnabled(configuration);
 	const { strategy, platform } = await loadEngineModules(
 		"generate",
 		`${red("✖")} Could not load engine`,
@@ -247,6 +270,7 @@ export const run = async () => {
 		platform,
 		libraryModules,
 		projectLibraries,
+		cycles,
 	);
 	const asyncModuleIncludes = buildAsyncModuleIncludes(
 		strategy,
@@ -288,6 +312,7 @@ export const run = async () => {
 			entryLibraries,
 			asyncModuleIncludes,
 			asyncTaskModule?.objectTypeInfo ?? null,
+			cycles,
 		);
 
 	writeBuildOutput({
