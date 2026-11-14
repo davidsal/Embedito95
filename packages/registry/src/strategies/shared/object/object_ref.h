@@ -24,9 +24,9 @@
 //
 // Reference fields stored as handles give TS identity/aliasing for nested
 // objects and let objects be passed without copying field contents. A field
-// that aliases an ancestor (`obj.child = obj`) forms a cycle of references and
-// therefore LEAKS under a plain refcount (no GC) — a documented, unsupported
-// case (todayPlan.md "ciclos no soportados") and deliberately NOT exercised.
+// that aliases an ancestor (`obj.child = obj`) forms a reference cycle: with
+// cycles enabled the trial-deletion collector reclaims it (see
+// ../memory/ref.h), while `cycles: "off"` leaks it under the plain refcount.
 
 #ifndef _E95_OBJECT_REF_H
 #define _E95_OBJECT_REF_H

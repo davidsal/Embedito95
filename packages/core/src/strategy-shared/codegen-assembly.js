@@ -24,7 +24,25 @@ import {
 	sortInitEntries,
 } from "./prelude.js";
 import { renderFunctionBody } from "./statements.js";
+import { renderTypeInfoDeclarations } from "./type-info.js";
 import { renderFunctionPrototypes } from "./user-code.js";
+
+const renderTypeInfoSection = (
+	ast,
+	anonymousObjectTypes,
+	renderContext,
+	namespaceName,
+	cycles,
+) => {
+	return renderTypeInfoDeclarations({
+		ast,
+		orderedAnonymousKeys: orderAnonymousObjectTypeKeys(anonymousObjectTypes),
+		anonymousObjectTypes,
+		renderContext,
+		namespaceName,
+		cycles,
+	});
+};
 
 // Anonymous-shape structs are emitted at file scope. When one shape holds
 // another (an anonymous shape field becomes an `Object<childBody>` member), the
@@ -132,12 +150,22 @@ export const assembleMainParts = (
 	mainBody,
 	mainGenerator,
 	additionalParts,
+	ast,
+	namespaceName = null,
+	cycles = true,
 ) => {
 	const parts = [
 		includeSections,
 		...typeDeclarations,
 		...orderAnonymousObjectTypeKeys(anonymousObjectTypes).map((shapeType) =>
 			renderAnonymousObjectType(shapeType, anonymousObjectTypes, renderContext),
+		),
+		renderTypeInfoSection(
+			ast,
+			anonymousObjectTypes,
+			renderContext,
+			namespaceName,
+			cycles,
 		),
 		constantDeclarations,
 		sharedFunctionPrototypes,
@@ -160,6 +188,8 @@ export const buildSplitLibraryArtifacts = (
 	constantDeclarations,
 	userFunctions,
 	libraryGlobalsInSource,
+	namespaceName = null,
+	cycles = true,
 ) => {
 	const prototypes = renderFunctionPrototypes(userFunctions);
 	generated.libraryHeaderGlobal = [
@@ -167,6 +197,16 @@ export const buildSplitLibraryArtifacts = (
 	]
 		.filter(Boolean)
 		.join("\n\n");
+	// The specializations must live OUTSIDE the library namespace (they reopen
+	// `core_mem` at global scope), so they are a separate section appended after
+	// the namespace block in library.js.
+	generated.libraryHeaderTypeInfo = renderTypeInfoSection(
+		ast,
+		anonymousObjectTypes,
+		renderContext,
+		namespaceName,
+		cycles,
+	);
 	generated.libraryHeaderNamespace = [
 		renderProjectLibraryEnumTypedefs(ast, libraryEnumInfo),
 		...typeDeclarations,

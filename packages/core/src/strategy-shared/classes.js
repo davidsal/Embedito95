@@ -52,8 +52,11 @@ export const renderTypeDeclaration = (node, context) => {
 // methods are declared as function-pointer members instead. A closure carries
 // `fieldsInOrder` (captured fields, possibly none); a plain type falls back to
 // its declared `fields` in declaration order.
-const renderSharedObjectStruct = (typeName, objectTypes, context) => {
-	const info = objectTypes[typeName];
+export const resolveSharedObjectFields = (typeName, objectTypes, context) => {
+	const info = objectTypes?.[typeName];
+	if (!info) {
+		return [];
+	}
 	const fields =
 		info.fieldsInOrder ??
 		Object.entries(info.fields ?? {}).map(([name, definition]) => ({
@@ -61,11 +64,22 @@ const renderSharedObjectStruct = (typeName, objectTypes, context) => {
 			type: definition?.type,
 			optional: Boolean(definition?.optional),
 		}));
+	return fields.map((field) => {
+		return {
+			name: field.name,
+			optional: Boolean(field.optional),
+			cType: context.toCType(field.type),
+		};
+	});
+};
+
+const renderSharedObjectStruct = (typeName, objectTypes, context) => {
+	const info = objectTypes[typeName];
+	const fields = resolveSharedObjectFields(typeName, objectTypes, context);
 	const lines = [`struct ${typeName} {`];
 	for (const field of fields) {
-		const cType = context.toCType(field.type);
 		lines.push(
-			`\t${field.optional ? optionalName(cType) : cType} ${field.name};`,
+			`\t${field.optional ? optionalName(field.cType) : field.cType} ${field.name};`,
 		);
 	}
 	if (!hasDataFields(info)) {

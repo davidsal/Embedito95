@@ -1,6 +1,6 @@
 import { tokenize } from "../lexer/index.js";
 import { parse } from "../parser/index.js";
-import { generateCode } from "./codegen.js";
+import { CYCLES_OFF_DEFINE, generateCode } from "./codegen.js";
 
 const PROJECT_LIBRARY_INCLUDE_PATTERN = /^#include "libraries\/([^"]+)"$/;
 const CORE_INCLUDE_PATTERN = /^#include "core\/([^"]+)"$/;
@@ -32,6 +32,7 @@ export const compileProjectLibrary = ({
 	namespace,
 	headerIncludes = null,
 	libraryGlobalsInSource = false,
+	cycles = true,
 }) => {
 	const { tokens, errors: lexErrors } = tokenize(source);
 
@@ -45,6 +46,7 @@ export const compileProjectLibrary = ({
 		userObjectMethods,
 		libraryHeaderGlobal,
 		libraryHeaderNamespace,
+		libraryHeaderTypeInfo,
 		librarySource,
 		objectTypeInfo,
 	} = generateCode({
@@ -63,6 +65,7 @@ export const compileProjectLibrary = ({
 		namespace,
 		splitLibrary: true,
 		libraryGlobalsInSource,
+		cycles,
 	});
 
 	if (!namespace) {
@@ -87,6 +90,9 @@ export const compileProjectLibrary = ({
 		.map(rewriteLibraryHeaderInclude)
 		.join("\n");
 	const headerSections = [`#ifndef ${guardPrefix}\n#define ${guardPrefix}`];
+	if (cycles === false) {
+		headerSections.push(CYCLES_OFF_DEFINE);
+	}
 	if (headerGlobal) {
 		headerSections.push(headerGlobal);
 	}
@@ -95,6 +101,9 @@ export const compileProjectLibrary = ({
 		headerSections.push(libraryHeaderNamespace);
 	}
 	headerSections.push("}");
+	if (libraryHeaderTypeInfo) {
+		headerSections.push(libraryHeaderTypeInfo);
+	}
 	headerSections.push("#endif");
 	const header = headerSections.join("\n\n");
 	const libraryCpp = [

@@ -31,6 +31,11 @@ import { renderUserCode } from "./user-code.js";
 
 const SOFTWARE_FLOAT64_MODE = "software";
 
+// Emitted at the very top of a generated translation unit when cycle collection
+// is disabled, before any core header is included. On (the default) no define is
+// emitted and `ref.h` supplies its default value of 1.
+export const CYCLES_OFF_DEFINE = "#define E95_CYCLES 0";
+
 const isSoftwareFloat64 = (platform) => {
 	return platform?.float64 === SOFTWARE_FLOAT64_MODE;
 };
@@ -56,6 +61,7 @@ export const generateCode = ({
 	namespace = null,
 	splitLibrary = false,
 	libraryGlobalsInSource = false,
+	cycles = true,
 }) => {
 	const { wordCType, wordSize, wordType } = resolveWordOptions(platform);
 	const {
@@ -195,7 +201,7 @@ export const generateCode = ({
 		moduleParts,
 	);
 
-	const main = assembleMainParts(
+	const assembledMain = assembleMainParts(
 		includeSections,
 		typeDeclarations,
 		anonymousObjectTypes,
@@ -206,7 +212,13 @@ export const generateCode = ({
 		mainBody,
 		mainGenerator,
 		additionalParts,
+		ast,
+		namespace,
+		cycles,
 	);
+	const main = cycles
+		? assembledMain
+		: `${CYCLES_OFF_DEFINE}\n\n${assembledMain}`;
 
 	const generated = { main, userObjectMethods };
 	generated.objectTypeInfo = buildObjectTypeInfo(
@@ -227,6 +239,8 @@ export const generateCode = ({
 			constantDeclarations,
 			userFunctions,
 			libraryGlobalsInSource,
+			namespace,
+			cycles,
 		);
 	}
 
