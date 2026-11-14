@@ -24,6 +24,7 @@ import {
 	PROJECT_TYPE,
 	parse,
 	readPackageNames,
+	shared,
 	tokenize,
 	UTF8,
 } from "embedito95-core";
@@ -31,7 +32,6 @@ import {
 	PLATFORM_CATEGORY,
 	supportedPlatforms,
 } from "embedito95-registry/platforms";
-import { resolveCyclesEnabled } from "../cli/src/commands/build/index.js";
 import { buildAgentsDocument } from "../cli/src/commands/init/agents-template.js";
 import {
 	buildConfiguration,
@@ -536,12 +536,12 @@ const checkInitConfiguration = () => {
 		),
 		expectEqual(
 			"absent enableCycleCollector defaults to enabled",
-			resolveCyclesEnabled({}),
+			shared.resolveCyclesEnabled({}),
 			true,
 		),
 		expectEqual(
 			"explicit enableCycleCollector false disables the collector",
-			resolveCyclesEnabled({ enableCycleCollector: false }),
+			shared.resolveCyclesEnabled({ enableCycleCollector: false }),
 			false,
 		),
 		expectEqual(

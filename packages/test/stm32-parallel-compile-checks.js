@@ -166,6 +166,7 @@ const createFakeShared = ({ toolchainDirectory, firmwareDirectory }) => {
 		ARM_COMPILER_EXECUTABLE: shared.ARM_COMPILER_EXECUTABLE,
 		ARM_OBJCOPY_EXECUTABLE: shared.ARM_OBJCOPY_EXECUTABLE,
 		ARM_SIZE_EXECUTABLE: shared.ARM_SIZE_EXECUTABLE,
+		renderCyclesDefineArgument: shared.renderCyclesDefineArgument,
 		findStm32FirmwareCache: () => {
 			return firmwareDirectory;
 		},

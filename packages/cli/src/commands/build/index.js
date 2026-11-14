@@ -35,15 +35,6 @@ import {
 } from "./write-artifacts.js";
 
 const CURRENT_WORKING_DIRECTORY = getCurrentWorkingDirectory();
-const ENABLE_CYCLE_COLLECTOR_OPTION = "enableCycleCollector";
-const DEFAULT_ENABLE_CYCLE_COLLECTOR = true;
-
-export const resolveCyclesEnabled = (configuration) => {
-	return (
-		configuration[ENABLE_CYCLE_COLLECTOR_OPTION] ??
-		DEFAULT_ENABLE_CYCLE_COLLECTOR
-	);
-};
 
 const validateProjectConfiguration = (configuration) => {
 	if (!configuration.name) {
@@ -56,13 +47,14 @@ const validateProjectConfiguration = (configuration) => {
 		process.exit(1);
 	}
 
-	const enableCycleCollector = configuration[ENABLE_CYCLE_COLLECTOR_OPTION];
+	const enableCycleCollector =
+		configuration[shared.ENABLE_CYCLE_COLLECTOR_OPTION];
 	if (
 		enableCycleCollector !== undefined &&
 		typeof enableCycleCollector !== "boolean"
 	) {
 		writeErrorLine(
-			`${red("✖")} Invalid "${ENABLE_CYCLE_COLLECTOR_OPTION}" in config.json: expected true or false`,
+			`${red("✖")} Invalid "${shared.ENABLE_CYCLE_COLLECTOR_OPTION}" in config.json: expected true or false`,
 		);
 		process.exit(1);
 	}
@@ -216,7 +208,7 @@ export const run = async () => {
 	validateProjectConfiguration(configuration);
 
 	const projectName = configuration.name;
-	const cycles = resolveCyclesEnabled(configuration);
+	const cycles = shared.resolveCyclesEnabled(configuration);
 	const { strategy, platform } = await loadEngineModules(
 		"generate",
 		`${red("✖")} Could not load engine`,

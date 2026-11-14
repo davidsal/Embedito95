@@ -18,6 +18,11 @@ export {
 	setCubeIdeRoot,
 } from "./cubeide.js";
 export {
+	ENABLE_CYCLE_COLLECTOR_OPTION,
+	renderCyclesDefineArgument,
+	resolveCyclesEnabled,
+} from "./cycles.js";
+export {
 	ARM_COMPILER_EXECUTABLE,
 	ARM_OBJCOPY_EXECUTABLE,
 	ARM_SIZE_EXECUTABLE,

@@ -31,6 +31,7 @@ import {
 	ENTRY_OPTION,
 	LIBRARIES_DIRECTORY_NAME,
 	MODULES_DIRECTORY_NAME,
+	shared,
 	UTF8,
 } from "embedito95-core";
 import {
@@ -438,6 +439,9 @@ int main() {
 };
 
 const buildCompileArguments = (fixture, driverPath, binary) => {
+	const configuration = JSON.parse(
+		readFileSync(join(fixture.projectDirectory, CONFIG_FILE), UTF8),
+	);
 	const includeArguments = [
 		INCLUDE_ARGUMENT,
 		HOST_INCLUDE_DIRECTORY,
@@ -455,6 +459,9 @@ const buildCompileArguments = (fixture, driverPath, binary) => {
 		SANITIZER_ARGUMENTS,
 		FRAME_POINTER_ARGUMENT,
 		"-g",
+		shared.renderCyclesDefineArgument(
+			shared.resolveCyclesEnabled(configuration),
+		),
 		...includeArguments,
 		LANGUAGE_ARGUMENT,
 		CPP_LANGUAGE,

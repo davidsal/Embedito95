@@ -94,11 +94,14 @@ export {
 export * as shared from "./strategy-shared/index.js";
 export {
 	compileProjectLibrary,
+	ENABLE_CYCLE_COLLECTOR_OPTION,
 	formatFloat32Value,
 	formatFloat64Value,
 	loadTemplates,
 	MAIN_ENTRY_MAIN,
 	MAIN_ENTRY_SETUP_LOOP,
+	renderCyclesDefineArgument,
 	renderLibraryBuildArtifacts,
+	resolveCyclesEnabled,
 } from "./strategy-shared/index.js";
 export { resolvePlatformTypes } from "./types.js";

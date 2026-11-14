@@ -69,6 +69,7 @@ export const compile = async ({
 	platform,
 	shared,
 	maximumCompileJobs,
+	cycles = true,
 	log = console.log,
 }) => {
 	const { mkdirSync, readdirSync } = await import("node:fs");
@@ -120,6 +121,7 @@ export const compile = async ({
 		"-ffunction-sections",
 		"-fdata-sections",
 		`-D${mcuDefine}`,
+		shared.renderCyclesDefineArgument(cycles),
 		...includeArgs,
 	];
 
