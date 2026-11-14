@@ -1,0 +1,21 @@
+// Object reference cycles (handled by the runtime trial-deletion collector).
+// The checker emits no static diagnostic for 'obj.field = obj', whether the
+// field is the object's own type or nullable, and longer cycles are equally
+// accepted. Every case below must stay diagnostic-free.
+// type Node = { next: Node }; n.next = n -> accepted
+selfReference: no
+
+// type Node = { next: Node | null }; n.next = n -> accepted
+selfReference: no
+
+// n.next = m (a different Node, not self) -> accepted
+selfReference: no
+
+// acyclic linked list a.next = b; b.next = null -> accepted
+selfReference: no
+
+// indirect cycle a.next = b; b.next = a -> accepted
+selfReference: no
+
+// scalar field self-name is not an object field -> accepted
+selfReference: no

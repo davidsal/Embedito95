@@ -15,7 +15,7 @@ import { listMethodAssignmentSnapshots } from "./src/language/generate-method-as
 import { listMethodOnlyLiteralSnapshots } from "./src/language/generate-method-only-literal.mjs";
 import { listMethodReceiverSnapshots } from "./src/language/generate-method-receiver.mjs";
 import { listNullableAssignmentsSnapshots } from "./src/language/generate-nullable-assignments.mjs";
-import { listObjectSelfReferenceSnapshots } from "./src/language/generate-object-self-reference.mjs";
+import { listObjectCycleSnapshots } from "./src/language/generate-object-cycle.mjs";
 import { listSerialLibrarySnapshots } from "./src/language/generate-serial-library.mjs";
 import { listServoLibrarySnapshots } from "./src/language/generate-servo-library.mjs";
 import { listSoftwareSerialLibrarySnapshots } from "./src/language/generate-software-serial-library.mjs";
@@ -54,7 +54,7 @@ export const listLanguageSnapshots = () => {
 		...listMethodReceiverSnapshots(),
 		...listLocalClosureSnapshots(),
 		...listCapturedFieldAccessSnapshots(),
-		...listObjectSelfReferenceSnapshots(),
+		...listObjectCycleSnapshots(),
 		...listSwitchExhaustivenessSnapshots(),
 		...listLogicalOperatorSnapshots(),
 		...listMathLibrarySnapshots(),

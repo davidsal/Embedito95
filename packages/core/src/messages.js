@@ -130,8 +130,6 @@ const DIAG_MESSAGES = {
 		"Cannot assign '{actual}' to field '{field}' of type '{expected}'.",
 	[ERROR_CODE.objectTypeMismatch]:
 		"Object literal does not match type '{type}': '{detail}'.",
-	[ERROR_CODE.objectSelfReference]:
-		"Storing '{name}' inside its own field '{field}' would create a reference cycle; object self-references are not allowed (no garbage collector).",
 	[ERROR_CODE.methodOnlyObjectLiteral]:
 		"Type '{type}' has methods but no data fields, so an inline method for '{method}' must be a plain function that does not capture local state. Reference a named function, drop the captured state, or build the object with a factory.",
 	[ERROR_CODE.capturedFieldAccess]:

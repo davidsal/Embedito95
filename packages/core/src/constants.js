@@ -125,7 +125,6 @@ export const ERROR_CODE = {
 	unknownObjectField: `${ERROR_PREFIX}unknownObjectField`,
 	objectFieldTypeMismatch: `${ERROR_PREFIX}objectFieldTypeMismatch`,
 	objectTypeMismatch: `${ERROR_PREFIX}objectTypeMismatch`,
-	objectSelfReference: `${ERROR_PREFIX}objectSelfReference`,
 	methodOnlyObjectLiteral: `${ERROR_PREFIX}methodOnlyObjectLiteral`,
 	capturedFieldAccess: `${ERROR_PREFIX}capturedFieldAccess`,
 	callbackCapturesLocalState: `${ERROR_PREFIX}callbackCapturesLocalState`,

@@ -63,7 +63,7 @@ import { runLspCompletionChecks } from "./lsp-completion-checks.js";
 import { runLspDiagnosticsChecks } from "./lsp-diagnostics-checks.js";
 import { runLspHoverChecks } from "./lsp-hover-checks.js";
 import { runLspInterruptChecks } from "./lsp-interrupt-checks.js";
-import { runLspObjectSelfReferenceChecks } from "./lsp-object-self-reference-checks.js";
+import { runLspObjectCycleChecks } from "./lsp-object-cycle-checks.js";
 import { runLspPrefixDiagnosticsChecks } from "./lsp-prefix-diagnostics-checks.js";
 import { runLspSerial2Checks } from "./lsp-serial2-checks.js";
 import { runLspStrictEqualityChecks } from "./lsp-strict-equality-checks.js";
@@ -376,12 +376,9 @@ export const run = async () => {
 	);
 	collectMismatches(lspPrefixDiagnosticsResults, mismatches);
 
-	const lspObjectSelfReferenceResults = await runLspObjectSelfReferenceChecks();
-	reportUnitChecks(
-		LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
-		lspObjectSelfReferenceResults,
-	);
-	collectMismatches(lspObjectSelfReferenceResults, mismatches);
+	const lspObjectCycleResults = await runLspObjectCycleChecks();
+	reportUnitChecks(LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP, lspObjectCycleResults);
+	collectMismatches(lspObjectCycleResults, mismatches);
 
 	const lspWireResults = await runLspWireChecks();
 	reportUnitChecks(LSP_HOVER_UNIT_CHECKS_GROUP, lspWireResults);
