@@ -173,6 +173,7 @@ export const buildConfiguration = (
 		configuration.package = `${PACKAGE_PREFIX}${projectName}`;
 	} else {
 		configuration.platform = platformName;
+		configuration.enableCycleCollector = true;
 		configuration.core = [];
 		configuration.libraries = [];
 	}

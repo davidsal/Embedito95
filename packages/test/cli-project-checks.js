@@ -24,6 +24,7 @@ import {
 	PROJECT_TYPE,
 	parse,
 	readPackageNames,
+	shared,
 	tokenize,
 	UTF8,
 } from "embedito95-core";
@@ -101,6 +102,10 @@ const DOCS_VERSION_FILE_NAME = "VERSION";
 const DOCS_VERSION_REFERENCE = "docs/VERSION";
 const INIT_LIBRARY_NAME = "init-library";
 const INIT_PROJECT_NAME = "init-project";
+const INVALID_CYCLE_COLLECTOR_DIRECTORY_NAME =
+	"invalid-cycle-collector-project";
+const INVALID_CYCLE_COLLECTOR_ERROR =
+	'Invalid "enableCycleCollector" in config.json: expected true or false';
 const INSTALL_PROJECT_DIRECTORY_NAME = "install-project";
 const LIBRARY_PACKAGE_PREFIX = "embedito95-";
 const LANGUAGE_DOC_FILE_NAME = "e95-language.md";
@@ -518,6 +523,26 @@ const checkInitConfiguration = () => {
 			"init library configuration keeps the toolchain version anchor",
 			typeof libraryConfiguration.embedito95Version,
 			"string",
+		),
+		expectEqual(
+			"init library configuration omits the cycle collector flag",
+			"enableCycleCollector" in libraryConfiguration,
+			false,
+		),
+		expectEqual(
+			"init project configuration enables the cycle collector",
+			projectConfiguration.enableCycleCollector,
+			true,
+		),
+		expectEqual(
+			"absent enableCycleCollector defaults to enabled",
+			shared.resolveCyclesEnabled({}),
+			true,
+		),
+		expectEqual(
+			"explicit enableCycleCollector false disables the collector",
+			shared.resolveCyclesEnabled({ enableCycleCollector: false }),
+			false,
 		),
 		expectEqual(
 			"init project configuration starts with an empty core list",
@@ -1326,6 +1351,36 @@ const checkToolchainVersionInheritance = (temporaryDirectory) => {
 	];
 };
 
+const checkInvalidCycleCollectorConfiguration = async (temporaryDirectory) => {
+	const projectDirectory = join(
+		temporaryDirectory,
+		INVALID_CYCLE_COLLECTOR_DIRECTORY_NAME,
+	);
+	writeMinimalProject(projectDirectory);
+	const configuration = readJson(join(projectDirectory, CONFIG_FILE));
+	configuration.enableCycleCollector = "on";
+	writeFileSync(
+		join(projectDirectory, CONFIG_FILE),
+		`${JSON.stringify(configuration, null, JSON_INDENTATION)}\n`,
+		UTF8,
+	);
+
+	const buildError = await captureCliFailure(projectDirectory, BUILD_COMMAND);
+
+	return [
+		expectEqual(
+			"build rejects a non-boolean enableCycleCollector",
+			buildError !== null,
+			true,
+		),
+		expectEqual(
+			"build explains enableCycleCollector must be boolean",
+			buildError?.stderr.includes(INVALID_CYCLE_COLLECTOR_ERROR),
+			true,
+		),
+	];
+};
+
 export const runCliProjectChecks = async () => {
 	const temporaryDirectory = mkdtempSync(
 		join(tmpdir(), CLI_PROJECT_TEMP_DIRECTORY_PREFIX),
@@ -1347,6 +1402,7 @@ export const runCliProjectChecks = async () => {
 			),
 			...checkMissingDocsSource(temporaryDirectory),
 			...checkToolchainVersionInheritance(temporaryDirectory),
+			...(await checkInvalidCycleCollectorConfiguration(temporaryDirectory)),
 			...checkVersionDecision(temporaryDirectory),
 			...checkDelegationExecution(),
 			...checkDelegationFailure(),

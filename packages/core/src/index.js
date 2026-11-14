@@ -93,12 +93,19 @@ export {
 } from "./project/index.js";
 export * as shared from "./strategy-shared/index.js";
 export {
+	CYCLES_CONFIG_FILE_NAME,
 	compileProjectLibrary,
+	ENABLE_CYCLE_COLLECTOR_OPTION,
 	formatFloat32Value,
 	formatFloat64Value,
 	loadTemplates,
 	MAIN_ENTRY_MAIN,
 	MAIN_ENTRY_SETUP_LOOP,
+	renderCyclesConfigHeader,
+	renderCyclesDefineArgument,
 	renderLibraryBuildArtifacts,
+	resolveCyclesEnabled,
+	writeCyclesConfigHeader,
+	writeCyclesConfigHeaders,
 } from "./strategy-shared/index.js";
 export { resolvePlatformTypes } from "./types.js";

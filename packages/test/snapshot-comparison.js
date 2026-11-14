@@ -9,6 +9,7 @@ import { dirname, extname, join } from "node:path";
 import {
 	BUILD_DIRECTORY_NAME,
 	CORE_LIBRARIES_DIRECTORY_NAME,
+	CYCLES_CONFIG_FILE_NAME,
 	LIBRARIES_DIRECTORY_NAME,
 	UTF8,
 } from "embedito95-core";
@@ -77,6 +78,11 @@ const processLibrariesSnapshot = (
 	for (const libraryName of readdirSync(librariesDirectory)) {
 		const librarySourceDirectory = join(librariesDirectory, libraryName);
 		for (const fileName of readdirSync(librarySourceDirectory)) {
+			// The generated config header is validated by `config-include-checks.js`;
+			// skipping it avoids one duplicated snapshot per library.
+			if (fileName === CYCLES_CONFIG_FILE_NAME) {
+				continue;
+			}
 			const snapshotPath = join(
 				snapshotsDirectory,
 				ENGINE_DIRECTORY_NAME,
@@ -132,6 +138,11 @@ export const snapshotBuild = (
 		}
 
 		if (entry.isFile()) {
+			// The generated config header is validated by `config-include-checks.js`;
+			// skipping it avoids one duplicated snapshot per unit/library.
+			if (entry.name === CYCLES_CONFIG_FILE_NAME) {
+				continue;
+			}
 			const snapshotPath = join(
 				categorySnapshotDirectory,
 				`${testName}${extname(entry.name)}`,

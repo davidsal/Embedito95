@@ -14,6 +14,25 @@ struct Bound {
 	core_object::Object<Cfg> cfg;
 };
 
+inline void _e95Trace_Bound(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Bound> *typed = (core_mem::RefBox<Bound> *)box;
+	Bound *value = &typed->value;
+	value->cfg.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Bound> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Bound>,
+			&_e95Trace_Bound,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 core_serial::SerialPort serial = core_serial::getSerial(core_serial::Serial::SERIAL_1);
 
 i16 readPin(core_object::Object<Bound> &self);

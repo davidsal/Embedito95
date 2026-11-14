@@ -106,7 +106,11 @@ export const compile = async ({
 
 	const compileResult = await shared.runSpawnedProcess(
 		compilerPath,
-		buildCompilerArguments({ includeDirectories, sourceFiles, executablePath }),
+		buildCompilerArguments({
+			includeDirectories,
+			sourceFiles,
+			executablePath,
+		}),
 		{ timeout: COMPILE_TIMEOUT_MILLISECONDS },
 	);
 

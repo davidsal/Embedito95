@@ -1,9 +1,7 @@
-import { ERROR_CODE } from "embedito95-core";
 import {
 	buildSnapshotReport,
 	checkSource,
 	createLibraries,
-	hasErrorCode,
 	isMainModule,
 	listSnapshots,
 	renderFlagCase,
@@ -12,19 +10,31 @@ import {
 
 const LIBRARIES = createLibraries();
 
+const SELF_REFERENCE_PATTERN =
+	/objectSelfReference|self-reference|reference cycle/i;
+
+const hasSelfReferenceDiagnostic = (errors) => {
+	return errors.some((error) => {
+		return SELF_REFERENCE_PATTERN.test(`${error.code ?? ""} ${error.message ?? ""}`);
+	});
+};
+
+// Cycles are reclaimed at runtime by the trial-deletion collector, so the
+// checker must not flag any of these programs. The snapshot pins that absence:
+// every case reports `selfReference: no`.
 const renderCase = ({ body, description }) => {
 	const { errors } = checkSource(`${body.join("\n")}\n`, LIBRARIES);
 	return renderFlagCase({
 		description,
-		label: "objectSelfReference",
-		flag: hasErrorCode(errors, ERROR_CODE.objectSelfReference),
+		label: "selfReference",
+		flag: hasSelfReferenceDiagnostic(errors),
 	});
 };
 
 const buildReport = () => {
 	const cases = [
 		{
-			description: "type Node = { next: Node }; n.next = n -> cycle error",
+			description: "type Node = { next: Node }; n.next = n -> accepted",
 			body: [
 				"type Node = {",
 				"    next: Node",
@@ -38,7 +48,8 @@ const buildReport = () => {
 			],
 		},
 		{
-			description: "type Node = { next: Node | null }; n.next = n -> cycle error",
+			description:
+				"type Node = { next: Node | null }; n.next = n -> accepted",
 			body: [
 				"type Node = {",
 				"    next: Node | null",
@@ -52,7 +63,7 @@ const buildReport = () => {
 			],
 		},
 		{
-			description: "n.next = m (a different Node, not self) -> ok",
+			description: "n.next = m (a different Node, not self) -> accepted",
 			body: [
 				"type Node = {",
 				"    next: Node",
@@ -67,7 +78,7 @@ const buildReport = () => {
 			],
 		},
 		{
-			description: "acyclic linked list a.next = b; b.next = null -> ok",
+			description: "acyclic linked list a.next = b; b.next = null -> accepted",
 			body: [
 				"type Node = {",
 				"    next: Node | null",
@@ -83,7 +94,7 @@ const buildReport = () => {
 			],
 		},
 		{
-			description: "indirect cycle a.next = b; b.next = a -> not detected (ok)",
+			description: "indirect cycle a.next = b; b.next = a -> accepted",
 			body: [
 				"type Node = {",
 				"    next: Node | null",
@@ -99,7 +110,7 @@ const buildReport = () => {
 			],
 		},
 		{
-			description: "scalar field self-name is not an object field -> ok",
+			description: "scalar field self-name is not an object field -> accepted",
 			body: [
 				"type Pair = {",
 				"    value: i16",
@@ -115,27 +126,25 @@ const buildReport = () => {
 	];
 
 	const header = [
-		"// Direct object self-reference guard (refcount has no GC).",
-		"// 'obj.field = obj' where the field holds the object's own type must emit",
-		"// error.objectSelfReference (a length-1 reference cycle), including when the",
-		"// field is nullable. Assigning a DIFFERENT instance, building an acyclic",
-		"// linked list, or forming an indirect cycle across variables must not flag;",
-		"// indirect cycles are a documented restriction that leaks memory.",
+		"// Object reference cycles (handled by the runtime trial-deletion collector).",
+		"// The checker emits no static diagnostic for 'obj.field = obj', whether the",
+		"// field is the object's own type or nullable, and longer cycles are equally",
+		"// accepted. Every case below must stay diagnostic-free.",
 		"",
 	];
 
 	return buildSnapshotReport(header, cases, renderCase);
 };
 
-export const listObjectSelfReferenceSnapshots = () => {
-	return listSnapshots("object-self-reference.txt", buildReport());
+export const listObjectCycleSnapshots = () => {
+	return listSnapshots("object-cycle.txt", buildReport());
 };
 
-export const writeObjectSelfReferenceSnapshots = () => {
-	writeSnapshots(listObjectSelfReferenceSnapshots());
+export const writeObjectCycleSnapshots = () => {
+	writeSnapshots(listObjectCycleSnapshots());
 };
 
 if (isMainModule(import.meta.url)) {
-	writeObjectSelfReferenceSnapshots();
-	console.log("Generated object-self-reference.txt");
+	writeObjectCycleSnapshots();
+	console.log("Generated object-cycle.txt");
 }

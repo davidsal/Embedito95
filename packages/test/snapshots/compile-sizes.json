@@ -1,8 +1,8 @@
 {
 	"arduino-nano": {
 		"examples/arduino-nano/async-locals.test.e95": {
-			"flash": 6522,
-			"ram": 76,
+			"flash": 8344,
+			"ram": 246,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -31,50 +31,50 @@
 			"ramMax": 2048
 		},
 		"libraries/arduino-nano/dht22.test.e95": {
-			"flash": 5622,
-			"ram": 256,
+			"flash": 7150,
+			"ram": 406,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"libraries/arduino-nano/eeprom.test.e95": {
-			"flash": 3762,
-			"ram": 53,
+			"flash": 5258,
+			"ram": 203,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"libraries/arduino-nano/max7219.test.e95": {
-			"flash": 4498,
-			"ram": 73,
+			"flash": 6120,
+			"ram": 231,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"libraries/arduino-nano/servo.test.e95": {
-			"flash": 3364,
-			"ram": 80,
+			"flash": 4692,
+			"ram": 222,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"libraries/arduino-nano/software-serial.test.e95": {
-			"flash": 6602,
-			"ram": 205,
+			"flash": 8040,
+			"ram": 351,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"libraries/arduino-nano/ssd1306.test.e95": {
-			"flash": 10260,
-			"ram": 309,
+			"flash": 11884,
+			"ram": 479,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/anon-nested.test.e95": {
-			"flash": 4184,
-			"ram": 250,
+			"flash": 5738,
+			"ram": 400,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/anon-shape.test.e95": {
-			"flash": 4236,
-			"ram": 250,
+			"flash": 5758,
+			"ram": 400,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -85,50 +85,50 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/array-alias.test.e95": {
-			"flash": 5132,
-			"ram": 250,
+			"flash": 6744,
+			"ram": 404,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/array-string.test.e95": {
-			"flash": 8308,
-			"ram": 292,
+			"flash": 9886,
+			"ram": 502,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/async.test.e95": {
-			"flash": 6190,
-			"ram": 61,
+			"flash": 7960,
+			"ram": 227,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/callback-reassign.test.e95": {
-			"flash": 3912,
-			"ram": 250,
+			"flash": 5392,
+			"ram": 396,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/closure-capture.test.e95": {
-			"flash": 4822,
-			"ram": 250,
+			"flash": 6422,
+			"ram": 404,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/closure-local.test.e95": {
-			"flash": 2828,
-			"ram": 51,
+			"flash": 4228,
+			"ram": 213,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/closure-param.test.e95": {
-			"flash": 4078,
-			"ram": 250,
+			"flash": 5540,
+			"ram": 396,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/const-object.test.e95": {
-			"flash": 3890,
-			"ram": 256,
+			"flash": 5370,
+			"ram": 402,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -151,8 +151,8 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/function-parameter.test.e95": {
-			"flash": 3712,
-			"ram": 250,
+			"flash": 5124,
+			"ram": 392,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -163,8 +163,8 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/i2c.test.e95": {
-			"flash": 6748,
-			"ram": 293,
+			"flash": 8300,
+			"ram": 447,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -175,8 +175,8 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/inline-callback.test.e95": {
-			"flash": 4258,
-			"ram": 250,
+			"flash": 5788,
+			"ram": 404,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -193,8 +193,8 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/keywords.test.e95": {
-			"flash": 3738,
-			"ram": 254,
+			"flash": 5208,
+			"ram": 400,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -205,98 +205,98 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/method-receiver.test.e95": {
-			"flash": 2844,
-			"ram": 51,
+			"flash": 4282,
+			"ram": 205,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/nested-array.test.e95": {
-			"flash": 5986,
-			"ram": 256,
+			"flash": 7630,
+			"ram": 422,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/nested-object.test.e95": {
-			"flash": 5668,
-			"ram": 262,
+			"flash": 7118,
+			"ram": 416,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/nullable-truthiness.test.e95": {
-			"flash": 8660,
-			"ram": 256,
+			"flash": 10244,
+			"ram": 422,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/object-alias.test.e95": {
-			"flash": 4212,
-			"ram": 258,
+			"flash": 5684,
+			"ram": 404,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/object-array-field.test.e95": {
-			"flash": 6468,
-			"ram": 258,
-			"flashMax": 30720,
-			"ramMax": 2048
-		},
-		"core/arduino-nano/object-factory.test.e95": {
-			"flash": 3934,
-			"ram": 250,
-			"flashMax": 30720,
-			"ramMax": 2048
-		},
-		"core/arduino-nano/object-methods.test.e95": {
-			"flash": 4074,
-			"ram": 254,
-			"flashMax": 30720,
-			"ramMax": 2048
-		},
-		"core/arduino-nano/objects.test.e95": {
-			"flash": 5302,
-			"ram": 250,
-			"flashMax": 30720,
-			"ramMax": 2048
-		},
-		"core/arduino-nano/objeto-param.test.e95": {
-			"flash": 4356,
-			"ram": 254,
-			"flashMax": 30720,
-			"ramMax": 2048
-		},
-		"core/arduino-nano/serial.test.e95": {
-			"flash": 21024,
-			"ram": 254,
-			"flashMax": 30720,
-			"ramMax": 2048
-		},
-		"core/arduino-nano/serial-share.test.e95": {
-			"flash": 5282,
+			"flash": 8234,
 			"ram": 436,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
+		"core/arduino-nano/object-factory.test.e95": {
+			"flash": 5410,
+			"ram": 396,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
+		"core/arduino-nano/object-methods.test.e95": {
+			"flash": 5640,
+			"ram": 408,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
+		"core/arduino-nano/objects.test.e95": {
+			"flash": 6886,
+			"ram": 408,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
+		"core/arduino-nano/objeto-param.test.e95": {
+			"flash": 5900,
+			"ram": 408,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
+		"core/arduino-nano/serial.test.e95": {
+			"flash": 22490,
+			"ram": 412,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
+		"core/arduino-nano/serial-share.test.e95": {
+			"flash": 6748,
+			"ram": 582,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
 		"core/arduino-nano/spi.test.e95": {
-			"flash": 4754,
-			"ram": 77,
+			"flash": 6234,
+			"ram": 231,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/string-alias.test.e95": {
-			"flash": 5446,
-			"ram": 250,
+			"flash": 6908,
+			"ram": 396,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/string-conversion.test.e95": {
-			"flash": 17884,
-			"ram": 254,
+			"flash": 19254,
+			"ram": 424,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"core/arduino-nano/string-mutation.test.e95": {
-			"flash": 6264,
-			"ram": 250,
+			"flash": 7752,
+			"ram": 396,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -315,8 +315,8 @@
 	},
 	"stm32-bluepill": {
 		"examples/stm32-bluepill/async-locals.test.e95": {
-			"flash": 11920,
-			"ram": 2060,
+			"flash": 13524,
+			"ram": 2340,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -345,44 +345,44 @@
 			"ramMax": 20480
 		},
 		"libraries/stm32-bluepill/dht22.test.e95": {
-			"flash": 13688,
-			"ram": 2092,
+			"flash": 14816,
+			"ram": 2364,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"libraries/stm32-bluepill/max7219.test.e95": {
-			"flash": 11296,
-			"ram": 2068,
+			"flash": 12508,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"libraries/stm32-bluepill/servo.test.e95": {
-			"flash": 10820,
-			"ram": 2084,
+			"flash": 11792,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"libraries/stm32-bluepill/software-serial.test.e95": {
-			"flash": 12916,
-			"ram": 2396,
+			"flash": 14008,
+			"ram": 2660,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"libraries/stm32-bluepill/ssd1306.test.e95": {
-			"flash": 16536,
-			"ram": 2116,
+			"flash": 17944,
+			"ram": 2396,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/anon-nested.test.e95": {
-			"flash": 11580,
-			"ram": 2084,
+			"flash": 12792,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/anon-shape.test.e95": {
-			"flash": 11708,
-			"ram": 2084,
+			"flash": 12884,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -393,50 +393,50 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/array-alias.test.e95": {
-			"flash": 12084,
-			"ram": 2084,
+			"flash": 13252,
+			"ram": 2364,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/array-string.test.e95": {
-			"flash": 14180,
-			"ram": 2164,
+			"flash": 15812,
+			"ram": 2492,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/async.test.e95": {
-			"flash": 12260,
-			"ram": 2036,
+			"flash": 13836,
+			"ram": 2316,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/callback-reassign.test.e95": {
-			"flash": 11404,
-			"ram": 2084,
+			"flash": 12532,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/closure-capture.test.e95": {
-			"flash": 12380,
-			"ram": 2084,
+			"flash": 13724,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/closure-local.test.e95": {
-			"flash": 9576,
-			"ram": 2008,
+			"flash": 10948,
+			"ram": 2280,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/closure-param.test.e95": {
-			"flash": 11508,
-			"ram": 2084,
+			"flash": 12636,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/const-object.test.e95": {
-			"flash": 11388,
-			"ram": 2092,
+			"flash": 12508,
+			"ram": 2364,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -459,8 +459,8 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/function-parameter.test.e95": {
-			"flash": 11252,
-			"ram": 2084,
+			"flash": 12292,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -471,8 +471,8 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/i2c.test.e95": {
-			"flash": 13140,
-			"ram": 2076,
+			"flash": 14200,
+			"ram": 2356,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -483,8 +483,8 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/inline-callback.test.e95": {
-			"flash": 11696,
-			"ram": 2084,
+			"flash": 12936,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -501,8 +501,8 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/keywords.test.e95": {
-			"flash": 11356,
-			"ram": 2084,
+			"flash": 12484,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -513,98 +513,98 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/method-receiver.test.e95": {
-			"flash": 9600,
-			"ram": 2008,
+			"flash": 10908,
+			"ram": 2280,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/nested-array.test.e95": {
-			"flash": 12460,
-			"ram": 2092,
+			"flash": 13768,
+			"ram": 2388,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/nested-object.test.e95": {
-			"flash": 12696,
-			"ram": 2084,
+			"flash": 14032,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/nullable-truthiness.test.e95": {
-			"flash": 16104,
-			"ram": 2092,
+			"flash": 17424,
+			"ram": 2372,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/object-alias.test.e95": {
-			"flash": 11620,
-			"ram": 2084,
+			"flash": 12756,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/object-array-field.test.e95": {
-			"flash": 13180,
-			"ram": 2084,
+			"flash": 14748,
+			"ram": 2372,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/object-factory.test.e95": {
-			"flash": 11444,
-			"ram": 2084,
+			"flash": 12576,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/object-methods.test.e95": {
-			"flash": 11584,
-			"ram": 2084,
+			"flash": 12776,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/objects.test.e95": {
-			"flash": 12424,
-			"ram": 2084,
+			"flash": 13712,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/objeto-param.test.e95": {
-			"flash": 11816,
-			"ram": 2084,
+			"flash": 13040,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/serial.test.e95": {
-			"flash": 20128,
-			"ram": 2092,
+			"flash": 21372,
+			"ram": 2372,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/serial-share.test.e95": {
-			"flash": 12204,
-			"ram": 2104,
+			"flash": 13452,
+			"ram": 2384,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/spi.test.e95": {
-			"flash": 11596,
-			"ram": 2068,
+			"flash": 12660,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/string-alias.test.e95": {
-			"flash": 12228,
-			"ram": 2084,
+			"flash": 13388,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/string-conversion.test.e95": {
-			"flash": 17344,
-			"ram": 2084,
+			"flash": 18604,
+			"ram": 2372,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/string-mutation.test.e95": {
-			"flash": 13196,
-			"ram": 2084,
+			"flash": 14356,
+			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},

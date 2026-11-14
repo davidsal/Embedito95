@@ -46,6 +46,18 @@ const validateProjectConfiguration = (configuration) => {
 		writeErrorLine(`${red("✖")} Cannot build a library. Use 'publish' instead`);
 		process.exit(1);
 	}
+
+	const enableCycleCollector =
+		configuration[shared.ENABLE_CYCLE_COLLECTOR_OPTION];
+	if (
+		enableCycleCollector !== undefined &&
+		typeof enableCycleCollector !== "boolean"
+	) {
+		writeErrorLine(
+			`${red("✖")} Invalid "${shared.ENABLE_CYCLE_COLLECTOR_OPTION}" in config.json: expected true or false`,
+		);
+		process.exit(1);
+	}
 };
 
 const prepareBuildDirectory = (projectName) => {
@@ -110,6 +122,7 @@ const compileAsyncModule = (
 	platform,
 	libraryModules,
 	projectLibraries,
+	cycles,
 ) => {
 	if (!intermediate.async) {
 		return null;
@@ -119,6 +132,7 @@ const compileAsyncModule = (
 		platform,
 		libraryModules,
 		projectLibraries.libraryNamespaces,
+		cycles,
 	);
 };
 
@@ -169,6 +183,7 @@ const writeBuildOutput = ({
 	asyncTaskModule,
 	libraryModules,
 	buildDirectory,
+	cycles,
 }) => {
 	mkdirSync(join(buildDirectory, MODULES_DIRECTORY_NAME), { recursive: true });
 
@@ -185,6 +200,7 @@ const writeBuildOutput = ({
 		buildDirectory,
 	);
 	copyCoreLibraries(libraryModules, buildDirectory, CURRENT_WORKING_DIRECTORY);
+	shared.writeCyclesConfigHeaders(buildDirectory, cycles);
 
 	writeLine(`${green("✔")} Built ${projectName}${strategy.extension}`);
 };
@@ -194,6 +210,7 @@ export const run = async () => {
 	validateProjectConfiguration(configuration);
 
 	const projectName = configuration.name;
+	const cycles = shared.resolveCyclesEnabled(configuration);
 	const { strategy, platform } = await loadEngineModules(
 		"generate",
 		`${red("✖")} Could not load engine`,
@@ -247,6 +264,7 @@ export const run = async () => {
 		platform,
 		libraryModules,
 		projectLibraries,
+		cycles,
 	);
 	const asyncModuleIncludes = buildAsyncModuleIncludes(
 		strategy,
@@ -288,6 +306,7 @@ export const run = async () => {
 			entryLibraries,
 			asyncModuleIncludes,
 			asyncTaskModule?.objectTypeInfo ?? null,
+			cycles,
 		);
 
 	writeBuildOutput({
@@ -299,5 +318,6 @@ export const run = async () => {
 		asyncTaskModule,
 		libraryModules,
 		buildDirectory,
+		cycles,
 	});
 };

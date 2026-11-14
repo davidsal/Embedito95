@@ -1,0 +1,28 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A graph whose nodes hold each other in an array: the cycle is closed through
+// `Array<GraphNode>` storage, so the array's Storage trace must visit its
+// element handles for collection to reach the other node.
+type GraphNode = {
+    edges: GraphNode[]
+}
+
+const connectBoth = (first: GraphNode, second: GraphNode) => {
+    first.edges.push(second)
+    second.edges.push(first)
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const first: GraphNode = { edges: [] }
+        const second: GraphNode = { edges: [] }
+        connectBoth(first, second)
+    }
+    setAnalog(Pin.6, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

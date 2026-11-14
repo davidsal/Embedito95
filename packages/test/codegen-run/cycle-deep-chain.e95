@@ -1,0 +1,41 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A 64-node ring exceeds the collector's fixed 32-entry worklist. The contract
+// is "never corrupt": the deep cycle may be left allocated, but the program must
+// terminate without a crash, UAF or double free after collection is forced.
+type Node = {
+    value: u8
+    next?: Node
+}
+
+const buildRing = (length: u16) => {
+    let head: Node = { value: 1 }
+    let current: Node = head
+    for (let index: u16 = 0; index < length; index = index + 1) {
+        const next: Node = { value: 2 }
+        current.next = next
+        current = next
+    }
+    current.next = head
+}
+
+const fillWithCycles = () => {
+    for (let index: u16 = 0; index < 200; index = index + 1) {
+        const node: Node = { value: 3 }
+        node.next = node
+    }
+}
+
+const setup = () => {
+    if (true) {
+        buildRing(64)
+    }
+    fillWithCycles()
+    setAnalog(Pin.3, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

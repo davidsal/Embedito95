@@ -32,6 +32,7 @@ export const compileProjectLibrary = ({
 	namespace,
 	headerIncludes = null,
 	libraryGlobalsInSource = false,
+	cycles = true,
 }) => {
 	const { tokens, errors: lexErrors } = tokenize(source);
 
@@ -45,6 +46,7 @@ export const compileProjectLibrary = ({
 		userObjectMethods,
 		libraryHeaderGlobal,
 		libraryHeaderNamespace,
+		libraryHeaderTypeInfo,
 		librarySource,
 		objectTypeInfo,
 	} = generateCode({
@@ -63,6 +65,7 @@ export const compileProjectLibrary = ({
 		namespace,
 		splitLibrary: true,
 		libraryGlobalsInSource,
+		cycles,
 	});
 
 	if (!namespace) {
@@ -95,6 +98,9 @@ export const compileProjectLibrary = ({
 		headerSections.push(libraryHeaderNamespace);
 	}
 	headerSections.push("}");
+	if (libraryHeaderTypeInfo) {
+		headerSections.push(libraryHeaderTypeInfo);
+	}
 	headerSections.push("#endif");
 	const header = headerSections.join("\n\n");
 	const libraryCpp = [

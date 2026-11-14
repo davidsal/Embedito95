@@ -13,14 +13,17 @@ import {
 } from "./case-discovery.js";
 import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
+import { runConfigIncludeChecks } from "./config-include-checks.js";
 import { runConsoleChecks } from "./console-checks.js";
 import {
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
+	CONFIG_INCLUDE_UNIT_CHECKS_GROUP,
 	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
+	CYCLES_FLAG_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
 	FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
@@ -55,6 +58,7 @@ import {
 } from "./constants.js";
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
+import { runCyclesFlagChecks } from "./cycles-flag-checks.js";
 import { runFunctionTypeParserChecks } from "./function-type-parser-checks.js";
 import { runRegistryIntTypeParityChecks } from "./int-type-parity-checks.js";
 import { listLanguageSnapshots } from "./language-snapshots.js";
@@ -63,7 +67,7 @@ import { runLspCompletionChecks } from "./lsp-completion-checks.js";
 import { runLspDiagnosticsChecks } from "./lsp-diagnostics-checks.js";
 import { runLspHoverChecks } from "./lsp-hover-checks.js";
 import { runLspInterruptChecks } from "./lsp-interrupt-checks.js";
-import { runLspObjectSelfReferenceChecks } from "./lsp-object-self-reference-checks.js";
+import { runLspObjectCycleChecks } from "./lsp-object-cycle-checks.js";
 import { runLspPrefixDiagnosticsChecks } from "./lsp-prefix-diagnostics-checks.js";
 import { runLspSerial2Checks } from "./lsp-serial2-checks.js";
 import { runLspStrictEqualityChecks } from "./lsp-strict-equality-checks.js";
@@ -218,6 +222,14 @@ export const run = async () => {
 	const coreSurfaceResults = runCoreSurfaceChecks();
 	reportUnitChecks(CORE_SURFACE_UNIT_CHECKS_GROUP, coreSurfaceResults);
 	collectMismatches(coreSurfaceResults, mismatches);
+
+	const cyclesFlagResults = await runCyclesFlagChecks();
+	reportUnitChecks(CYCLES_FLAG_UNIT_CHECKS_GROUP, cyclesFlagResults);
+	collectMismatches(cyclesFlagResults, mismatches);
+
+	const configIncludeResults = await runConfigIncludeChecks();
+	reportUnitChecks(CONFIG_INCLUDE_UNIT_CHECKS_GROUP, configIncludeResults);
+	collectMismatches(configIncludeResults, mismatches);
 
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);
@@ -376,12 +388,9 @@ export const run = async () => {
 	);
 	collectMismatches(lspPrefixDiagnosticsResults, mismatches);
 
-	const lspObjectSelfReferenceResults = await runLspObjectSelfReferenceChecks();
-	reportUnitChecks(
-		LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
-		lspObjectSelfReferenceResults,
-	);
-	collectMismatches(lspObjectSelfReferenceResults, mismatches);
+	const lspObjectCycleResults = await runLspObjectCycleChecks();
+	reportUnitChecks(LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP, lspObjectCycleResults);
+	collectMismatches(lspObjectCycleResults, mismatches);
 
 	const lspWireResults = await runLspWireChecks();
 	reportUnitChecks(LSP_HOVER_UNIT_CHECKS_GROUP, lspWireResults);

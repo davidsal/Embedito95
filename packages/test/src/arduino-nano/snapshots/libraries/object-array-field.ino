@@ -15,6 +15,26 @@ struct Pack {
 	core_array::Array<core_object::Object<Point>> coords;
 };
 
+inline void _e95Trace_Pack(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Pack> *typed = (core_mem::RefBox<Pack> *)box;
+	Pack *value = &typed->value;
+	value->counts.traceChild(visit);
+	value->coords.traceChild(visit);
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<Pack> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<Pack>,
+			&_e95Trace_Pack,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 core_serial::SerialPort serial = core_serial::getSerial(core_serial::Serial::SERIAL_1);
 
 void first(core_object::Object<Pack> p) {

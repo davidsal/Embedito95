@@ -267,6 +267,7 @@ always matches the CLI version. Add `--verbose` to see the raw editor output.
   "type": "project",
   "embedito95Version": "embedito95@1.0.0",
   "platform": "arduino-nano",
+  "enableCycleCollector": true,
   "core": ["@embedito95/gpio"],
   "libraries": ["@embedito95/dht22"]
 }
@@ -278,6 +279,7 @@ always matches the CLI version. Add `--verbose` to see the raw editor output.
 | `type` | `project` or `library`. |
 | `embedito95Version` | Toolchain version the project is pinned to. `docs/` matches it, and the CLI delegates to it when it differs from the running version. |
 | `platform` | Target board. |
+| `enableCycleCollector` | `true` (default) or `false`. `true` compiles the reference-cycle collector; `false` drops it and real cycles may stay allocated. |
 | `core` | Package names of the core libraries installed for that platform. Boards list every core library except `@embedito95/console`; host targets list `@embedito95/type`, `@embedito95/console`, `@embedito95/time` and `@embedito95/async`. Maintained by the CLI. |
 | `libraries` | Package names of the libraries to install from the registry. Edit this to add or remove. |
 

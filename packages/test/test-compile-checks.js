@@ -874,7 +874,7 @@ const checkSuccessfulHermeticCompile = async () => {
 	);
 };
 
-const EXAMPLE_JOB_COUNT = 4;
+const EXAMPLE_JOB_COUNT = 5;
 const ENTRY_PIPELINE_PLATFORM = "arduino-nano";
 const FAKE_SOURCE_DIRECTORY = "/fake-source";
 
@@ -968,7 +968,7 @@ const checkCollectPlatformJobsUsesGeneratedEntries = () => {
 
 	return [
 		expectEqual(
-			"fast compile jobs contain exactly the four platform examples",
+			"fast compile jobs contain exactly the five platform examples",
 			fastJobs.length,
 			EXAMPLE_JOB_COUNT,
 		),

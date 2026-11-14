@@ -22,6 +22,11 @@ namespace core_array {
 
 using core_mem::Ref;
 
+// Declared before the traits below so `Array<T>` can be recognized as a handle
+// even though its definition comes later in this file.
+template <typename T>
+class Array;
+
 namespace detail {
 // Capacity floor: fresh arrays start here and shrinking never goes below it.
 const u16 ARRAY_MIN_CAPACITY = 5;
@@ -74,10 +79,97 @@ struct Storage {
 	}
 };
 
+namespace detail {
+// Compile-time classification of an array element: a handle derives from
+// `core_mem::AnyObject` (Object<...>, AnyObject itself, nested Array<T>), so it
+// is detected by pointer convertibility without naming `core_object` (which may
+// not be declared yet at this point) or pulling in <type_traits>. Scalars and
+// String do not derive from AnyObject: an array of them cannot form a cycle.
+struct NoCycleHandleTag {};
+struct CycleHandleTag {};
+
+template <bool IsHandle>
+struct CycleHandleTagOf;
+
+template <>
+struct CycleHandleTagOf<true> {
+	typedef CycleHandleTag Type;
+};
+
+template <>
+struct CycleHandleTagOf<false> {
+	typedef NoCycleHandleTag Type;
+};
+
+template <typename T>
+struct IsCycleHandle {
+	static char detect(core_mem::AnyObject *);
+	static long detect(...);
+	static const bool value =
+		sizeof(detect(static_cast<T *>(0))) == sizeof(char);
+	typedef typename CycleHandleTagOf<value>::Type Type;
+};
+
+// Array<T> is a value wrapper around its Ref<Storage<T>>, so it does not derive
+// from AnyObject; it exposes traceChild explicitly and is a handle when nested.
+template <typename T>
+struct IsCycleHandle<Array<T>> {
+	typedef CycleHandleTag Type;
+};
+
+template <typename T>
+void traceHandleImpl(T &value, core_mem::TraceVisitor visit, CycleHandleTag) {
+	value.traceChild(visit);
+}
+
+template <typename T>
+void traceHandleImpl(T &, core_mem::TraceVisitor, NoCycleHandleTag) {}
+
+template <typename T>
+void traceHandle(T &value, core_mem::TraceVisitor visit) {
+	traceHandleImpl(value, visit, typename IsCycleHandle<T>::Type());
+}
+
+template <typename T>
+void traceStorage(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<Storage<T>> *typed = (core_mem::RefBox<Storage<T>> *)box;
+	Storage<T> *storage = &typed->value;
+	for (u16 i = 0; i < storage->size; i++) {
+		traceHandle(storage->data[i], visit);
+	}
+}
+
+typedef void (*StorageTraceFunction)(void *box, core_mem::TraceVisitor visit);
+
+template <typename T>
+StorageTraceFunction storageTrace(CycleHandleTag) {
+	return &traceStorage<T>;
+}
+
+template <typename T>
+StorageTraceFunction storageTrace(NoCycleHandleTag) {
+	return nullptr;
+}
+
+// TypeInfo for an array's Storage<T>. `trace` is null for a leaf element type
+// (nothing to walk) and non-null only when the elements are handles, so a
+// scalar array never becomes a collection candidate.
+template <typename T>
+struct ArrayStorageTypeInfo {
+	static const core_mem::TypeInfo *get() noexcept {
+		static const core_mem::TypeInfo typeInfo = {
+			&core_mem::destroyRefBox<Storage<T>>,
+			storageTrace<T>(typename IsCycleHandle<T>::Type()),
+		};
+		return &typeInfo;
+	}
+};
+} // namespace detail
+
 template <typename T>
 class Array {
 public:
-	Array() : storage_(Ref<Storage<T>>::emplace()) {
+	Array() : storage_(makeStorage()) {
 		storage_->ensureCapacity(detail::ARRAY_MIN_CAPACITY);
 	}
 
@@ -86,7 +178,7 @@ public:
 	// move construction from another Array (copy construction is required for
 	// the TS alias model).
 	template <typename... Rest>
-	Array(T first, Rest &&... rest) : storage_(Ref<Storage<T>>::emplace()) {
+	Array(T first, Rest &&... rest) : storage_(makeStorage()) {
 		storage_->ensureCapacity((u16)(1 + sizeof...(Rest)));
 		push(T(first));
 		pushConstructed(static_cast<Rest &&>(rest)...);
@@ -222,10 +314,23 @@ public:
 		return storage_.hasValue() ? storage_.get().data : nullptr;
 	}
 
+	// Reports the Storage handle as a child of the value currently being traced.
+	// An Array is stored by value inside an object (or another struct) but its
+	// elements live in a refcounted Storage box, so the collector must see that
+	// box to walk `Array<Object<...>>` graphs.
+	void traceChild(core_mem::TraceVisitor visit) const {
+		storage_.traceChild(visit);
+	}
+
 private:
+	static Ref<Storage<T>> makeStorage() {
+		return Ref<Storage<T>>::emplaceWithType(
+			detail::ArrayStorageTypeInfo<T>::get());
+	}
+
 	void ensureStorage() {
 		if (!storage_.hasValue()) {
-			storage_ = Ref<Storage<T>>::emplace();
+			storage_ = makeStorage();
 		}
 	}
 

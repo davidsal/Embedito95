@@ -1,0 +1,37 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// Same stack-handle cycle as `cycle-stack-handle.e95`, but with `cycles: "off"`
+// the collector is compiled out. The cycle leaks instead of being reclaimed, yet
+// the program must still run to completion with no crash, double free or UAF.
+type Node = {
+    value: u8
+    next?: Node
+}
+
+const link = (node: Node, target: Node) => {
+    node.next = target
+}
+
+const fillWithCycles = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const node: Node = { value: 0 }
+        link(node, node)
+    }
+}
+
+const setup = () => {
+    if (true) {
+        const node: Node = { value: 17 }
+        link(node, node)
+        fillWithCycles()
+        setAnalog(Pin.8, node.value)
+    }
+    fillWithCycles()
+    setAnalog(Pin.9, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

@@ -1,0 +1,31 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A cycle closed through array storage (`node.items.push(node)`). Dropping the
+// external handle leaves the object referenced only by its own array, so the
+// collector must reclaim it without corrupting the array or double freeing the
+// element.
+type Node = {
+    items: Node[]
+}
+
+const fillWithCycles = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const node: Node = { items: [] }
+        node.items.push(node)
+    }
+}
+
+const setup = () => {
+    if (true) {
+        const node: Node = { items: [] }
+        node.items.push(node)
+    }
+    fillWithCycles()
+    setAnalog(Pin.2, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

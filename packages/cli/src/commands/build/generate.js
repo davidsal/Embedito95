@@ -14,6 +14,7 @@ export const generateProjectCode = async (
 	entryLibraries,
 	asyncModuleIncludes,
 	asyncObjectTypeInfo = null,
+	cycles = true,
 ) => {
 	const {
 		projectLibraryParts,
@@ -28,6 +29,7 @@ export const generateProjectCode = async (
 		projectLibraries,
 		libraryModules,
 		DEFAULT_WORD_SIZE,
+		cycles,
 	);
 
 	// The generated async module is compiled on its own (not through the project
@@ -47,6 +49,7 @@ export const generateProjectCode = async (
 		libraryModules,
 		DEFAULT_WORD_SIZE,
 		projectLibraryFiles,
+		cycles,
 	);
 
 	const generated =
@@ -65,6 +68,7 @@ export const generateProjectCode = async (
 			moduleParts: [...moduleIncludes, ...(asyncModuleIncludes ?? [])],
 			additionalUserObjectMethods,
 			libraryObjectInfo: mergedLibraryObjectInfo,
+			cycles,
 		}) ?? {};
 
 	return { generated, projectLibraryFiles, moduleFiles };

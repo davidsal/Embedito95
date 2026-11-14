@@ -36,8 +36,9 @@ namespace core_object {
 // caller; reassigning a param/var rebinds only the local handle; move steals
 // the storage (moved-from is empty); dtor releases, freeing storage (and every
 // nested handle) when refs hit 0. A field aliasing an ancestor
-// (`obj.child = obj`) forms a reference cycle and leaks under a plain refcount
-// (no GC) — a documented unsupported case, not exercised here.
+// (`obj.child = obj`) forms a reference cycle: with cycles enabled the
+// trial-deletion collector reclaims it (see ../memory/ref.h), and with
+// `cycles: "off"` it leaks under the plain refcount.
 
 using core_mem::Ref;
 

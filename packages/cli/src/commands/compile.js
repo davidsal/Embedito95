@@ -39,6 +39,7 @@ export const run = async () => {
 	}
 
 	const projectName = configuration.name;
+	const cycles = shared.resolveCyclesEnabled(configuration);
 	const outputDirectory = join(
 		CURRENT_WORKING_DIRECTORY,
 		BUILD_DIRECTORY_NAME,
@@ -50,10 +51,13 @@ export const run = async () => {
 		process.exit(1);
 	}
 
+	shared.writeCyclesConfigHeaders(outputDirectory, cycles);
+
 	await strategy.compile({
 		outputDir: outputDirectory,
 		projectName,
 		platform,
 		shared,
+		cycles,
 	});
 };

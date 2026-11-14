@@ -25,8 +25,12 @@ TypeScript, keywords, and where each topic lives.
 - **Memory tuned for small devices.** Arrays, strings and objects are
   heap-backed, reference-counted handles, including fixed-size `T[N]` arrays.
   See [Engine](engine.md) for the runtime details.
-- **Reference counting.** A direct self-reference is rejected at compile time;
-  longer cycles are not detected and leak.
+- **Reference counting with runtime cycle collection.** Reference-counted
+  handles can form cycles (for example, `node.next = node`), and the runtime
+  frees unreachable ones with a trial-deletion collector: no `weak` reference
+  and no new syntax. Setting `enableCycleCollector: false` in `config.json` is
+  the escape hatch that drops the collector, and then real cycles stay
+  allocated.
 - **Portable by design.** Libraries are written in e95 and compiled per platform,
   so the same code can target different boards.
 

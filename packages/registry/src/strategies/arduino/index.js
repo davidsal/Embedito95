@@ -6,7 +6,9 @@ import {
 } from "../shared/directories.js";
 import { profile } from "./profile.js";
 
-const FWRAPV_BUILD_PROPERTY = "build.extra_flags=-fwrapv";
+const FWRAPV_FLAG = "-fwrapv";
+const EXTRA_FLAGS_BUILD_PROPERTY = "build.extra_flags";
+const BUILD_PROPERTY_ARGUMENT = "--build-property";
 const ARDUINO_CLI_COMMAND = "arduino-cli";
 const ARDUINO_CLI_REQUIREMENT_LABEL = "arduino-cli installed";
 const BOARD_PACKAGE_LABEL_PREFIX = "Board package";
@@ -130,6 +132,7 @@ const generate = ({
 	libraryParts,
 	moduleParts,
 	libraryNamespaces,
+	cycles = true,
 }) => {
 	const { renderStringLiteral, flashStrings } =
 		shared.resolvePlatformRenderOptions(platform);
@@ -150,6 +153,7 @@ const generate = ({
 		libraryParts,
 		moduleParts,
 		libraryNamespaces,
+		cycles,
 	});
 };
 
@@ -182,6 +186,7 @@ const compile = async ({
 	const { join } = await import("node:path");
 	const { existsSync } = await import("node:fs");
 	const fqbn = getCompileFqbn({ platform });
+	const extraFlags = [FWRAPV_FLAG];
 	const librariesDirectory = join(outputDir, LIBRARIES_DIRECTORY_NAME);
 	const coreLibrariesDirectory = join(outputDir, CORE_LIBRARIES_DIRECTORY_NAME);
 	const modulesDirectory = join(outputDir, MODULES_DIRECTORY_NAME);
@@ -201,8 +206,8 @@ const compile = async ({
 			"--fqbn",
 			fqbn,
 			...libraryArguments,
-			"--build-property",
-			FWRAPV_BUILD_PROPERTY,
+			BUILD_PROPERTY_ARGUMENT,
+			`${EXTRA_FLAGS_BUILD_PROPERTY}=${extraFlags.join(" ")}`,
 			"--json",
 			outputDir,
 		],

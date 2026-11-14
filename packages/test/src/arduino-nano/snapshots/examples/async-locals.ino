@@ -25,6 +25,27 @@ struct _AnimateAsyncTask {
 	u32 childSleepStart;
 };
 
+inline void _e95Trace__AnimateAsyncTask(void *box, core_mem::TraceVisitor visit) {
+	core_mem::RefBox<_AnimateAsyncTask> *typed = (core_mem::RefBox<_AnimateAsyncTask> *)box;
+	_AnimateAsyncTask *value = &typed->value;
+	if (!value->childReadStep.isNull) {
+		value->childReadStep.value.traceChild(visit);
+	}
+}
+
+namespace core_mem {
+template <>
+struct TypeInfoOf<_AnimateAsyncTask> {
+	static const TypeInfo *get() noexcept {
+		static const TypeInfo typeInfo = {
+			&destroyRefBox<_AnimateAsyncTask>,
+			&_e95Trace__AnimateAsyncTask,
+		};
+		return &typeInfo;
+	}
+};
+} // namespace core_mem
+
 const i8 STEP_SIZE = 1;
 const i8 STEP_LIMIT = 10;
 

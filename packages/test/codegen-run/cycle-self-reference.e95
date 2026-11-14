@@ -1,0 +1,28 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A self-referential handle (`a.next = a`) is a cycle the trial-deletion
+// collector must reclaim. Allocating more than the fixed worklist in a row
+// forces a collection while the temporary cycles are unreachable, so a broken
+// trace/destroy pairing would show up as a double free or use-after-free under
+// the sanitizers.
+type Node = {
+    next?: Node
+}
+
+const link = (node: Node, target: Node) => {
+    node.next = target
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const node: Node = {}
+        link(node, node)
+    }
+    setAnalog(Pin.3, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

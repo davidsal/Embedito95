@@ -1,0 +1,30 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A cyclic node that also owns leaf fields (`label` is a string box and
+// `values` is an array of scalars). Those leaves are never traversed by the
+// cycle trace, so the collector must release them normally while destroying
+// the whites; otherwise their box and buffer leak (LeakSanitizer catches it).
+type Node = {
+    label: string
+    values: u8[]
+    next?: Node
+}
+
+const link = (node: Node, target: Node) => {
+    node.next = target
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const node: Node = { label: "cycle", values: [] }
+        node.values.push(1)
+        link(node, node)
+    }
+    setAnalog(Pin.4, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

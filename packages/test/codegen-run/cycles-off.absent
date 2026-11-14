@@ -1,0 +1,3 @@
+# With `cycles: "off"` the collector wiring is compiled out: no per-object
+# trace function or TypeInfo specialization may be emitted.
+_e95Trace_

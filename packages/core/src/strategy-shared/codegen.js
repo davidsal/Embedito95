@@ -56,6 +56,7 @@ export const generateCode = ({
 	namespace = null,
 	splitLibrary = false,
 	libraryGlobalsInSource = false,
+	cycles = true,
 }) => {
 	const { wordCType, wordSize, wordType } = resolveWordOptions(platform);
 	const {
@@ -195,7 +196,7 @@ export const generateCode = ({
 		moduleParts,
 	);
 
-	const main = assembleMainParts(
+	const assembledMain = assembleMainParts(
 		includeSections,
 		typeDeclarations,
 		anonymousObjectTypes,
@@ -206,9 +207,11 @@ export const generateCode = ({
 		mainBody,
 		mainGenerator,
 		additionalParts,
+		ast,
+		namespace,
+		cycles,
 	);
-
-	const generated = { main, userObjectMethods };
+	const generated = { main: assembledMain, userObjectMethods };
 	generated.objectTypeInfo = buildObjectTypeInfo(
 		userTypeNames,
 		objectTypes,
@@ -227,6 +230,8 @@ export const generateCode = ({
 			constantDeclarations,
 			userFunctions,
 			libraryGlobalsInSource,
+			namespace,
+			cycles,
 		);
 	}
 

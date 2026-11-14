@@ -27,6 +27,7 @@ export const generate = ({
 	libraryParts,
 	moduleParts,
 	libraryNamespaces,
+	cycles = true,
 }) => {
 	const { renderStringLiteral } = shared.resolvePlatformRenderOptions(platform);
 	return shared.generateCode({
@@ -46,5 +47,6 @@ export const generate = ({
 		libraryParts,
 		moduleParts,
 		libraryNamespaces,
+		cycles,
 	});
 };

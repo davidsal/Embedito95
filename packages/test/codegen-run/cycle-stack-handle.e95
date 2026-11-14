@@ -1,0 +1,38 @@
+import { Pin, setAnalog } from '@embedito95/gpio'
+
+// A `let` handle on the stack keeps a self-referential object alive. Collections
+// forced while the handle is in scope must not reclaim it, and once the block
+// exits the whole cycle becomes unreachable and is reclaimed without a UAF or a
+// double free.
+type Node = {
+    value: u8
+    next?: Node
+}
+
+const link = (node: Node, target: Node) => {
+    node.next = target
+}
+
+const fillWithCycles = () => {
+    for (let index: u16 = 0; index < 100; index = index + 1) {
+        const node: Node = { value: 0 }
+        link(node, node)
+    }
+}
+
+const setup = () => {
+    if (true) {
+        const node: Node = { value: 17 }
+        link(node, node)
+        fillWithCycles()
+        setAnalog(Pin.2, node.value)
+    }
+    fillWithCycles()
+    setAnalog(Pin.3, 1)
+}
+
+const main = () => {
+    setup()
+}
+
+main()

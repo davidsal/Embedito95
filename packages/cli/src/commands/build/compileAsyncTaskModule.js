@@ -166,6 +166,7 @@ export const compileAsyncTaskModule = (
 	platform,
 	libraryModules,
 	libraryNamespaces = null,
+	cycles = true,
 ) => {
 	const moduleSource = extractAsyncTaskModuleSource(asyncSource);
 	if (!moduleSource) {
@@ -191,6 +192,7 @@ export const compileAsyncTaskModule = (
 		},
 		namespace,
 		libraryGlobalsInSource: true,
+		cycles,
 		...shared.resolvePlatformRenderOptions(platform),
 	});
 
