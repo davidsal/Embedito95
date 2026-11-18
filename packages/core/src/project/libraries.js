@@ -46,7 +46,7 @@ const countCommentLines = (comment) => {
 	return comment.value.match(/\n/g)?.length ?? 0;
 };
 
-const findDocCommentBefore = (comments, statementLine) => {
+export const findDocCommentBefore = (comments, statementLine) => {
 	for (let index = comments.length - 1; index >= 0; index--) {
 		const comment = comments[index];
 		if (!comment.value.startsWith(DOC_COMMENT_START)) {

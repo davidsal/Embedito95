@@ -88,6 +88,7 @@ export {
 	collectLibraryEnumInfo,
 	collectLibraryModuleInfo,
 	excludeLibrary,
+	findDocCommentBefore,
 	findEnclosingProjectRoot,
 	installLibrary,
 	loadLocalModules,

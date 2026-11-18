@@ -7,6 +7,7 @@ export {
 export {
 	collectLibraryEnumInfo,
 	collectLibraryModuleInfo,
+	findDocCommentBefore,
 } from "./libraries.js";
 export { loadLocalModules, mergeModuleLibraries } from "./modules.js";
 export {

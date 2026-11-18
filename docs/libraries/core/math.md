@@ -37,10 +37,13 @@ it selected:
   selected by width, not by summing per-argument conversion costs: the selected
   overload is the narrowest uniform width that accepts every argument without
   losing range. One `f64` argument is enough to select the `f64` overload, no
-  matter how many `f32` arguments accompany it; every `f32` argument (variable
-  or literal typed `f32`) is widened with an explicit `(f64)` cast, because a
-  bare C++ argument would make the call ambiguous between the `f32` and `f64`
-  overloads. This is why `interpolateRangeFloat(value64, 0.0, 1.0, 0.0, 100.0)`
+  matter how many `f32` arguments accompany it; every `f32` variable and every
+  integer argument is widened with an explicit `(f64)` cast, because a bare C++
+  argument would make the call ambiguous between the `f32` and `f64` overloads.
+  Float literals need no cast: they are emitted already in the parameter
+  context, so a `0.0` argument becomes a plain numeric literal (`0`) on native
+  targets and a `f64::fromBits(…)` construction on AVR. This is why
+  `interpolateRangeFloat(value64, 0.0, 1.0, 0.0, 100.0)`
   resolves to `f64` instead of narrowing `value64` to `f32` because the literals
   were cheaper. A call stays `f32` when every argument is `f32` or an integer
   whose whole type range is exact in `f32` (`u16`/`i16` or narrower).
@@ -107,96 +110,13 @@ their `f32` implementation and widen the result. On those targets an `f64`
 transcendental result therefore carries `f32` precision. Targets with a native
 `double` compute them in double precision.
 
-## Ranges and clamping
+## API reference
 
-| API | Description |
-| --- | --- |
-| `interpolateRange(value: i32, sourceMinimum: i32, sourceMaximum: i32, targetMinimum: i32, targetMaximum: i32): i32` | Maps an integer from one range to another. |
-| `interpolateRange(value: u32, sourceMinimum: u32, sourceMaximum: u32, targetMinimum: u32, targetMaximum: u32): u32` | Maps an unsigned integer from one range to another in 64-bit arithmetic. |
-| `interpolateRange(value: i64, sourceMinimum: i64, sourceMaximum: i64, targetMinimum: i64, targetMaximum: i64): i64` | Maps a wide integer from one range to another in 64-bit arithmetic. |
-| `interpolateRangeFloat(value: f32, sourceMinimum: f32, sourceMaximum: f32, targetMinimum: f32, targetMaximum: f32): f32` | Maps an `f32` value from one range to another. |
-| `interpolateRangeFloat(value: f64, sourceMinimum: f64, sourceMaximum: f64, targetMinimum: f64, targetMaximum: f64): f64` | Maps an `f64` value from one range to another in double precision. |
-| `clamp(value: i32, minimum: i32, maximum: i32): i32` | Limits an integer to a range. |
-| `clamp(value: u32, minimum: u32, maximum: u32): u32` | Limits an unsigned integer to a range. |
-| `clamp(value: i64, minimum: i64, maximum: i64): i64` | Limits a wide integer to a range without wrapping it negative. |
-| `clampFloat(value: f32, minimum: f32, maximum: f32): f32` | Limits an `f32` value to a range. |
-| `clampFloat(value: f64, minimum: f64, maximum: f64): f64` | Limits an `f64` value to a range. |
+Every exported function, its declaration with the width family, and the
+concrete overloads the compiler type-checks are listed in the generated
+[Math API reference](math-api.md). That page is built from the library source,
+so it cannot drift from the declarations; read it for exact signatures.
 
-## Numeric helpers
-
-| API | Description |
-| --- | --- |
-| `power(base: f32, exponent: f32): f32` | Raises an `f32` value to a power. |
-| `power(base: f64, exponent: f64): f64` | Raises an `f64` value to a power. |
-| `squareRoot(value: f32): f32` | Square root of an `f32` value. |
-| `squareRoot(value: f64): f64` | Square root of an `f64` value. |
-| `square(value: f32): f32` | Multiplies an `f32` value by itself. |
-| `square(value: f64): f64` | Multiplies an `f64` value by itself. |
-| `naturalLog(value: f32): f32` | Natural logarithm of an `f32` value. |
-| `naturalLog(value: f64): f64` | Natural logarithm of an `f64` value. |
-| `logarithm10(value: f32): f32` | Base-10 logarithm of an `f32` value. |
-| `logarithm10(value: f64): f64` | Base-10 logarithm of an `f64` value. |
-| `exponential(value: f32): f32` | `e` raised to an `f32` value. |
-| `exponential(value: f64): f64` | `e` raised to an `f64` value. |
-| `absolute(value: i32): i32` | Absolute value of an integer. |
-| `absolute(value: u32): u32` | Absolute value of an unsigned integer (itself). |
-| `absolute(value: i64): i64` | Absolute value of a wide integer; the most negative `i64` returns itself. |
-| `absoluteFloat(value: f32): f32` | Absolute value of an `f32` value. |
-| `absoluteFloat(value: f64): f64` | Absolute value of an `f64` value. |
-| `minimum(left: i32, right: i32): i32` | Smaller of two integers. |
-| `minimum(left: u32, right: u32): u32` | Smaller of two unsigned integers. |
-| `minimum(left: i64, right: i64): i64` | Smaller of two wide integers. |
-| `minimumFloat(left: f32, right: f32): f32` | Smaller of two `f32` values. |
-| `minimumFloat(left: f64, right: f64): f64` | Smaller of two `f64` values. |
-| `maximum(left: i32, right: i32): i32` | Larger of two integers. |
-| `maximum(left: u32, right: u32): u32` | Larger of two unsigned integers. |
-| `maximum(left: i64, right: i64): i64` | Larger of two wide integers. |
-| `maximumFloat(left: f32, right: f32): f32` | Larger of two `f32` values. |
-| `maximumFloat(left: f64, right: f64): f64` | Larger of two `f64` values. |
-| `roundDown(value: f32): f32` | Rounds an `f32` value down. |
-| `roundDown(value: f64): f64` | Rounds an `f64` value down. |
-| `roundUp(value: f32): f32` | Rounds an `f32` value up. |
-| `roundUp(value: f64): f64` | Rounds an `f64` value up. |
-| `roundNearest(value: f32): f32` | Rounds an `f32` value to the nearest integer. |
-| `roundNearest(value: f64): f64` | Rounds an `f64` value to the nearest integer. |
-| `remainderFloat(value: f32, divisor: f32): f32` | Remainder with the sign of the value. |
-| `remainderFloat(value: f64, divisor: f64): f64` | Remainder with the sign of the value, in double precision. |
-| `truncate(value: f32): f32` | Drops the fractional part of an `f32` value. |
-| `truncate(value: f64): f64` | Drops the fractional part of an `f64` value. |
-
-## Random and bits
-
-| API | Description |
-| --- | --- |
-| `randomInteger(minimum: i32, maximum: i32): i32` | Random integer in the range. |
-| `seedRandom(seed: u32): void` | Seeds the random generator. |
-| `readBitValue(value: u32, bitIndex: u8): boolean` | Reads one bit. |
-| `writeBitValue(value: u32, bitIndex: u8, bitValue: boolean): u32` | Writes one bit and returns the result. |
-| `setBitValue(value: u32, bitIndex: u8): u32` | Sets one bit and returns the result. |
-| `clearBitValue(value: u32, bitIndex: u8): u32` | Clears one bit and returns the result. |
-| `lowByteValue(value: u32): u8` | Low 8 bits. |
-| `highByteValue(value: u32): u8` | Bits 8-15. |
-| `bitMask(bitIndex: u8): u32` | Mask with a single bit set. |
-
-## Trigonometry
-
-| API | Description |
-| --- | --- |
-| `sine(radians: f32): f32` | Sine of an `f32` angle. |
-| `sine(radians: f64): f64` | Sine of an `f64` angle. |
-| `cosine(radians: f32): f32` | Cosine of an `f32` angle. |
-| `cosine(radians: f64): f64` | Cosine of an `f64` angle. |
-| `tangent(radians: f32): f32` | Tangent of an `f32` angle. |
-| `tangent(radians: f64): f64` | Tangent of an `f64` angle. |
-| `arcSine(value: f32): f32` | Arcsine of an `f32` value. |
-| `arcSine(value: f64): f64` | Arcsine of an `f64` value. |
-| `arcCosine(value: f32): f32` | Arccosine of an `f32` value. |
-| `arcCosine(value: f64): f64` | Arccosine of an `f64` value. |
-| `arcTangent(value: f32): f32` | Arctangent of an `f32` value. |
-| `arcTangent(value: f64): f64` | Arctangent of an `f64` value. |
-| `arcTangent2(y: f32, x: f32): f32` | Arctangent of `y / x` with quadrant. |
-| `arcTangent2(y: f64, x: f64): f64` | Arctangent of `y / x` with quadrant, in double precision. |
-| `toRadians(degrees: f32): f32` | Degrees to radians. |
-| `toRadians(degrees: f64): f64` | Degrees to radians with the double-precision pi constant. |
-| `toDegrees(radians: f32): f32` | Radians to degrees. |
-| `toDegrees(radians: f64): f64` | Radians to degrees with the double-precision pi constant. |
+Promotion rules and width-selection details stay in the sections above and are
+not repeated there. To rewrite the reference after changing the library,
+regenerate it with `pnpm run test:snapshot` from the repository root.
