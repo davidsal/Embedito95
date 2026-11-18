@@ -3,6 +3,7 @@ import {
 	DATA_TYPE,
 	DEFAULT_WORD_SIZE,
 	resolveNarrowedTypeAt,
+	resolveOverloadSignature,
 	resolveProjectTypes,
 	resolveWordDataType,
 } from "embedito95-core";
@@ -52,18 +53,65 @@ export const collectProjectObjectTypes = (syntaxTree, allExports) => {
 	};
 };
 
-export const resolveLibraryReturnType = (name, allExports, importAliases) => {
+// Resolves the concrete signature a library call selects. Hover uses it to show
+// the width the checker picked, so the editor never reimplements the overload
+// rule.
+export const resolveLibraryCallSignature = (
+	name,
+	allExports,
+	importAliases,
+	argumentTypes = [],
+	wordSize = 0,
+) => {
 	const originalName = importAliases?.get(name) ?? name;
 	const libraryFunction = allExports.find((exportItem) => {
 		return exportItem.name === originalName && exportItem.kind === "function";
 	});
 
-	return libraryFunction?.returnType ?? null;
+	if (!libraryFunction) {
+		return null;
+	}
+	return resolveOverloadSignature(
+		{
+			params: libraryFunction.params,
+			returnType: libraryFunction.returnType,
+			signatures: libraryFunction.signatures,
+		},
+		argumentTypes,
+		wordSize,
+	);
 };
 
-export const createLibraryCallTypeResolver = (allExports, importAliases) => {
-	return (calleeName) => {
-		return resolveLibraryReturnType(calleeName, allExports, importAliases);
+export const resolveLibraryReturnType = (
+	name,
+	allExports,
+	importAliases,
+	argumentTypes = [],
+	wordSize = 0,
+) => {
+	const signature = resolveLibraryCallSignature(
+		name,
+		allExports,
+		importAliases,
+		argumentTypes,
+		wordSize,
+	);
+	return signature?.returnType ?? null;
+};
+
+export const createLibraryCallTypeResolver = (
+	allExports,
+	importAliases,
+	wordSize = 0,
+) => {
+	return (calleeName, argumentTypes = []) => {
+		return resolveLibraryReturnType(
+			calleeName,
+			allExports,
+			importAliases,
+			argumentTypes,
+			wordSize,
+		);
 	};
 };
 
@@ -115,6 +163,7 @@ export const buildProjectTypeInference = (options) => {
 	const resolveLibraryCallType = createLibraryCallTypeResolver(
 		allExports,
 		importAliases,
+		wordSize,
 	);
 	const { variableTypes, resolveCallType } = resolveProjectTypes(
 		syntaxTree,

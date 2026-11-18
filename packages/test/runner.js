@@ -34,6 +34,7 @@ import {
 	LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
 	LSP_HOVER_UNIT_CHECKS_GROUP,
 	MONITOR_STATE_UNIT_CHECKS_GROUP,
+	NUMERIC_CONVERSION_UNIT_CHECKS_GROUP,
 	POSIX_STRATEGY_UNIT_CHECKS_GROUP,
 	RED_CROSS,
 	REGISTRY_CORE_PARITY_UNIT_CHECKS_GROUP,
@@ -76,6 +77,7 @@ import { runLspString3Checks } from "./lsp-string3-checks.js";
 import { runLspUnionChecks } from "./lsp-union-checks.js";
 import { runLspWireChecks } from "./lsp-wire-checks.js";
 import { runLspWireSlaveChecks } from "./lsp-wire-slave-checks.js";
+import { runNumericConversionChecks } from "./numeric-conversion-checks.js";
 import { runPosixStrategyChecks } from "./posix-strategy-checks.js";
 import { buildEntry, copyEntryFiles, createProject } from "./project-setup.js";
 import { runRegistryCoreParityChecks } from "./registry-core-parity-checks.js";
@@ -311,6 +313,13 @@ export const run = async () => {
 	const sharedConstantsResults = await runSharedConstantsChecks();
 	reportUnitChecks(SHARED_CONSTANTS_UNIT_CHECKS_GROUP, sharedConstantsResults);
 	collectMismatches(sharedConstantsResults, mismatches);
+
+	const numericConversionResults = await runNumericConversionChecks();
+	reportUnitChecks(
+		NUMERIC_CONVERSION_UNIT_CHECKS_GROUP,
+		numericConversionResults,
+	);
+	collectMismatches(numericConversionResults, mismatches);
 
 	const wordSizeResults = runWordSizeChecks();
 	reportUnitChecks(WORD_SIZE_UNIT_CHECKS_GROUP, wordSizeResults);

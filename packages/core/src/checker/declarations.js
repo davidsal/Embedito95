@@ -2,7 +2,15 @@ import { AST_NODE, DATA_TYPE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { createAsyncTaskType } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
-import { getImportEffectiveName, isModuleNameTaken } from "./imports.js";
+import { checkImportStatement } from "./import-declarations.js";
+import { isModuleNameTaken } from "./imports.js";
+import { expandWidthFamilySignature } from "./library-types.js";
+import {
+	buildFunctionSignature,
+	getFunctionSignatures,
+	hasRegisteredSignature,
+	isDistinctCoreLibrarySignature,
+} from "./overloads.js";
 import { resolveFloatType, resolveIntegerType } from "./type-resolution.js";
 import { REQUIRED_FUNCTIONS, RESERVED_NAMES } from "./types.js";
 
@@ -61,58 +69,6 @@ export const checkTopLevelDeclarations = (state) => {
 				}
 			}
 		}
-	}
-};
-
-const checkImportStatement = (state, statement) => {
-	const seen = new Set();
-	for (const specifier of statement.specifiers) {
-		const effectiveName = getImportEffectiveName(specifier);
-		state.imported.push({ name: effectiveName, location: specifier.loc });
-		state.importedNames.add(effectiveName);
-		if (seen.has(effectiveName)) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.duplicateImport,
-					params: { name: effectiveName },
-					location: specifier.loc,
-				}),
-			);
-		}
-		seen.add(effectiveName);
-	}
-
-	const libraryExportNames = state.libraryExports[statement.source];
-	const isLibraryKnown = state.knownLibraries.has(statement.source);
-
-	if (!isLibraryKnown) {
-		state.errors.push(
-			makeDiagnostic({
-				code: ERROR_CODE.unknownLibrary,
-				params: { name: statement.source },
-				location: statement.loc,
-			}),
-		);
-	} else if (libraryExportNames) {
-		for (const specifier of statement.specifiers) {
-			if (!libraryExportNames.has(specifier.name)) {
-				state.errors.push(
-					makeDiagnostic({
-						code: ERROR_CODE.unknownImport,
-						params: { name: specifier.name },
-						location: specifier.loc,
-					}),
-				);
-			}
-		}
-	} else {
-		state.errors.push(
-			makeDiagnostic({
-				code: ERROR_CODE.libraryLoadFailed,
-				params: { name: statement.source },
-				location: statement.loc,
-			}),
-		);
 	}
 };
 
@@ -281,22 +237,29 @@ const checkNameTaken = (state, name, location) => {
 	}
 };
 
-const registerFunctionDefinition = (state, name, initializer, location) => {
-	const functionParamCount = initializer.params.length;
-	const functionParamTypes = initializer.params.map((param) => ({
-		name: param.name,
-		type: param.typeAnnotation?.type ?? null,
-		functionType: param.typeAnnotation?.functionType ?? null,
-		defaultValue: param.defaultValue ?? null,
-	}));
-	state.functionParameterCount[name] = functionParamCount;
-	const declaredReturnType = initializer.returnType?.name ?? DATA_TYPE.void;
+const registerFunctionDefinition = (
+	state,
+	name,
+	signatureList,
+	initializer,
+	location,
+) => {
+	const existing = state.functionDefinitions[name];
+	const signatures = existing ? [...getFunctionSignatures(existing)] : [];
+	for (const signature of signatureList) {
+		if (!hasRegisteredSignature({ signatures }, signature)) {
+			signatures.push(signature);
+		}
+	}
+	const firstSignature = signatures[0];
+	state.functionParameterCount[name] = firstSignature.params.length;
 	state.functionDefinitions[name] = {
-		params: functionParamTypes,
+		params: firstSignature.params,
 		returnType:
 			initializer.async === true
-				? createAsyncTaskType(declaredReturnType)
-				: declaredReturnType,
+				? createAsyncTaskType(firstSignature.returnType)
+				: firstSignature.returnType,
+		signatures,
 	};
 
 	if (REQUIRED_FUNCTIONS.includes(name) && initializer.async) {
@@ -329,9 +292,33 @@ const checkVariableDeclarationStatement = (state, statement) => {
 			);
 		}
 
-		checkNameTaken(state, name, location);
-		state.defined.set(name, statement);
-		registerFunctionDefinition(state, name, initializer, location);
+		const baseSignature = buildFunctionSignature(initializer);
+		const signatures = state.isCoreLibrary
+			? expandWidthFamilySignature(baseSignature)
+			: [baseSignature];
+		// A width-family declaration expands before the checker sees it. When
+		// the library was already loaded, its expanded signatures are present,
+		// so this is the same declaration, not a duplicate.
+		const alreadyRegistered =
+			state.isCoreLibrary &&
+			signatures.length > 1 &&
+			signatures.every((signature) => {
+				return hasRegisteredSignature(
+					state.functionDefinitions[name],
+					signature,
+				);
+			});
+		const isOverload =
+			signatures.every((signature) => {
+				return isDistinctCoreLibrarySignature(state, name, signature);
+			}) && signatures.length > 0;
+		if (!isOverload && !alreadyRegistered) {
+			checkNameTaken(state, name, location);
+		}
+		if (!state.defined.has(name)) {
+			state.defined.set(name, statement);
+		}
+		registerFunctionDefinition(state, name, signatures, initializer, location);
 	} else if (initializer && REQUIRED_FUNCTIONS.includes(name)) {
 		state.errors.push(
 			makeDiagnostic({

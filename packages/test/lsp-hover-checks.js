@@ -1,6 +1,6 @@
 // The LSP package has no importable public entry point (`src/index.js` starts
 // the language server), so the checks import the hover internals directly.
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -41,6 +41,41 @@ const MATH_SOURCE = [
 	"export const angle = arcSine(0.5)",
 	"export const mask = bitMask(7)",
 ].join("\n");
+const MATH_DECLARATION_SOURCE = readFileSync(
+	join(
+		REPOSITORY_ROOT,
+		"packages",
+		"registry",
+		"src",
+		"core",
+		"math",
+		"main.e95",
+	),
+	"utf8",
+);
+const MATH_OVERLOAD_SOURCE = [
+	"import { square } from '@embedito95/math'",
+	"const wide: f64 = 3.14159265358979",
+	"const narrow: f32 = 3.1415927",
+	"const wideResult = square(wide)",
+	"const narrowResult = square(narrow)",
+	"const literalResult = square(3)",
+].join("\n");
+const MATH_OVERLOAD_F64_PREFIX = "```e95\nconst wideResult: f64";
+const MATH_OVERLOAD_F32_PREFIX = "```e95\nconst narrowResult: f32";
+const MATH_OVERLOAD_LITERAL_PREFIX = "```e95\nconst literalResult: f32";
+const MATH_INTEGER_OVERLOAD_SOURCE = [
+	"import { clamp } from '@embedito95/math'",
+	"const bigUnsigned: u32 = 3000000000",
+	"const low: i32 = -5",
+	"const high: i32 = 10",
+	"const wideResult = clamp(bigUnsigned, 0, 10)",
+	"const bigUnsignedResult = clamp(bigUnsigned, low, high)",
+	"const smallResult = clamp(5, 0, 10)",
+].join("\n");
+const MATH_INTEGER_I64_PREFIX = "```e95\nconst wideResult: i64";
+const MATH_INTEGER_BOUND_I64_PREFIX = "```e95\nconst bigUnsignedResult: i64";
+const MATH_INTEGER_I32_PREFIX = "```e95\nconst smallResult: i32";
 // A document inside the console core library loads the real
 // `@embedito95/console` exports, so console hover/completions resolve the same
 // library surface the editor sees in a host project.
@@ -1220,8 +1255,107 @@ const checkLibraryMathFunctionHover = async () => {
 	return expectEqual(
 		"LSP hover of a math function shows its signature and domain doc",
 		hover,
-		"```e95\nconst arcSine(value: f32): f32\n```\n\nReturns the angle in radians whose sine is the given value.  \nValues outside the [-1, 1] domain follow the C library rules and yield NaN.  \n@param value - Sine value to invert.  \n@returns The angle in radians, or NaN outside the domain.",
+		"```e95\nconst arcSine(value: f32): f32\n```\n\nReturns the angle in radians whose sine is the given value.  \nValues outside the [-1, 1] domain follow the C library rules and yield NaN.  \n@param value - Sine value to invert.  \n@returns The angle in radians, or NaN outside the domain, at the selected width.",
 	);
+};
+
+const checkLibraryMathOverloadHover = async () => {
+	const f64Hover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_OVERLOAD_SOURCE,
+		findPosition(MATH_OVERLOAD_SOURCE, "wideResult", 0),
+	);
+	const f32Hover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_OVERLOAD_SOURCE,
+		findPosition(MATH_OVERLOAD_SOURCE, "narrowResult", 0),
+	);
+	const literalHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_OVERLOAD_SOURCE,
+		findPosition(MATH_OVERLOAD_SOURCE, "literalResult", 0),
+	);
+	const wideIntegerHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_INTEGER_OVERLOAD_SOURCE,
+		findPosition(MATH_INTEGER_OVERLOAD_SOURCE, "wideResult", 0),
+	);
+	const boundIntegerHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_INTEGER_OVERLOAD_SOURCE,
+		findPosition(MATH_INTEGER_OVERLOAD_SOURCE, "bigUnsignedResult", 0),
+	);
+	const smallIntegerHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_INTEGER_OVERLOAD_SOURCE,
+		findPosition(MATH_INTEGER_OVERLOAD_SOURCE, "smallResult", 0),
+	);
+
+	return [
+		expectEqual(
+			"LSP hover picks the f64 math overload for an f64 argument",
+			f64Hover?.startsWith(MATH_OVERLOAD_F64_PREFIX),
+			true,
+		),
+		expectEqual(
+			"LSP hover picks the f32 math overload for an f32 argument",
+			f32Hover?.startsWith(MATH_OVERLOAD_F32_PREFIX),
+			true,
+		),
+		expectEqual(
+			"LSP hover keeps f32 for an integer literal math argument",
+			literalHover?.startsWith(MATH_OVERLOAD_LITERAL_PREFIX),
+			true,
+		),
+		expectEqual(
+			"LSP hover picks the i64 math overload for a large u32 argument",
+			wideIntegerHover?.startsWith(MATH_INTEGER_I64_PREFIX),
+			true,
+		),
+		expectEqual(
+			"LSP hover keeps i64 when a u32 has two i32 bound arguments",
+			boundIntegerHover?.startsWith(MATH_INTEGER_BOUND_I64_PREFIX),
+			true,
+		),
+		expectEqual(
+			"LSP hover keeps i32 for small math arguments",
+			smallIntegerHover?.startsWith(MATH_INTEGER_I32_PREFIX),
+			true,
+		),
+	];
+};
+
+const checkMathWidthFamilyHover = async () => {
+	const declarationHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_DECLARATION_SOURCE,
+		findPosition(MATH_DECLARATION_SOURCE, "const clamp", "const ".length),
+	);
+	const callHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_INTEGER_OVERLOAD_SOURCE,
+		findPosition(
+			MATH_INTEGER_OVERLOAD_SOURCE,
+			"clamp(bigUnsigned, low, high)",
+			0,
+		),
+	);
+	return [
+		expectEqual(
+			"LSP hover of a math declaration shows the single family declaration",
+			declarationHover?.includes(
+				"const clamp: (value: i32 | i64 | u32, minimum: i32 | i64 | u32, maximum: i32 | i64 | u32) => i32 | i64 | u32",
+			),
+			true,
+		),
+		expectEqual(
+			"LSP hover of a math call shows the selected width",
+			callHover?.startsWith(
+				"```e95\nconst clamp(value: i64, minimum: i64, maximum: i64): i64",
+			),
+			true,
+		),
+	];
 };
 
 const checkLibraryMathBitHelperHover = async () => {
@@ -1436,6 +1570,8 @@ export const runLspHoverChecks = async () => {
 		checkInvalidAwaitDiagnostic(),
 		checkTypeArgumentsDiagnostic(),
 		await checkLibraryMathFunctionHover(),
+		...(await checkLibraryMathOverloadHover()),
+		...(await checkMathWidthFamilyHover()),
 		await checkLibraryMathBitHelperHover(),
 		await checkConsoleConstantHover(),
 		await checkConsoleLogMemberHover(),

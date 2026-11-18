@@ -13,6 +13,17 @@ types:
 - smallest => i32
 - bitResult => u32
 
+// integer arguments select the width that holds them
+diagnostics:
+- none
+types:
+- wideClamped => i64
+- narrowClamped => i32
+- wideMagnitude => u32
+- wideMinimum => i64
+- wideBoundClamped => i64
+- wideBoundRemapped => i64
+
 // float helpers infer f32
 diagnostics:
 - none
@@ -45,6 +56,27 @@ types:
 - squared => f32
 - remainder => f32
 - whole => f32
+
+// f64 arguments select the f64 overload
+diagnostics:
+- none
+types:
+- preciseSquare => f64
+- preciseClamp => f64
+- preciseRoot => f64
+
+// a mixed-width call narrows with a non-blocking warning
+diagnostics:
+- warning error.assignmentTypeMismatch @ 3:30: Cannot assign 'f64' value to 'narrowed' of type 'f32'.
+types:
+- narrowed => f32
+
+// an f64 variable with integer literals keeps the f64 overload
+diagnostics:
+- none
+types:
+- wholeClamp => f64
+- wholeRemapped => f64
 
 // byte helpers infer u8 and bitMask infers u32
 diagnostics:
@@ -90,11 +122,11 @@ diagnostics:
 types:
 - badArity => f32
 
-// integer argument warns on an f32 parameter
+// a wide integer argument selects the f64 overload
 diagnostics:
-- warning error.argumentTypeMismatch @ 3:37: Argument 'value' expects type 'f32' but 'wholeNumber' is 'i32'
+- none
 types:
-- integerAngle => f32
+- integerAngle => f64
 
 // nested inverse trigonometry calls produce no diagnostics
 diagnostics:

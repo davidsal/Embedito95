@@ -9,7 +9,7 @@ import {
 	shared,
 	UTF8,
 } from "embedito95-core";
-import { PLATFORM_CATEGORY } from "embedito95-registry/platforms";
+import { FLOAT64_MODE, PLATFORM_CATEGORY } from "embedito95-registry/platforms";
 import { green, red, writeErrorLine, writeLine } from "../../console.js";
 import { INTERMEDIATE_DIRECTORY_NAME } from "../../constants.js";
 import { loadProjectConfiguration } from "../shared/config.js";
@@ -184,6 +184,7 @@ const writeBuildOutput = ({
 	libraryModules,
 	buildDirectory,
 	cycles,
+	platform,
 }) => {
 	mkdirSync(join(buildDirectory, MODULES_DIRECTORY_NAME), { recursive: true });
 
@@ -200,7 +201,11 @@ const writeBuildOutput = ({
 		buildDirectory,
 	);
 	copyCoreLibraries(libraryModules, buildDirectory, CURRENT_WORKING_DIRECTORY);
-	shared.writeCyclesConfigHeaders(buildDirectory, cycles);
+	shared.writeCyclesConfigHeaders(
+		buildDirectory,
+		cycles,
+		platform.float64 === FLOAT64_MODE.SOFTWARE,
+	);
 
 	writeLine(`${green("✔")} Built ${projectName}${strategy.extension}`);
 };
@@ -319,5 +324,6 @@ export const run = async () => {
 		libraryModules,
 		buildDirectory,
 		cycles,
+		platform,
 	});
 };

@@ -1,9 +1,10 @@
 import { buildTypeDeclarationMembers } from "../checker/declarations.js";
 import {
-	buildLibraryFunctionReturnTypes,
+	buildLibraryFunctionDefinitions,
 	collectImportAliases,
 	flattenLibraryObjectTypes,
 	makeResolveImportedName,
+	resolveDefinitionReturnType,
 } from "../checker/index.js";
 import {
 	AST_NODE,
@@ -119,6 +120,7 @@ export const buildImportContext = (
 	libraryObjectTypes,
 	libraryFunctions,
 	libraryTypes,
+	wordSize = 0,
 ) => {
 	const importAliases = collectImportAliases(ast);
 	const resolveImportedName = makeResolveImportedName(importAliases);
@@ -130,10 +132,13 @@ export const buildImportContext = (
 		libraryObjectTypes,
 		libraryNamespaces,
 	);
-	const libFunctionReturnTypes =
-		buildLibraryFunctionReturnTypes(libraryFunctions);
-	const resolveLibraryCallType = (name) => {
-		return libFunctionReturnTypes[resolveImportedName(name)] ?? null;
+	const libraryDefinitions = buildLibraryFunctionDefinitions(libraryFunctions);
+	const resolveLibraryCallType = (name, argumentTypes = []) => {
+		return resolveDefinitionReturnType(
+			libraryDefinitions[resolveImportedName(name)],
+			argumentTypes,
+			wordSize,
+		);
 	};
 	const libParamTypes = buildLibraryParamTypes(
 		ast,
@@ -151,6 +156,7 @@ export const buildImportContext = (
 		resolveImportedName,
 		importNamespaces,
 		libraryNamespaceObjects,
+		libFunctionDefinitions: libraryDefinitions,
 		resolveLibraryCallType,
 		libParamTypes,
 		libParamDefaults,

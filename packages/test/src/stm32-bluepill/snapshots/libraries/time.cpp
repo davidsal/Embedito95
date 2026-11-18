@@ -11,18 +11,18 @@ const i16 PERIOD_US = 1000;
 void blinkMs() {
 	while (true) {
 		core_gpio::setDigital(LED_PIN, core_gpio::HIGH);
-		core_time::delay(PERIOD_MS);
+		core_time::delay((u32)(PERIOD_MS));
 		core_gpio::setDigital(LED_PIN, core_gpio::LOW);
-		core_time::delay(PERIOD_MS);
+		core_time::delay((u32)(PERIOD_MS));
 	}
 }
 
 void blinkMicros() {
 	while (true) {
 		core_gpio::setDigital(LED_PIN, core_gpio::HIGH);
-		core_time::delayMicros(PERIOD_US);
+		core_time::delayMicros((u32)(PERIOD_US));
 		core_gpio::setDigital(LED_PIN, core_gpio::LOW);
-		core_time::delayMicros(PERIOD_US);
+		core_time::delayMicros((u32)(PERIOD_US));
 	}
 }
 

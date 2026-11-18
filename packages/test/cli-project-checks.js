@@ -123,11 +123,12 @@ const MISSING_DOCS_DIRECTORY_NAME = "missing-docs";
 const MACOS_ARM64_PLATFORM = "macos-arm64";
 const PROJECT_NAME = "cli-project-checks";
 const PROJECT_PLATFORM = "arduino-nano";
-const HOST_CORE_LIBRARY_NAMES = ["type", "console", "time", "async"];
-const HOST_CORE_DIRECTORY_NAMES = ["async", "console", "time", "type"];
+const HOST_CORE_LIBRARY_NAMES = ["type", "console", "time", "async", "math"];
+const HOST_CORE_DIRECTORY_NAMES = ["async", "console", "math", "time", "type"];
 const HOST_CORE_PACKAGE_NAMES = [
 	"@embedito95/async",
 	"@embedito95/console",
+	"@embedito95/math",
 	"@embedito95/time",
 	"@embedito95/type",
 ];
@@ -136,7 +137,6 @@ const BOARD_ONLY_CORE_LIBRARY_NAMES = [
 	"serial",
 	"i2c",
 	"spi",
-	"math",
 	"system",
 ];
 const CORE_LIBRARY_PROJECT_DIRECTORY_NAME = "core-library-project";
@@ -349,17 +349,17 @@ const checkHostCoreLibraryFiltering = async (temporaryDirectory) => {
 
 	return [
 		expectEqual(
-			"host platform declares the type, console, time and async core libraries",
+			"host platform declares the type, console, time, async and math core libraries",
 			findSupportedPlatform(MACOS_ARM64_PLATFORM)?.coreLibraries?.join(","),
 			HOST_CORE_LIBRARY_NAMES.join(","),
 		),
 		expectEqual(
-			"host config.core lists the type, console, time and async packages",
+			"host config.core lists the type, console, time, async and math packages",
 			corePackageNames.sort().join(","),
 			HOST_CORE_PACKAGE_NAMES.join(","),
 		),
 		expectEqual(
-			"host core/ contains the type, console, time and async directories",
+			"host core/ contains the type, console, time, async and math directories",
 			coreDirectoryNames.join(","),
 			HOST_CORE_DIRECTORY_NAMES.join(","),
 		),

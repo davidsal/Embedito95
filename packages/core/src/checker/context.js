@@ -240,7 +240,7 @@ export const buildCheckContext = ({
 		if (
 			resolveAssignmentTruncation(
 				rhsNode,
-				rhsType,
+				callAwareRhsType ?? rhsType,
 				targetType,
 				floatContext,
 				ast,
@@ -252,7 +252,7 @@ export const buildCheckContext = ({
 					params: {
 						name: name ?? "?",
 						type: targetType,
-						rhsType,
+						rhsType: callAwareRhsType ?? rhsType,
 					},
 					location,
 					severity: SEVERITY.warning,
@@ -336,7 +336,18 @@ export const buildCheckContext = ({
 		}
 		if (node?.type === AST_NODE.callExpression) {
 			if (node.callee?.type === AST_NODE.identifier) {
-				return resolveCallType(node.callee.name) ?? null;
+				const argumentTypes = (node.arguments ?? []).map((argument) => {
+					return resolveExpressionType(
+						resolveVariableTypeAt,
+						argument,
+						undefined,
+						resolveCallType,
+						wordSize,
+						objectTypes,
+						ast,
+					);
+				});
+				return resolveCallType(node.callee.name, argumentTypes) ?? null;
 			}
 			if (node.callee?.type === AST_NODE.memberExpression) {
 				const objectName = node.callee.object?.name;

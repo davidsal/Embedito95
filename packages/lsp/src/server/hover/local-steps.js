@@ -39,11 +39,7 @@ export const resolveParameterHover = (context) => {
 
 const resolveVariableDisplayType = (variableDeclaration, context) => {
 	const init = variableDeclaration.declarations?.[0]?.init;
-	const callType = resolveCallExpressionType(
-		init,
-		context.allExports,
-		context.importAliases,
-	);
+	const callType = resolveCallExpressionType(init, context);
 	const variableType =
 		callType ??
 		resolveVariableType(

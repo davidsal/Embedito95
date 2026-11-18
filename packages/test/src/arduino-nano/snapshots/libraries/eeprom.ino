@@ -21,16 +21,16 @@ void setup() {
 		lib_eeprom::updateEepromByte(CONFIGURATION_CELL, ALTERNATE_VALUE);
 	}
 	lib_eeprom::writeEepromByte(lib_eeprom::getCapacity(), CONFIGURATION_VALUE);
-	lib_eeprom::writeEepromByte(((i32)(lib_eeprom::getCapacity()) - (i32)(1)), ALTERNATE_VALUE);
+	lib_eeprom::writeEepromByte((u16)(((i32)(lib_eeprom::getCapacity()) - (i32)(1))), ALTERNATE_VALUE);
 	core_array::Array<u8> configuration = { CONFIGURATION_VALUE, ALTERNATE_VALUE };
 	lib_eeprom::writeEepromBlock(CONFIGURATION_CELL, configuration);
 	core_array::Array<u8> block = lib_eeprom::readEepromBlock(CONFIGURATION_CELL, CONFIGURATION_LENGTH);
-	lib_eeprom::writeEepromBlock(((i32)(lib_eeprom::getCapacity()) - (i32)(1)), block);
+	lib_eeprom::writeEepromBlock((u16)(((i32)(lib_eeprom::getCapacity()) - (i32)(1))), block);
 
 	core_array::Array<u8> empty = lib_eeprom::readEepromBlock(CONFIGURATION_CELL, EMPTY_LENGTH);
 	lib_eeprom::writeEepromBlock(CONFIGURATION_CELL, empty);
 
-	core_array::Array<u8> clipped = lib_eeprom::readEepromBlock(((i32)(lib_eeprom::getCapacity()) - (i32)(1)), CONFIGURATION_LENGTH);
+	core_array::Array<u8> clipped = lib_eeprom::readEepromBlock((u16)(((i32)(lib_eeprom::getCapacity()) - (i32)(1))), CONFIGURATION_LENGTH);
 	lib_eeprom::writeEepromBlock(lib_eeprom::getCapacity(), clipped);
 }
 
