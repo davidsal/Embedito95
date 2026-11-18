@@ -2,9 +2,10 @@
 
 Embedito95 does not accept external pull requests.
 
-The project is dual-licensed (AGPL-3.0-only and commercial), and accepting code
-from outside contributors would require a signed CLA to keep that possible.
-Until that process exists, the repository stays closed to outside code changes.
+The project is licensed under AGPL-3.0-only with the Embedito95 Runtime
+Exception v1.0, plus a separate commercial option, and accepting code from
+outside contributors would require a signed CLA to keep that possible. Until
+that process exists, the repository stays closed to outside code changes.
 
 ## What is welcome
 
@@ -30,6 +31,9 @@ made in this repository.
 
 ## Using Embedito95
 
-You can fork it, read it and modify it for your own use under the AGPL. If you
-distribute firmware built with it, or a modified version of the toolchain, the
-AGPL applies. See [LICENSE](LICENSE) and [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md).
+You can fork it, read it and modify it for your own use under the AGPL. The
+Embedito95 Runtime Exception means the firmware and executables you build are
+yours and may be distributed under any terms. If you distribute a modified
+version of the toolchain itself, the AGPL applies. See [LICENSE](LICENSE),
+[LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md) and
+[LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md).

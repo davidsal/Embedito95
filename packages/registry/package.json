@@ -3,7 +3,7 @@
 	"version": "0.2.1",
 	"description": "Embedito95 platforms, strategies and libraries registry",
 	"type": "module",
-	"license": "AGPL-3.0-only",
+	"license": "AGPL-3.0-only WITH LicenseRef-Embedito95-Runtime-Exception-1.0",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/davidsal/Embedito95.git",
@@ -18,7 +18,9 @@
 		"./strategies": "./src/strategies/index.js"
 	},
 	"files": [
-		"src"
+		"src",
+		"LICENSE",
+		"LICENSE-EXCEPTION.md"
 	],
 	"engines": {
 		"node": ">=22"
@@ -26,5 +28,8 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"dependencies": {}
+	"dependencies": {},
+	"scripts": {
+		"prepack": "node ../../scripts/license-files.mjs"
+	}
 }

@@ -9,3 +9,9 @@ packages/test/testers/
 packages/cli/docs/
 packages/cli/assets/
 packages/cli/.bundled-dependencies-backup.json
+packages/cli/LICENSE
+packages/cli/LICENSE-EXCEPTION.md
+packages/core/LICENSE
+packages/core/LICENSE-EXCEPTION.md
+packages/registry/LICENSE
+packages/registry/LICENSE-EXCEPTION.md

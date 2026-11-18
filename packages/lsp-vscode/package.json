@@ -5,7 +5,7 @@
 	"version": "1.0.3",
 	"publisher": "embedito95",
 	"private": true,
-	"license": "AGPL-3.0-only",
+	"license": "AGPL-3.0-only WITH LicenseRef-Embedito95-Runtime-Exception-1.0",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/davidsal/Embedito95.git",

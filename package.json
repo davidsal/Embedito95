@@ -2,7 +2,7 @@
   "name": "embedito95",
   "version": "0.1.3",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "AGPL-3.0-only WITH LicenseRef-Embedito95-Runtime-Exception-1.0",
   "scripts": {
     "changeset": "changeset",
     "version": "changeset version && node packages/cli/scripts/sync-extension-version.js",
