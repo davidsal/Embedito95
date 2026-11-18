@@ -10,6 +10,7 @@ import { listInterruptLibrarySnapshots } from "./src/language/generate-interrupt
 import { listLibraryStrictnessSnapshots } from "./src/language/generate-library-strictness.mjs";
 import { listLocalClosureSnapshots } from "./src/language/generate-local-closure.mjs";
 import { listLogicalOperatorSnapshots } from "./src/language/generate-logical-operators.mjs";
+import { listMathApiSnapshots } from "./src/language/generate-math-api.mjs";
 import { listMathLibrarySnapshots } from "./src/language/generate-math-library.mjs";
 import { listMethodAssignmentSnapshots } from "./src/language/generate-method-assignment.mjs";
 import { listMethodOnlyLiteralSnapshots } from "./src/language/generate-method-only-literal.mjs";
@@ -59,6 +60,7 @@ export const listLanguageSnapshots = () => {
 		...listSwitchExhaustivenessSnapshots(),
 		...listLogicalOperatorSnapshots(),
 		...listMathLibrarySnapshots(),
+		...listMathApiSnapshots(),
 		...listNumericConversionSnapshots(),
 		...listLibraryStrictnessSnapshots(),
 		...listVariableScopingSnapshots(),

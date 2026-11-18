@@ -56,7 +56,8 @@ Common C/C++ problems it avoids:
 is no runtime trap: values that exceed the result type still wrap, so use a
 wider type or an explicit check when the range is uncertain.
 
-The full result type for every arithmetic pair is listed in the
-`binary-operations.txt` snapshot, and the promotion used by each comparison in
-`binary-comparisons.txt`. Both live in the project test suite, under
-`packages/test/src/language/snapshots/`.
+The full result type for every arithmetic pair on each word size, and the
+promotion used by each comparison, are listed in
+[Binary operator result types](binary-operators.md). That page is generated from
+the same checker functions that the `binary-operations.txt` and
+`binary-comparisons.txt` regression fixtures use.

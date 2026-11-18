@@ -27,7 +27,7 @@ the cooperative event loop, which returns when no task remains.
 | [GPIO](libraries/core/gpio.md) | `@embedito95/gpio` | Digital and analog pins, PWM, shift helpers |
 | [Time](libraries/core/time.md) | `@embedito95/time` | Delays and millisecond/microsecond clock |
 | [Async](libraries/core/async.md) | `@embedito95/async` | `sleep` and the `AsyncTask` type |
-| [Math](libraries/core/math.md) | `@embedito95/math` | Ranges, rounding, trig, random and bit helpers |
+| [Math](libraries/core/math.md) | `@embedito95/math` | Ranges, rounding, trig, random and bit helpers · [API reference](libraries/core/math-api.md) |
 | [Serial](libraries/core/serial.md) | `@embedito95/serial` | UART ports and text/number parsing |
 | [SPI](libraries/core/spi.md) | `@embedito95/spi` | SPI buses and transactions |
 | [I2C](libraries/core/i2c.md) | `@embedito95/i2c` | I2C master and slave buses |

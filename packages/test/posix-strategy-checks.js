@@ -2373,10 +2373,14 @@ const main = () => {
     const mixedSymmetricMinimum: f64 = minimumFloat(wideHalf, singleHalf)
     const mixedPower: f64 = power(singleHalf, 3.14159265358979)
     const mixedRemapped: f64 = interpolateRangeFloat(singleHalf, 0.0, 1.0, 0.0, wideHalf)
+    // A long-tailed f64 destination must keep f64 width through a mixed call.
+    const wideTail: f64 = 0.123456789012
+    const mixedTail: f64 = interpolateRangeFloat(singleHalf, 0.0, 1.0, 0.0, wideTail)
     console.log(mixedMinimum)
     console.log(mixedSymmetricMinimum)
     console.log(mixedPower)
     console.log(mixedRemapped)
+    console.log(mixedTail)
     // A u32 above the i32 range must keep its magnitude through the i64 overload.
     const bigUnsigned: u32 = 3000000000
     const bigClamped: i64 = clamp(bigUnsigned, 0, 10)
@@ -2427,11 +2431,15 @@ const POSIX_MATH_F64_REMAP_NARROWED_F32 = "(f32)(wide)";
 const POSIX_MATH_MIXED_MINIMUM_PREFIX = "0.5";
 const POSIX_MATH_MIXED_POWER_PREFIX = "0.1133147";
 const POSIX_MATH_MIXED_REMAP_PREFIX = "0.25";
+const POSIX_MATH_MIXED_TAIL_PREFIX = "0.0617283945";
 const POSIX_MATH_MIXED_MINIMUM_CAST = "(f64)(singleHalf)";
 const POSIX_MATH_MIXED_POWER_CAST = "(f64)(singleHalf)";
+const POSIX_MATH_MIXED_TAIL_CAST = "(f64)(singleHalf)";
+const POSIX_MATH_MIXED_TAIL_ARGUMENT = "wideTail";
 const POSIX_MATH_MIXED_MINIMUM_DECLARATION = "f64 mixedMinimum";
 const POSIX_MATH_MIXED_POWER_DECLARATION = "f64 mixedPower";
 const POSIX_MATH_MIXED_REMAP_DECLARATION = "f64 mixedRemapped";
+const POSIX_MATH_MIXED_TAIL_DECLARATION = "f64 mixedTail";
 const POSIX_MATH_INCLUDE_LINE = '#include "core/math/core_math.h"';
 const POSIX_MATH_INFERRED_F64_DECLARATION = "f64 inferred";
 const POSIX_MATH_INFERRED_F32_DECLARATION = "float inferred";
@@ -2450,7 +2458,7 @@ const POSIX_MATH_LARGE_UNSIGNED_RESULTS = [
 	"5",
 	"5",
 ];
-const POSIX_MATH_FLOAT_OUTPUT_COUNT = 9;
+const POSIX_MATH_FLOAT_OUTPUT_COUNT = 10;
 const POSIX_MATH_INT64_CLAMP_DECLARATION = "i64 bigWideClamp";
 const POSIX_MATH_INT64_MIXED_DECLARATION = "i64 mixedClamped";
 const POSIX_MATH_INT32_CLAMP_DECLARATION = "i32 smallClamped";
@@ -2521,6 +2529,7 @@ const checkPosixMathPrecision = async ({ clangAvailable }) => {
 			mixedSymmetricMinimum,
 			mixedPower,
 			mixedRemapped,
+			mixedTail,
 		] = outputLines;
 		const largeUnsignedResults = outputLines.slice(
 			POSIX_MATH_FLOAT_OUTPUT_COUNT,
@@ -2588,6 +2597,18 @@ const checkPosixMathPrecision = async ({ clangAvailable }) => {
 			expectEqual(
 				"posix math mixed floats keep f64 interpolation precision",
 				mixedRemapped?.startsWith(POSIX_MATH_MIXED_REMAP_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math mixed floats keep f64 precision on a long-tailed destination",
+				mixedTail?.startsWith(POSIX_MATH_MIXED_TAIL_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math casts the f32 argument of a mixed long-tailed interpolation",
+				generatedSource.includes(POSIX_MATH_MIXED_TAIL_CAST) &&
+					generatedSource.includes(POSIX_MATH_MIXED_TAIL_ARGUMENT) &&
+					generatedSource.includes(POSIX_MATH_MIXED_TAIL_DECLARATION),
 				true,
 			),
 			expectEqual(

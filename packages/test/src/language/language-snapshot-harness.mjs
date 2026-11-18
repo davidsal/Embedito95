@@ -30,6 +30,16 @@ const UNBOUNDED_SPAN = Number.MAX_SAFE_INTEGER;
 const REPOSITORY_ROOT = join(MODULE_DIRECTORY, "..", "..", "..", "..");
 
 const SNAPSHOTS_DIRECTORY = join(MODULE_DIRECTORY, "snapshots");
+export const LANGUAGE_DOCS_DIRECTORY = join(
+	REPOSITORY_ROOT,
+	"docs",
+	"language",
+);
+export const LIBRARY_DOCS_DIRECTORY = join(
+	REPOSITORY_ROOT,
+	"docs",
+	"libraries",
+);
 export const CORE_LIBRARY_DIRECTORY = join(
 	REPOSITORY_ROOT,
 	"packages",
@@ -347,16 +357,26 @@ export const renderLibraryCase = (testCase, context) => {
 	].join("\n");
 };
 
-// A snapshot entry carries both the write path and the compared content; the
-// runner consumes the same shape for every generator.
-export const listSnapshots = (fileName, content) => {
+// A generated entry carries both the write path and the compared content; the
+// runner consumes the same shape for every generator. `listSnapshots` writes
+// test fixtures, while `listDocumentSnapshots` writes a checked-in document
+// outside the test tree but validates it with the same runner.
+export const listSnapshotsIn = (directory, fileName, content) => {
 	return [
 		{
 			fileName,
-			snapshotPath: join(SNAPSHOTS_DIRECTORY, fileName),
+			snapshotPath: join(directory, fileName),
 			content,
 		},
 	];
+};
+
+export const listSnapshots = (fileName, content) => {
+	return listSnapshotsIn(SNAPSHOTS_DIRECTORY, fileName, content);
+};
+
+export const listDocumentSnapshots = (fileName, content) => {
+	return listSnapshotsIn(LANGUAGE_DOCS_DIRECTORY, fileName, content);
 };
 
 export const writeSnapshots = (snapshots) => {
