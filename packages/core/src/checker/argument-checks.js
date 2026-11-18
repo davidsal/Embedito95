@@ -5,6 +5,7 @@ import {
 	FLOAT_TYPES,
 	QUOTE_DOUBLE,
 	QUOTE_SINGLE,
+	SEVERITY,
 } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { checkAllowedArgumentValue } from "./allowed-values.js";
@@ -13,8 +14,17 @@ import {
 	checkIdentifierArgument,
 	checkMemberArgument,
 } from "./identifier-argument-checks.js";
+import {
+	canLoseFloatPrecision,
+	shouldWarnNumericConversion,
+} from "./numeric-conversions.js";
 import { inferLiteralType, resolveLiteralDataType } from "./type-resolution.js";
-import { CHARACTER_TYPES, INTEGER_TYPES, TYPE_RANGES } from "./types.js";
+import {
+	CHARACTER_TYPES,
+	INTEGER_TYPES,
+	isNumericType,
+	TYPE_RANGES,
+} from "./types.js";
 
 export const checkArgumentAgainstParam = (state, argument, param) => {
 	checkAllowedArgumentValue(state.errors, argument, param);
@@ -54,6 +64,38 @@ export const checkArgumentAgainstParam = (state, argument, param) => {
 
 	if (argument.type === AST_NODE.asExpression && TYPE_RANGES[param.type]) {
 		checkCastArgument(state, argument, param);
+		return;
+	}
+
+	if (isNumericType(param.type)) {
+		checkExpressionNumericArgument(state, argument, param);
+	}
+};
+
+// Expressions that are not a plain literal/identifier/member (e.g. `u32 * i16`)
+// still follow the numeric conversion rule. Integer narrowing is only judged on
+// a declared type (identifier/member): a promoted expression (`getCapacity()-1`
+// is i32) would warn even when the value cannot truncate, so expressions only
+// warn on float precision loss, which the operand types do determine.
+const checkExpressionNumericArgument = (state, argument, param) => {
+	const argumentType = state.context?.resolveCheckExpressionType?.(argument);
+	if (!argumentType || !isNumericType(argumentType)) {
+		return;
+	}
+	if (canLoseFloatPrecision(argumentType, param.type)) {
+		state.errors.push(
+			makeDiagnostic({
+				code: ERROR_CODE.argumentTypeMismatch,
+				params: {
+					name: param.name,
+					expected: param.type,
+					actual: argumentType,
+					value: describeExpression(argument),
+				},
+				location: argument.loc,
+				severity: SEVERITY.warning,
+			}),
+		);
 	}
 };
 
@@ -101,6 +143,22 @@ const checkLiteralArgument = (state, argument, param) => {
 
 const checkLiteralFloatArgument = (state, argument, param) => {
 	if (typeof argument.value === "number") {
+		const literalType = resolveLiteralDataType(argument);
+		if (shouldWarnNumericConversion(literalType, param.type)) {
+			state.errors.push(
+				makeDiagnostic({
+					code: ERROR_CODE.argumentTypeMismatch,
+					params: {
+						name: param.name,
+						expected: param.type,
+						actual: literalType,
+						value: argument.value,
+					},
+					location: argument.loc,
+					severity: SEVERITY.warning,
+				}),
+			);
+		}
 		return;
 	}
 	state.errors.push(

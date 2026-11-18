@@ -5,6 +5,7 @@ import {
 	LIBRARY_PROJECT_TYPE,
 	shared,
 } from "embedito95-core";
+import { FLOAT64_MODE } from "embedito95-registry/platforms";
 import { red, writeErrorLine } from "../console.js";
 import { loadProjectConfiguration } from "./shared/config.js";
 import { loadEngineModules } from "./shared/engine.js";
@@ -51,7 +52,11 @@ export const run = async () => {
 		process.exit(1);
 	}
 
-	shared.writeCyclesConfigHeaders(outputDirectory, cycles);
+	shared.writeCyclesConfigHeaders(
+		outputDirectory,
+		cycles,
+		platform.float64 === FLOAT64_MODE.SOFTWARE,
+	);
 
 	await strategy.compile({
 		outputDir: outputDirectory,

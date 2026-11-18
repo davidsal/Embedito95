@@ -6,6 +6,7 @@ import {
 	inferLiteralType,
 	resolveConstIntegerType,
 	resolveLiteralDataType,
+	resolveReceiverType,
 } from "embedito95-core";
 import { resolveLibraryReturnType } from "../shared/type-inference.js";
 
@@ -46,7 +47,11 @@ export const buildParameterTypesByName = (syntaxTree, allExports) => {
 	return parameterTypesByName;
 };
 
-export const resolveCallExpressionType = (init, allExports, importAliases) => {
+// Resolves the return type of a library call from the argument types, so hover
+// shows the same overload `check`/codegen picked instead of the first declared
+// signature. Argument types come from the shared `resolveReceiverType`
+// inference, not from a local reimplementation.
+export const resolveCallExpressionType = (init, context) => {
 	if (init?.type !== AST_NODE.callExpression) {
 		return null;
 	}
@@ -57,7 +62,23 @@ export const resolveCallExpressionType = (init, allExports, importAliases) => {
 		return null;
 	}
 
-	return resolveLibraryReturnType(callee, allExports, importAliases);
+	const argumentTypes = (init.arguments ?? []).map((argument) => {
+		return resolveReceiverType(
+			argument,
+			context.resolveNameType,
+			context.resolveCallType,
+			context.hoverWordSize,
+			context.objectTypes,
+		);
+	});
+
+	return resolveLibraryReturnType(
+		callee,
+		context.allExports,
+		context.importAliases,
+		argumentTypes,
+		context.hoverWordSize,
+	);
 };
 
 export const resolvePinMemberValue = (init, hoverPlatform, allExports) => {

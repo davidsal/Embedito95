@@ -1,9 +1,9 @@
 import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { PLATFORM_CATEGORY } from "./enums.js";
+import { FLOAT64_MODE, PLATFORM_CATEGORY } from "./enums.js";
 
-export { PLATFORM_CATEGORY };
+export { FLOAT64_MODE, PLATFORM_CATEGORY };
 
 const PLATFORMS_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const INDEX_FILE_NAME = "index.js";

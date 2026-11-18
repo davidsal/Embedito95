@@ -8,7 +8,7 @@ void dimmer() {
 	while (true) {
 		const i16 sensorValue = core_gpio::getAnalog(core_gpio::Pin::PIN_A0);
 		const i16 brightness = sensorValue / (i16)(4);
-		core_gpio::setAnalog(core_gpio::Pin::PIN_10, brightness);
+		core_gpio::setAnalog(core_gpio::Pin::PIN_10, (u8)(brightness));
 		core_time::delay(10);
 	}
 }

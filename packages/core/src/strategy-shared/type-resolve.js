@@ -165,9 +165,13 @@ const resolveIndexDataType = (node, context) => {
 
 const resolveCallDataType = (node, context) => {
 	if (node.callee?.type === AST_NODE.identifier) {
-		return context.resolveCallType
-			? context.resolveCallType(node.callee.name)
-			: null;
+		if (!context.resolveCallType) {
+			return null;
+		}
+		const argumentTypes = (node.arguments ?? []).map((argument) => {
+			return resolveExpressionType(argument, context);
+		});
+		return context.resolveCallType(node.callee.name, argumentTypes);
 	}
 	if (node.callee?.type === AST_NODE.memberExpression) {
 		const methodName = node.callee.property?.name;

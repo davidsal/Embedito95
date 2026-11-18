@@ -1,9 +1,15 @@
-import { DATA_TYPE, formatExpression } from "embedito95-core";
+import {
+	AST_NODE,
+	DATA_TYPE,
+	formatExpression,
+	resolveReceiverType,
+} from "embedito95-core";
 import { formatDocComment } from "../shared/doc-comments.js";
 import {
 	getLibraryDocComment,
 	getLibraryEnumMemberDoc,
 } from "../shared/library-docs.js";
+import { resolveLibraryCallSignature } from "../shared/type-inference.js";
 import { formatPeripheralMemberHover } from "./formatting.js";
 import { NOT_HANDLED } from "./local-steps.js";
 
@@ -65,17 +71,99 @@ const formatLibraryParameter = (parameter) => {
 	return `${parameter.name}?${typeSuffix} = ${formatExpression(parameter.defaultValue)}`;
 };
 
-const buildLibraryFunctionHover = (context, libraryExport, docSection) => {
-	const parameters = libraryExport.params
-		?.map(formatLibraryParameter)
-		.join(", ");
-	const returnType = libraryExport.returnType ?? DATA_TYPE.void;
-	const signature = `\`\`\`e95\nconst ${context.name}(${parameters}): ${returnType}\n\`\`\``;
+const sameLocation = (first, second) => {
+	return (
+		first?.start?.line === second?.start?.line &&
+		first?.start?.column === second?.start?.column
+	);
+};
+
+const findCallForIdentifier = (node, identifier) => {
+	if (!node || typeof node !== "object") {
+		return null;
+	}
+
+	if (
+		node.type === AST_NODE.callExpression &&
+		node.callee?.type === AST_NODE.identifier &&
+		node.callee.name === identifier.name &&
+		sameLocation(node.callee.loc, identifier.loc)
+	) {
+		return node;
+	}
+
+	for (const [key, value] of Object.entries(node)) {
+		if (key === "loc") {
+			continue;
+		}
+		if (Array.isArray(value)) {
+			for (const item of value) {
+				const found = findCallForIdentifier(item, identifier);
+				if (found) {
+					return found;
+				}
+			}
+		} else {
+			const found = findCallForIdentifier(value, identifier);
+			if (found) {
+				return found;
+			}
+		}
+	}
+
+	return null;
+};
+
+// A hover over the callee of a library call reports the signature the checker
+// selected for the actual argument types, not the first declared signature.
+// On a declaration or import specifier there is no call, so the declaration
+// itself is shown.
+const resolveHoveredCallSignature = (context, libraryExport) => {
+	if (!context.identifier || libraryExport.kind !== "function") {
+		return null;
+	}
+
+	const call = findCallForIdentifier(context.syntaxTree, context.identifier);
+
+	if (!call) {
+		return null;
+	}
+
+	const argumentTypes = (call.arguments ?? []).map((argument) => {
+		return resolveReceiverType(
+			argument,
+			context.resolveNameType,
+			context.resolveCallType,
+			context.hoverWordSize,
+			context.objectTypes,
+		);
+	});
+
+	return resolveLibraryCallSignature(
+		context.name,
+		context.allExports,
+		context.importAliases,
+		argumentTypes,
+		context.hoverWordSize,
+	);
+};
+
+const buildLibraryFunctionHover = (
+	context,
+	libraryExport,
+	docSection,
+	signature,
+) => {
+	const params = signature?.params ?? libraryExport.params;
+	const parameters = params?.map(formatLibraryParameter).join(", ");
+	const returnType =
+		signature?.returnType ?? libraryExport.returnType ?? DATA_TYPE.void;
+	const signatureText = `\`\`\`e95\nconst ${context.name}(${parameters}): ${returnType}\n\`\`\``;
 
 	return {
 		contents: {
 			kind: "markdown",
-			value: signature + docSection,
+			value: signatureText + docSection,
 		},
 	};
 };
@@ -184,7 +272,12 @@ export const resolveLibraryExportHover = (context) => {
 	const docSection = formatDocComment(docComment);
 
 	if (libraryExport.kind === "function") {
-		return buildLibraryFunctionHover(context, libraryExport, docSection);
+		return buildLibraryFunctionHover(
+			context,
+			libraryExport,
+			docSection,
+			resolveHoveredCallSignature(context, libraryExport),
+		);
 	}
 
 	if (libraryExport.kind === "constant") {

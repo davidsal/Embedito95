@@ -3,7 +3,6 @@ import {
 	DEFAULT_WORD_SIZE,
 	ERROR_CODE,
 	formatDiagnosticMessage,
-	isTruncationWarning,
 	parse,
 	resolvePlatformTypes,
 	SEVERITY,
@@ -144,8 +143,7 @@ export const computeDiagnostics = (
 		...checkErrors
 			.filter(
 				(diagnostic) =>
-					(diagnostic.severity ?? SEVERITY.error) !== SEVERITY.error &&
-					!isTruncationWarning(diagnostic),
+					(diagnostic.severity ?? SEVERITY.error) !== SEVERITY.error,
 			)
 			.map((e) => toLspDiagnostic(e))
 			.filter((diagnostic) => diagnostic !== null),

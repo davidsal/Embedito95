@@ -7,13 +7,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	AST_NODE,
-	buildLibraryFunctionReturnTypes,
+	buildLibraryFunctionDefinitions,
 	check,
 	collectLibraryModuleInfo,
 	collectObjectLiteralTypes,
 	DEFAULT_WORD_SIZE,
 	formatDiagnosticMessage,
 	parse,
+	resolveDefinitionReturnType,
 	resolveProjectTypes,
 	resolveReceiverType,
 	resolveWordDataType,
@@ -142,10 +143,11 @@ export const renderDiagnostic = (diagnostic) => {
 	return `${severity} ${diagnostic.code} @ ${position}: ${formatDiagnosticMessage(diagnostic)}`;
 };
 
-// `resolveProjectTypes` types library calls through this callback; the return
-// types are known ahead of time, so it is a plain lookup bound to them.
-const resolveLibraryCallType = (returnTypes, name) => {
-	return returnTypes[name] ?? null;
+// `resolveProjectTypes` types library calls through this callback; the
+// definitions keep every overload signature, so the resolver picks the one that
+// matches the argument types.
+const resolveLibraryCallType = (definitions, name, argumentTypes) => {
+	return resolveDefinitionReturnType(definitions[name], argumentTypes);
 };
 
 // Reuses the same library introspection the LSP performs
@@ -163,7 +165,7 @@ export const readLibraryContext = ({
 	const source = marker ? rawSource.replaceAll(marker, sample) : rawSource;
 	const moduleInfo = collectLibraryModuleInfo(source, packageName);
 	const libraryFunctions = { [packageName]: moduleInfo.functions };
-	const returnTypes = buildLibraryFunctionReturnTypes(libraryFunctions);
+	const definitions = buildLibraryFunctionDefinitions(libraryFunctions);
 	const libraries = {
 		// Each case is a library-style program: its probes are exported, so unused
 		// declarations are suppressed and only meaningful diagnostics remain.
@@ -179,7 +181,7 @@ export const readLibraryContext = ({
 	};
 	return {
 		libraries,
-		resolveLibraryCallType: resolveLibraryCallType.bind(null, returnTypes),
+		resolveLibraryCallType: resolveLibraryCallType.bind(null, definitions),
 		objectTypes: moduleInfo.objectTypes,
 	};
 };

@@ -3,18 +3,27 @@
 // and diagnostic priority (the earliest local error wins over entry-global
 // errors, one visible error per file). Diagnostics come from
 // `computeDiagnostics`, the same pipeline the language server runs.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
 	AST_NODE,
 	ERROR_CODE,
+	excludeLibrary,
 	formatDiagnosticMessage,
 	parse,
 	tokenize,
+	UTF8,
 	walk,
 } from "embedito95-core";
 import { computeDiagnostics } from "../lsp/src/diagnostics.js";
+import {
+	findEnclosingLibraryConfig,
+	loadLibrariesFromContext,
+} from "../lsp/src/server/shared/libraries.js";
 import { SNAPSHOT_STATUS } from "./constants.js";
 import { expectEqual } from "./reporting.js";
+import { CORE_LIBRARY_DIRECTORY } from "./src/language/language-snapshot-harness.mjs";
 
 const LSP_SEVERITY = {
 	error: 1,
@@ -598,6 +607,32 @@ const checkWarningsAreAllEmitted = () => {
 	);
 };
 
+const checkCoreLibraryDocumentHasNoDuplicateDeclaration = async () => {
+	const libraryDirectory = join(CORE_LIBRARY_DIRECTORY, "math");
+	const documentPath = join(libraryDirectory, "main.e95");
+	const source = readFileSync(documentPath, UTF8);
+	const packageName =
+		findEnclosingLibraryConfig(libraryDirectory)?.package ?? null;
+	const libraries = excludeLibrary(
+		loadLibrariesFromContext(libraryDirectory),
+		packageName,
+	);
+	const diagnostics = await computeDiagnostics(
+		source,
+		null,
+		{ ...libraries, libraryPackage: packageName },
+		true,
+		false,
+	);
+	return expectEqual(
+		"LSP does not report duplicateDeclaration when the core math file is opened",
+		diagnostics.filter((diagnostic) => {
+			return diagnostic.code === ERROR_CODE.duplicateDeclaration;
+		}).length,
+		0,
+	);
+};
+
 export const runLspDiagnosticsChecks = async () => {
 	return [
 		checkMissingImportBraceReportsSingleError(),
@@ -618,6 +653,7 @@ export const runLspDiagnosticsChecks = async () => {
 		checkMissingSetupCallShownWithoutLocalErrors(),
 		checkExactlyOneVisibleErrorPerFile(),
 		checkWarningsAreAllEmitted(),
+		await checkCoreLibraryDocumentHasNoDuplicateDeclaration(),
 	];
 };
 

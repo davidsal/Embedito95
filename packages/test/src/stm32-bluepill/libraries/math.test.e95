@@ -61,7 +61,7 @@ const testFloatMath = () => {
 }
 
 const testLogarithms = () => {
-    const natural: f32 = naturalLog(2.7182817)
+    const natural: f32 = naturalLog(2.718282)
     const decimal: f32 = logarithm10(100.0)
     const raised: f32 = exponential(1.0)
     return natural + decimal + raised
@@ -132,6 +132,92 @@ const testInverseTrigonometry = () => {
     return fromSine + fromCosine + fromTangent + quadrant + domainEdge
 }
 
+const testFloat64Helpers = () => {
+    // More than seven significant digits: f64 keeps them, f32 would not.
+    const precise: f64 = 3.14159265358979
+    const singlePrecision: f32 = squareRoot(16.0)
+    const doublePrecision: f64 = squareRoot(precise)
+    const squared: f64 = square(precise)
+    const clamped: f64 = clampFloat(precise, 0.0, 3.0)
+    const remapped: f64 = interpolateRangeFloat(precise, 0.0, 3.14159265358979, 0.0, 100.0)
+    const rounded: f64 = roundNearest(precise)
+    const truncated: f64 = truncate(precise)
+    const remainder: f64 = remainderFloat(precise, 0.5)
+    const magnitude: f64 = absoluteFloat(-precise)
+    const smallest: f64 = minimumFloat(precise, 3.0)
+    const radians: f64 = toRadians(precise)
+    const sineValue: f64 = sine(precise)
+    const wideNatural: f64 = naturalLog(precise)
+    // Mixed f32/f64 arguments select f64 and cast the f32 argument explicitly.
+    const mixedMinimum: f64 = minimumFloat(singlePrecision, precise)
+    const mixedPower: f64 = power(singlePrecision, precise)
+    const mixedRemapped: f64 = interpolateRangeFloat(singlePrecision, 0.0, 1.0, 0.0, precise)
+    return singlePrecision + doublePrecision + squared + clamped + remapped + rounded + truncated + remainder + magnitude + smallest + radians + sineValue + wideNatural + mixedMinimum + mixedPower + mixedRemapped
+}
+
+// The result type follows the selected overload, so an unannotated const keeps
+// f64 instead of a fixed f32.
+const testFloat64Inference = (value: f64) => {
+    const inferredSquare = square(value)
+    const inferredRoot = squareRoot(value)
+    return inferredSquare + inferredRoot
+}
+
+// Declared f32 destination: the f64 overload is selected, and the f64 result
+// is cast explicitly with a non-blocking narrowing warning instead of an error.
+const testMixedWidthNarrowing = (value: f64) => {
+    const remapped: f32 = interpolateRangeFloat(value, 0.0, 1.0, 0.0, 100.0)
+    return remapped
+}
+
+// A u32 * i16 product does not fit f32 exactly, so square picks f64.
+const testWidenedIntegerProduct = (count: u32, factor: i16) => {
+    const product = count * factor
+    const squared: f64 = square(product)
+    return squared
+}
+
+// u64 into an i32 parameter: explicit cast plus a non-blocking warning.
+const testWidenedIntegerNarrowing = (wide: u64) => {
+    const bounded: i32 = clamp(wide, 0, 100)
+    return bounded
+}
+
+// A u32 above the i32 range must keep its magnitude: the i64 overloads run the
+// whole operation at 64 bits instead of wrapping the argument negative.
+const testLargeUnsignedIntegerMath = (value: u32) => {
+    const clamped: i64 = clamp(value, 0, 10)
+    const wideClamped: i64 = clamp(value, 0, 4000000000)
+    const smallest: i64 = minimum(value, 2000000000)
+    const largest: i64 = maximum(value, 2000000000)
+    const magnitude: i64 = absolute(value)
+    const remapped: i64 = interpolateRange(value, 0, 4000000000, 0, 1000)
+    // All-unsigned operands keep the u32 overload; integer literals are i32.
+    const zero: u32 = 0
+    const upper: u32 = 4000000000
+    const allUnsigned: u32 = clamp(value, zero, upper)
+    const allUnsignedSmallest: u32 = minimum(value, upper)
+    // Small i32 operands still take the cheap word-sized overload.
+    const small: i32 = clamp(5, 0, 10)
+    return clamped + wideClamped + smallest + largest + magnitude + remapped + allUnsigned + allUnsignedSmallest + small
+}
+
+// The wide value decides the overload even when every other argument is i32:
+// the u32 range loss dominates the number of cheap i32 arguments.
+const testLargeUnsignedWithSignedBounds = (wide: u32, low: i32, high: i32) => {
+    const clamped: i64 = clamp(wide, low, high)
+    const remapped: i64 = interpolateRange(wide, low, high, 0, 1000)
+    return clamped + remapped
+}
+
+const testMixedUnsignedIntegerMath = (small: u8, wide: u32) => {
+    // All-unsigned arguments keep u32 regardless of their order.
+    const lowFirst: u32 = clamp(small, wide, wide)
+    const lowLast: u32 = clamp(wide, wide, small)
+    const smallest: u32 = minimum(small, wide)
+    return lowFirst + lowLast + smallest
+}
+
 const setup = () => {}
 
 const main = () => {
@@ -150,6 +236,14 @@ const main = () => {
     testByteAndMaskHelpers()
     testTrigonometry()
     testInverseTrigonometry()
+    testFloat64Helpers()
+    testFloat64Inference(3.14159265358979)
+    testMixedWidthNarrowing(3.14159265358979)
+    testWidenedIntegerProduct(2, 3)
+    testWidenedIntegerNarrowing(7)
+    testLargeUnsignedIntegerMath(3000000000)
+    testLargeUnsignedWithSignedBounds(3000000000, -5, 10)
+    testMixedUnsignedIntegerMath(5, 3000000000)
 }
 
 main()

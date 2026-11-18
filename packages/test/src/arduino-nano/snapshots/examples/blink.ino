@@ -9,9 +9,9 @@ const i16 BLINK_INTERVAL = 1000;
 void blink() {
 	while (true) {
 		core_gpio::setDigital(core_gpio::LED_BUILTIN, core_gpio::HIGH);
-		core_time::delay(BLINK_INTERVAL);
+		core_time::delay((u32)(BLINK_INTERVAL));
 		core_gpio::setDigital(core_gpio::LED_BUILTIN, core_gpio::LOW);
-		core_time::delay(BLINK_INTERVAL);
+		core_time::delay((u32)(BLINK_INTERVAL));
 	}
 }
 

@@ -235,6 +235,7 @@ export const loadProjectLibraryExports = (documentUri) => {
 					kind: "function",
 					params: functionInfo.params,
 					returnType: functionInfo.returnType,
+					signatures: functionInfo.signatures ?? null,
 				});
 			}
 		}

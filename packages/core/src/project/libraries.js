@@ -4,6 +4,7 @@ import {
 	resolveFloatType,
 	resolveIntegerType,
 } from "../checker/index.js";
+import { expandWidthFamilySignature } from "../checker/library-types.js";
 import { AST_NODE, DATA_TYPE, QUOTE_SINGLE, UNKNOWN } from "../constants.js";
 import { tokenize } from "../lexer/index.js";
 import { parse } from "../parser/index.js";
@@ -198,6 +199,7 @@ const processVariableDeclaration = (
 	functions,
 	types,
 	libraryEnumInfo,
+	allowWidthFamilies,
 ) => {
 	const declaration = statement.declarations?.[0];
 
@@ -209,7 +211,7 @@ const processVariableDeclaration = (
 	exportNames.push(name);
 
 	if (declaration.init?.type === AST_NODE.functionExpression) {
-		functions[name] = {
+		const signature = {
 			params: declaration.init.params.map((param) => ({
 				name: param.name,
 				type: param.typeAnnotation?.type ?? null,
@@ -218,6 +220,20 @@ const processVariableDeclaration = (
 			})),
 			returnType: declaration.init.returnType?.name ?? DATA_TYPE.void,
 		};
+		const signatures = allowWidthFamilies
+			? expandWidthFamilySignature(signature)
+			: [signature];
+		const firstSignature = signatures[0];
+		const existing = functions[name];
+		if (existing) {
+			existing.signatures.push(...signatures);
+		} else {
+			functions[name] = {
+				params: firstSignature.params,
+				returnType: firstSignature.returnType,
+				signatures,
+			};
+		}
 	} else {
 		const enumInfo = libraryEnumInfo[packageName];
 		const isEnumMemberInit =
@@ -278,7 +294,11 @@ export const processLibraryAST = (
 	libraryObjectTypes,
 	options = {},
 ) => {
-	const { onlyExported = false, comments = [] } = options;
+	const {
+		onlyExported = false,
+		comments = [],
+		allowWidthFamilies = false,
+	} = options;
 	const exportNames = [];
 	const functions = {};
 	const types = {};
@@ -307,6 +327,7 @@ export const processLibraryAST = (
 				functions,
 				types,
 				libraryEnumInfo,
+				allowWidthFamilies,
 			);
 			continue;
 		}
@@ -330,7 +351,12 @@ export const processLibraryAST = (
 // Full module description (types, functions, enums) for a source string. Unlike
 // `readModule`, it keeps PRIVATE declarations too, so a consumer can reason about
 // the shape of an exported type whose fields reference non-exported enums.
-export const collectLibraryModuleInfo = (mainSource, packageName) => {
+export const collectLibraryModuleInfo = (
+	mainSource,
+	packageName,
+	options = {},
+) => {
+	const { allowWidthFamilies = true } = options;
 	const { tokens } = tokenize(mainSource);
 	const { ast, comments } = parse(tokens);
 	const libraryEnumInfo = {};
@@ -340,7 +366,7 @@ export const collectLibraryModuleInfo = (mainSource, packageName) => {
 		packageName,
 		libraryEnumInfo,
 		libraryObjectTypes,
-		{ comments },
+		{ comments, allowWidthFamilies },
 	);
 	return {
 		exports: exportNames,

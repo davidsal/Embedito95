@@ -11,9 +11,9 @@ void blink() {
 	core_gpio::setMode(LED_PIN, core_gpio::OUTPUT);
 	while (true) {
 		core_gpio::setDigital(LED_PIN, core_gpio::HIGH);
-		core_time::delay(PERIOD_MS);
+		core_time::delay((u32)(PERIOD_MS));
 		core_gpio::setDigital(LED_PIN, core_gpio::LOW);
-		core_time::delay(PERIOD_MS);
+		core_time::delay((u32)(PERIOD_MS));
 	}
 }
 

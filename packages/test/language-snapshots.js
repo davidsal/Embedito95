@@ -15,6 +15,7 @@ import { listMethodAssignmentSnapshots } from "./src/language/generate-method-as
 import { listMethodOnlyLiteralSnapshots } from "./src/language/generate-method-only-literal.mjs";
 import { listMethodReceiverSnapshots } from "./src/language/generate-method-receiver.mjs";
 import { listNullableAssignmentsSnapshots } from "./src/language/generate-nullable-assignments.mjs";
+import { listNumericConversionSnapshots } from "./src/language/generate-numeric-conversions.mjs";
 import { listObjectCycleSnapshots } from "./src/language/generate-object-cycle.mjs";
 import { listSerialLibrarySnapshots } from "./src/language/generate-serial-library.mjs";
 import { listServoLibrarySnapshots } from "./src/language/generate-servo-library.mjs";
@@ -58,6 +59,7 @@ export const listLanguageSnapshots = () => {
 		...listSwitchExhaustivenessSnapshots(),
 		...listLogicalOperatorSnapshots(),
 		...listMathLibrarySnapshots(),
+		...listNumericConversionSnapshots(),
 		...listLibraryStrictnessSnapshots(),
 		...listVariableScopingSnapshots(),
 		...listUnusedDeclarationSnapshots(),

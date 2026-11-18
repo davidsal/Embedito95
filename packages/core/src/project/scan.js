@@ -94,7 +94,7 @@ const loadLibraryModule = ({
 		packageName,
 		libraryEnumInfo,
 		libraryObjectTypes,
-		{ comments },
+		{ comments, allowWidthFamilies: coreLibraryPackages.has(packageName) },
 	);
 
 	libraryExports[packageName] = exportNames;

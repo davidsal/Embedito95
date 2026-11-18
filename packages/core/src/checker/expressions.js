@@ -61,7 +61,17 @@ const resolveCallReceiverType = (
 ) => {
 	const callee = node.callee;
 	if (callee?.type === AST_NODE.identifier) {
-		return resolveCallType ? resolveCallType(callee.name) : null;
+		const argumentTypes = (node.arguments ?? []).map((argument) => {
+			return resolveReceiverType(
+				argument,
+				resolveNameType,
+				resolveCallType,
+				wordSize,
+				objectTypes,
+				options,
+			);
+		});
+		return resolveCallType ? resolveCallType(callee.name, argumentTypes) : null;
 	}
 	return resolveMemberCallType(
 		callee,
@@ -428,7 +438,12 @@ export const resolveExpressionType = (
 	}
 	if (node.type === AST_NODE.callExpression) {
 		if (node.callee?.type === AST_NODE.identifier) {
-			return resolveCallType ? resolveCallType(node.callee.name) : null;
+			const argumentTypes = (node.arguments ?? []).map((argument) => {
+				return resolveExpressionChild(argument, context);
+			});
+			return resolveCallType
+				? resolveCallType(node.callee.name, argumentTypes)
+				: null;
 		}
 		if (node.callee?.type === AST_NODE.memberExpression) {
 			return resolveMemberCallType(
