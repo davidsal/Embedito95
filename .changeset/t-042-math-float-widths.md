@@ -1,7 +1,0 @@
----
-"embedito95-core": minor
-"embedito95-registry": minor
-"embedito95-cli": minor
----
-
-Declare every `math` helper per numeric width. Floating-point helpers get an `f32` and an `f64` overload: an `f64` argument keeps double precision instead of narrowing silently, the result follows the selected overload (so `const r = square(value)` infers `f64`), integer arguments pick `f32` when they fit in 2^24 and `f64` otherwise, and narrowing emits a visible cast plus a non-blocking warning. The generated `e95_config.h` now carries `E95_FLOAT64_SOFTWARE`, so shared C++ picks the native or software `f64` implementation from the platform mode. `interpolateRange`, `clamp`, `absolute`, `minimum` and `maximum` also get an `i32`, a `u32` and an `i64` overload: the integer overload now follows the same promotion as the binary operators, so all-unsigned arguments stay on the cheap `u32` path, `u8` + signed resolves to `i16`, `u16` + signed to `i32` and `u32` + signed (for example `clamp(u32, i32, i32)`) to `i64`, keeping the unsigned magnitude instead of wrapping it negative. `u32` overloads do their ratio in 64-bit intermediates. `u64` stays without an overload, falls back to `i64` with an explicit cast plus a non-blocking warning, and the bit helpers keep their fixed `u32`/`u8` signatures. Core library sources can now write one declaration per width family (`f32 | f64`, `i32 | i64 | u32`), which the compiler expands to the same concrete overloads before type checking; user code still rejects width unions.

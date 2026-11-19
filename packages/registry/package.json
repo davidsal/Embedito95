@@ -1,6 +1,6 @@
 {
 	"name": "embedito95-registry",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"description": "Embedito95 platforms, strategies and libraries registry",
 	"type": "module",
 	"license": "AGPL-3.0-only WITH LicenseRef-Embedito95-Runtime-Exception-1.0",
