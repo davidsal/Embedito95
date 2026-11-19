@@ -358,10 +358,10 @@ export const renderLibraryCase = (testCase, context) => {
 };
 
 // A generated entry carries both the write path and the compared content; the
-// runner consumes the same shape for every generator. `listSnapshots` writes
-// test fixtures, while `listDocumentSnapshots` writes a checked-in document
-// outside the test tree but validates it with the same runner.
-export const listSnapshotsIn = (directory, fileName, content) => {
+// runner consumes the same shape for every generator. `listSnapshotAt` targets
+// any directory (test fixtures or a checked-in document); generators whose files
+// live in the snapshot tree use `listSnapshots` as the shorthand.
+export const listSnapshotAt = (directory, fileName, content) => {
 	return [
 		{
 			fileName,
@@ -372,11 +372,7 @@ export const listSnapshotsIn = (directory, fileName, content) => {
 };
 
 export const listSnapshots = (fileName, content) => {
-	return listSnapshotsIn(SNAPSHOTS_DIRECTORY, fileName, content);
-};
-
-export const listDocumentSnapshots = (fileName, content) => {
-	return listSnapshotsIn(LANGUAGE_DOCS_DIRECTORY, fileName, content);
+	return listSnapshotAt(SNAPSHOTS_DIRECTORY, fileName, content);
 };
 
 export const writeSnapshots = (snapshots) => {

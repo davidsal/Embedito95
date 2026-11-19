@@ -1,10 +1,11 @@
 # Math API reference
 
-This page lists every function of the `math` core library. Each one is
-declared once with a width family (`f32 | f64` or `i32 | i64 | u32`);
-the compiler expands that family into one concrete signature per width
-before type checking, and both forms are shown here together with the
-first line of the function's doc comment.
+This page lists every function of the `math` core library. Most functions are
+declared once with a width family (`f32 | f64` or `i32 | i64 | u32`); the
+compiler expands that family into one concrete signature per width before
+type checking. The remaining functions have a fixed signature because their
+declaration does not depend on a width. Both forms are shown here together
+with the first line of the function's doc comment.
 
 The promotion rules and the width-selection table live in
 [Math](math.md); this page does not repeat them. Do not edit it by hand:
@@ -50,7 +51,7 @@ Expanded to the concrete overloads the compiler type-checks:
 
 ### `absolute`
 
-Returns the absolute value of an integer.
+Returns the absolute value of an integer; the i64 minimum returns itself.
 
 Declared once with its width family:
 
@@ -497,7 +498,7 @@ Expanded to the concrete overloads the compiler type-checks:
 
 ### `toRadians`
 
-Converts an angle from degrees to radians.
+Converts an angle from degrees to radians; f64 uses a double-precision pi constant.
 
 Declared once with its width family:
 
@@ -514,7 +515,7 @@ Expanded to the concrete overloads the compiler type-checks:
 
 ### `toDegrees`
 
-Converts an angle from radians to degrees.
+Converts an angle from radians to degrees; f64 uses a double-precision pi constant.
 
 Declared once with its width family:
 

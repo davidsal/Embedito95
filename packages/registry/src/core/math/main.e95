@@ -99,9 +99,9 @@ export const logarithm10 = (value: f32 | f64): f32 | f64 => {}
 export const exponential = (value: f32 | f64): f32 | f64 => {}
 
 /**
- * Returns the absolute value of an integer.
- * Declared once per integer width. The most negative i32 keeps its current
- * behavior and stays negative; use the i64 form for that magnitude.
+ * Returns the absolute value of an integer; the i64 minimum returns itself.
+ * Declared once per integer width. The most negative value of a width stays
+ * negative because its positive counterpart is not representable.
  * @param value - Value whose magnitude is requested.
  * @returns The magnitude of value at the promoted width.
  */
@@ -313,14 +313,14 @@ export const arcTangent = (value: f32 | f64): f32 | f64 => {}
 export const arcTangent2 = (y: f32 | f64, x: f32 | f64): f32 | f64 => {}
 
 /**
- * Converts an angle from degrees to radians.
+ * Converts an angle from degrees to radians; f64 uses a double-precision pi constant.
  * @param degrees - Angle in degrees.
  * @returns The angle expressed in radians, at the selected width.
  */
 export const toRadians = (degrees: f32 | f64): f32 | f64 => {}
 
 /**
- * Converts an angle from radians to degrees.
+ * Converts an angle from radians to degrees; f64 uses a double-precision pi constant.
  * @param radians - Angle in radians.
  * @returns The angle expressed in degrees, at the selected width.
  */

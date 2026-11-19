@@ -24,6 +24,7 @@ import {
 	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	CYCLES_FLAG_UNIT_CHECKS_GROUP,
+	DOC_GENERATOR_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
 	FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
@@ -60,6 +61,7 @@ import {
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
 import { runCyclesFlagChecks } from "./cycles-flag-checks.js";
+import { runDocGeneratorChecks } from "./doc-generator-checks.js";
 import { runFunctionTypeParserChecks } from "./function-type-parser-checks.js";
 import { runRegistryIntTypeParityChecks } from "./int-type-parity-checks.js";
 import { listLanguageSnapshots } from "./language-snapshots.js";
@@ -228,6 +230,10 @@ export const run = async () => {
 	const cyclesFlagResults = await runCyclesFlagChecks();
 	reportUnitChecks(CYCLES_FLAG_UNIT_CHECKS_GROUP, cyclesFlagResults);
 	collectMismatches(cyclesFlagResults, mismatches);
+
+	const docGeneratorResults = runDocGeneratorChecks();
+	reportUnitChecks(DOC_GENERATOR_UNIT_CHECKS_GROUP, docGeneratorResults);
+	collectMismatches(docGeneratorResults, mismatches);
 
 	const configIncludeResults = await runConfigIncludeChecks();
 	reportUnitChecks(CONFIG_INCLUDE_UNIT_CHECKS_GROUP, configIncludeResults);
