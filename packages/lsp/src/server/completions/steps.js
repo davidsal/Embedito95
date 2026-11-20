@@ -23,6 +23,12 @@ import {
 
 export const NOT_HANDLED = Symbol("notHandled");
 
+// A trailing dot (optionally followed by a partial member name) is always a
+// member access or the start of a float literal. When no receiver step resolves
+// members for it, the statement-level fallback would only offer keywords and
+// declarations that cannot appear after a dot, so the completion must be empty.
+const TRAILING_DOT_PATTERN = /(?:^|[^.])\.[a-zA-Z0-9_$]*$/;
+
 const METHOD_COMPLETION_KIND = 3;
 const FIELD_COMPLETION_KIND = 6;
 const ENUM_MEMBER_COMPLETION_KIND = 21;
@@ -417,6 +423,10 @@ export const resolveDotMemberCompletions = (context) => {
 	}
 
 	return resolveReceiverCompletionItems(context, "");
+};
+
+export const isUnresolvedDotContext = (context) => {
+	return TRAILING_DOT_PATTERN.test(context.beforeCursor.trimEnd());
 };
 
 export const resolveDotPartialCompletions = (context) => {

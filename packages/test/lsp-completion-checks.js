@@ -26,6 +26,13 @@ const READ_BLOCK_LABEL = "readEepromBlock";
 const WRITE_BLOCK_LABEL = "writeEepromBlock";
 const EXPECTED_BLOCK_LABELS = `${READ_BLOCK_LABEL}, ${WRITE_BLOCK_LABEL}`;
 const EXPECTED_READ_BLOCK_DETAIL = "(address, length) => u8[]";
+const UNRESOLVED_DOT_CASES = [
+	{ description: "numeric literal dot", source: "const INTERVAL = 1000." },
+	{ description: "enum member dot", source: "Pin.A0." },
+	{ description: "function name dot", source: "blinkLed." },
+	{ description: "void call dot", source: "setDigital(LED_BUILTIN, LOW)." },
+	{ description: "object literal dot", source: "{." },
+];
 
 const listBlockLabels = (completions) => {
 	return completions
@@ -88,6 +95,22 @@ const resolveCompletionsAt = (documentUri, source, line, character) => {
 		documents,
 		PLATFORM_NAME,
 	);
+};
+
+const checkUnresolvedDotCompletionsAreEmpty = () => {
+	return UNRESOLVED_DOT_CASES.map(({ description, source }) => {
+		const completions = resolveCompletionsAt(
+			DOCUMENT_URI,
+			source,
+			SOURCE_LINE,
+			source.length,
+		);
+		return expectEqual(
+			`LSP completion after ${description} is empty`,
+			completions.length,
+			0,
+		);
+	});
 };
 
 const resolveConsoleExpressionCompletions = (prefix) => {
@@ -178,6 +201,7 @@ const checkConsoleMemberCompletionList = () => {
 export const runLspCompletionChecks = () => {
 	return [
 		...checkEepromBlockCompletions(),
+		...checkUnresolvedDotCompletionsAreEmpty(),
 		...checkConsoleConstantCompletions(),
 		checkConsoleConstantHasNoDuplicateImport(),
 		checkConsoleMemberCompletionList(),

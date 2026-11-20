@@ -9,6 +9,7 @@ import { buildProjectTypeInference } from "../shared/type-inference.js";
 import { resolveDefaultCompletions } from "./default-completions.js";
 import { KEYWORD_COMPLETIONS } from "./keyword-completions.js";
 import {
+	isUnresolvedDotContext,
 	NOT_HANDLED,
 	resolveCallArgumentCompletions,
 	resolveDotMemberCompletions,
@@ -94,6 +95,10 @@ export const onCompletion = (requestParameters, documents, platform) => {
 		if (completions !== NOT_HANDLED) {
 			return completions;
 		}
+	}
+
+	if (isUnresolvedDotContext(context)) {
+		return [];
 	}
 
 	return resolveDefaultCompletions(context);
