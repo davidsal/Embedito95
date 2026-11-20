@@ -56,6 +56,14 @@ Common C/C++ problems it avoids:
 is no runtime trap: values that exceed the result type still wrap, so use a
 wider type or an explicit check when the range is uncertain.
 
+`-fwrapv` also protects 16-bit counters on AVR. There `int` is 16 bits, so an
+`i16` (`int16_t`) is promoted to a 16-bit `int`, and `32767 + 1` overflows a
+signed `int`. Without the flag that is undefined behavior: the compiler may
+assume it never happens, delete the loop exit and let
+`for (let i: i16 = 0; i >= 0; i += 1)` run forever. With `-fwrapv` the
+increment wraps to `-32768` and the loop ends. On ARM `int` is 32 bits, so the
+intermediate does not overflow and the same loop ends even without the flag.
+
 The full result type for every arithmetic pair is listed in the
 `binary-operations.txt` snapshot, and the promotion used by each comparison in
 `binary-comparisons.txt`. Both live in the project test suite, under
