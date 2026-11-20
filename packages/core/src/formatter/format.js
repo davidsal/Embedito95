@@ -92,20 +92,37 @@ const getSourceEndLine = (source, startLine, beforeLine) => {
 	return startLine;
 };
 
+const hasTrailingComment = (node, commentMap) => {
+	const comments = commentMap.get(node) ?? [];
+	const startLine = node.loc?.start?.line;
+	return comments.some((comment) => {
+		return comment.line >= startLine;
+	});
+};
+
 const getSeparator = (source, previous, part, commentMap) => {
 	if (previous.node && part.node) {
 		const previousLine = previous.node.loc?.start?.line;
 		const currentLine = part.node.loc?.start?.line;
 		const previousIsImport = previous.node.type === AST_NODE.importDeclaration;
 		const currentIsImport = part.node.type === AST_NODE.importDeclaration;
-
-		if (previousIsImport && !currentIsImport) {
-			return "\n\n";
-		}
 		const nodeComments = commentMap.get(part.node) ?? [];
 		const leadingComment = nodeComments.find((comment) => {
 			return comment.line < currentLine;
 		});
+		const importHasTrailingComment = hasTrailingComment(
+			previous.node,
+			commentMap,
+		);
+
+		if (
+			previousIsImport &&
+			!currentIsImport &&
+			!leadingComment &&
+			!importHasTrailingComment
+		) {
+			return "\n\n";
+		}
 		const checkLine = leadingComment?.line ?? currentLine;
 		const previousEndLine = getSourceEndLine(
 			source,
