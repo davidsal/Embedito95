@@ -87,7 +87,7 @@ const formatAwaitExpression = (node, depth, commentMap, source) => {
 };
 
 const formatIdentifier = (node, depth, commentMap, source) => {
-	let result = node.name;
+	let result = node.name ?? "";
 	if (node.typeAnnotation) {
 		result += `: ${node.typeAnnotation.type}`;
 	}
