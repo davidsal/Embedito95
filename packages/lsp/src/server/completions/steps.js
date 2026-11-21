@@ -2,7 +2,9 @@ import {
 	ARRAY_METHODS,
 	AST_NODE,
 	DATA_TYPE,
+	decodeObjectShape,
 	isAsyncTaskType,
+	isObjectShapeType,
 	parseArrayType,
 	resolveArrayMethod,
 	resolveReceiverType,
@@ -291,8 +293,22 @@ const buildAsyncTaskValueCompletionItems = (typeName, prefix) => {
 	];
 };
 
+// A receiver type can be a NAMED object (`objectTypes[name]`) or an ANONYMOUS
+// shape (`object:{field:type;…}`) produced by an inferred return. Both expose
+// the same field surface, so the anonymous shape is decoded with the same
+// parser hover uses and wrapped as a type info for `getObjectTypeMembers`.
+const resolveObjectTypeInfo = (typeName, objectTypes) => {
+	if (isObjectShapeType(typeName)) {
+		return { fields: decodeObjectShape(typeName) ?? {} };
+	}
+
+	return objectTypes?.[typeName];
+};
+
 const buildObjectMemberCompletionItems = (typeName, prefix, objectTypes) => {
-	const members = getObjectTypeMembers(objectTypes?.[typeName]);
+	const members = getObjectTypeMembers(
+		resolveObjectTypeInfo(typeName, objectTypes),
+	);
 
 	if (members.length === 0) {
 		return null;

@@ -34,6 +34,22 @@ const UNRESOLVED_DOT_CASES = [
 	{ description: "object literal dot", source: "{." },
 ];
 
+const PERSONA_DOT_LINE = "persona.";
+const PERSONA_ADDRESS_DOT_LINE = "persona.address.";
+const ANONYMOUS_SHAPE_SOURCE = [
+	"const getPersona = () => { return { name: 'David', age: 31 } }",
+	"const persona = getPersona()",
+	PERSONA_DOT_LINE,
+].join("\n");
+const ANONYMOUS_SHAPE_LINE = 2;
+const EXPECTED_PERSONA_LABELS = "age,name";
+const NESTED_SHAPE_SOURCE = [
+	"const getPersona = () => { return { name: 'David', address: { city: 'X' } } }",
+	"const persona = getPersona()",
+	PERSONA_ADDRESS_DOT_LINE,
+].join("\n");
+const EXPECTED_NESTED_LABELS = "city";
+
 const listBlockLabels = (completions) => {
 	return completions
 		.map((completion) => {
@@ -44,6 +60,15 @@ const listBlockLabels = (completions) => {
 		})
 		.sort()
 		.join(", ");
+};
+
+const listSortedLabels = (completions) => {
+	return completions
+		.map((completion) => {
+			return completion.label;
+		})
+		.sort()
+		.join(",");
 };
 
 const findCompletionDetail = (completions, label) => {
@@ -198,6 +223,35 @@ const checkConsoleMemberCompletionList = () => {
 	);
 };
 
+const checkAnonymousShapeMemberCompletions = () => {
+	return [
+		expectEqual(
+			"LSP completion after 'persona.' lists the anonymous return shape fields",
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					ANONYMOUS_SHAPE_SOURCE,
+					ANONYMOUS_SHAPE_LINE,
+					PERSONA_DOT_LINE.length,
+				),
+			),
+			EXPECTED_PERSONA_LABELS,
+		),
+		expectEqual(
+			"LSP completion after 'persona.address.' lists the nested anonymous shape fields",
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					NESTED_SHAPE_SOURCE,
+					ANONYMOUS_SHAPE_LINE,
+					PERSONA_ADDRESS_DOT_LINE.length,
+				),
+			),
+			EXPECTED_NESTED_LABELS,
+		),
+	];
+};
+
 export const runLspCompletionChecks = () => {
 	return [
 		...checkEepromBlockCompletions(),
@@ -207,5 +261,6 @@ export const runLspCompletionChecks = () => {
 		checkConsoleMemberCompletionList(),
 		...checkConsoleMemberCompletions(""),
 		...checkConsoleMemberCompletions("lo"),
+		...checkAnonymousShapeMemberCompletions(),
 	];
 };
