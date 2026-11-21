@@ -57,6 +57,7 @@ import {
 	TEST_SOURCES_DIRECTORY,
 	UPDATE_SNAPSHOTS_FLAG,
 	VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
+	VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP,
 	WORD_SIZE_UNIT_CHECKS_GROUP,
 } from "./constants.js";
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
@@ -97,6 +98,7 @@ import { runStm32ParallelCompileChecks } from "./stm32-parallel-compile-checks.j
 import { runSupportedPlatformsChecks } from "./supported-platforms-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
 import { runVscodeIndentationChecks } from "./vscode-indentation-checks.js";
+import { runVscodeQuickSuggestionsChecks } from "./vscode-quick-suggestions-checks.js";
 import { runWordSizeChecks } from "./word-size-checks.js";
 
 const buildLanguageResults = (updateSnapshots) => {
@@ -334,6 +336,13 @@ export const run = async () => {
 		vscodeIndentationResults,
 	);
 	collectMismatches(vscodeIndentationResults, mismatches);
+
+	const vscodeQuickSuggestionsResults = runVscodeQuickSuggestionsChecks();
+	reportUnitChecks(
+		VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP,
+		vscodeQuickSuggestionsResults,
+	);
+	collectMismatches(vscodeQuickSuggestionsResults, mismatches);
 
 	const stm32ParallelCompileResults = await runStm32ParallelCompileChecks();
 	reportUnitChecks(

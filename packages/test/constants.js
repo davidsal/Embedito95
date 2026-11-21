@@ -69,6 +69,10 @@ export const VSCODE_LANGUAGE_CONFIGURATION_FILE = join(
 	PACKAGE_DIRECTORY,
 	"../lsp-vscode/src/language-configuration.json",
 );
+export const VSCODE_PACKAGE_FILE = join(
+	PACKAGE_DIRECTORY,
+	"../lsp-vscode/package.json",
+);
 
 export const LANGUAGE_DIRECTORY_NAME = "language";
 export const FORMATTER_DIRECTORY_NAME = "formatter";
@@ -233,6 +237,8 @@ export const LSP_COMPLETION_UNIT_CHECKS_GROUP = "lsp-completion";
 export const LSP_HOVER_UNIT_CHECKS_GROUP = "lsp-hover";
 export const LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP = "lsp-diagnostics";
 export const VSCODE_INDENTATION_UNIT_CHECKS_GROUP = "vscode-indentation";
+export const VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP =
+	"vscode-quick-suggestions";
 export const SHARED_CONSTANTS_UNIT_CHECKS_GROUP = "shared-constants";
 export const WORD_SIZE_UNIT_CHECKS_GROUP = "word-size";
 export const CAST_CONTEXT_UNIT_CHECKS_GROUP = "cast-context";

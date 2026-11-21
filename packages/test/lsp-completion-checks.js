@@ -49,6 +49,45 @@ const NESTED_SHAPE_SOURCE = [
 	PERSONA_ADDRESS_DOT_LINE,
 ].join("\n");
 const EXPECTED_NESTED_LABELS = "city";
+const TEMPLATE_NOMINAL_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	"const getPersona = (): Persona => { return { name: 'David', age: 31 } }",
+	"const persona = getPersona()",
+	"const value = `${persona.",
+].join("\n");
+const TEMPLATE_ANONYMOUS_SOURCE = [
+	"const getPersona = () => { return { name: 'David', age: 31 } }",
+	"const persona = getPersona()",
+	"const value = `${persona.",
+].join("\n");
+const TEMPLATE_NESTED_SOURCE = [
+	"const getPersona = () => { return { name: 'David', address: { city: 'X' } } }",
+	"const persona = getPersona()",
+	"const value = `${persona.address.",
+].join("\n");
+const TEMPLATE_PERSONA_DOT_LINE = "const value = `${persona.";
+const TEMPLATE_PERSONA_ADDRESS_DOT_LINE = "const value = `${persona.address.";
+const TEMPLATE_PREFIX_LINE = "const value = `${";
+const TEMPLATE_PREFIXES = ["per", "pers"];
+const TEMPLATE_CLOSED_MEMBER_LINE = `const value = \`\${persona.name}\``;
+const INTERPOLATION_CLOSE_BRACE = "}";
+const TEMPLATE_CLOSED_MEMBER_BRACE_INDEX = TEMPLATE_CLOSED_MEMBER_LINE.indexOf(
+	INTERPOLATION_CLOSE_BRACE,
+);
+const OUTSIDE_TEMPLATE_MEMBER_LINE = "persona.name";
+const TEMPLATE_DEFAULT_EXCLUDED_LABELS = ["age", "name"];
+
+const hasLabel = (completions, label) => {
+	return completions.some((item) => {
+		return item.label === label;
+	});
+};
+
+const listsAnyLabel = (completions, labels) => {
+	return labels.some((label) => {
+		return hasLabel(completions, label);
+	});
+};
 
 const listBlockLabels = (completions) => {
 	return completions
@@ -252,6 +291,121 @@ const checkAnonymousShapeMemberCompletions = () => {
 	];
 };
 
+const checkTemplateMemberCompletions = () => {
+	return [
+		expectEqual(
+			"LSP completion after '${persona.' inside a template lists the nominal fields",
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					TEMPLATE_NOMINAL_SOURCE,
+					3,
+					TEMPLATE_PERSONA_DOT_LINE.length,
+				),
+			),
+			EXPECTED_PERSONA_LABELS,
+		),
+		expectEqual(
+			"LSP completion after '${persona.' inside a template lists the anonymous shape fields",
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					TEMPLATE_ANONYMOUS_SOURCE,
+					2,
+					TEMPLATE_PERSONA_DOT_LINE.length,
+				),
+			),
+			EXPECTED_PERSONA_LABELS,
+		),
+		expectEqual(
+			"LSP completion after '${persona.address.' inside a template lists the nested fields",
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					TEMPLATE_NESTED_SOURCE,
+					2,
+					TEMPLATE_PERSONA_ADDRESS_DOT_LINE.length,
+				),
+			),
+			EXPECTED_NESTED_LABELS,
+		),
+	];
+};
+
+const checkTemplateInterpolationPrefixCompletions = () => {
+	return TEMPLATE_PREFIXES.map((prefix) => {
+		const prefixLine = `${TEMPLATE_PREFIX_LINE}${prefix}`;
+		const source = [
+			"type Persona = { name: string, age: i32 }",
+			"const getPersona = (): Persona => { return { name: 'David', age: 31 } }",
+			"const persona = getPersona()",
+			prefixLine,
+		].join("\n");
+		const completions = resolveCompletionsAt(
+			DOCUMENT_URI,
+			source,
+			3,
+			prefixLine.length,
+		);
+		return expectEqual(
+			`LSP completion after '\${${prefix}' inside a template includes the persona variable`,
+			hasLabel(completions, "persona"),
+			true,
+		);
+	});
+};
+
+const checkTemplateClosedAccessCompletions = () => {
+	const closedSource = [
+		"type Persona = { name: string, age: i32 }",
+		"const getPersona = (): Persona => { return { name: 'David', age: 31 } }",
+		"const persona = getPersona()",
+		TEMPLATE_CLOSED_MEMBER_LINE,
+	].join("\n");
+	const closedMemberCompletions = resolveCompletionsAt(
+		DOCUMENT_URI,
+		closedSource,
+		3,
+		TEMPLATE_CLOSED_MEMBER_LINE.length,
+	);
+	return [
+		expectEqual(
+			`LSP completion before the interpolation close brace of '\${persona.name}' lists the field`,
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					closedSource,
+					3,
+					TEMPLATE_CLOSED_MEMBER_BRACE_INDEX,
+				),
+			),
+			"name",
+		),
+		expectEqual(
+			`LSP completion after a completed '\${persona.name}' lists no member fields`,
+			listsAnyLabel(closedMemberCompletions, TEMPLATE_DEFAULT_EXCLUDED_LABELS),
+			false,
+		),
+		expectEqual(
+			"LSP completion after 'persona.name' outside a template still lists the field",
+			listSortedLabels(
+				resolveCompletionsAt(
+					DOCUMENT_URI,
+					[
+						"type Persona = { name: string, age: i32 }",
+						"const getPersona = (): Persona => { return { name: 'David', age: 31 } }",
+						"const persona = getPersona()",
+						OUTSIDE_TEMPLATE_MEMBER_LINE,
+					].join("\n"),
+					3,
+					OUTSIDE_TEMPLATE_MEMBER_LINE.length,
+				),
+			),
+			"name",
+		),
+	];
+};
+
 export const runLspCompletionChecks = () => {
 	return [
 		...checkEepromBlockCompletions(),
@@ -262,5 +416,8 @@ export const runLspCompletionChecks = () => {
 		...checkConsoleMemberCompletions(""),
 		...checkConsoleMemberCompletions("lo"),
 		...checkAnonymousShapeMemberCompletions(),
+		...checkTemplateMemberCompletions(),
+		...checkTemplateInterpolationPrefixCompletions(),
+		...checkTemplateClosedAccessCompletions(),
 	];
 };
