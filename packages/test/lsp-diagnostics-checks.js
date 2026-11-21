@@ -54,8 +54,50 @@ const INFERRED_UNKNOWN_MEMBER_SOURCE = [
 	"    probando(persona.nom)",
 	"}",
 ].join("\n");
+const UNCONVERTIBLE_INTERPOLATION_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
+	"const probando = (value: string) => {}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probando(`${persona}`)",
+	"}",
+].join("\n");
 const SETUP_ONLY_SOURCE = "const setup = () => {}";
 const EMPTY_SOURCE = "";
+const EMPTY_ARRAY_INTERPOLATION_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const valor = `${[]}`",
+	"}",
+].join("\n");
+const NUMBER_ARRAY_INTERPOLATION_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const valor = `${[1, 2]}`",
+	"}",
+].join("\n");
+const SELF_MEMBER_INTERPOLATION_SOURCE = [
+	"type Labeled = { value: i32, text: string, describe: () => string }",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	'    const item: Labeled = { value: 1, text: "x",',
+	"        describe: () => { return `${this.text}-${this.value}-${this.describe()}` } }",
+	"}",
+].join("\n");
+const SHADOWED_FUNCTION_INTERPOLATION_SOURCE = [
+	"const peek = () => { return 1 }",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const probando = (peek: i32) => { const valor = `${peek}` }",
+	"}",
+].join("\n");
 const LOCAL_ERROR_LINE_FIVE_SOURCE = [
 	"const setup = () => {}",
 	"",
@@ -102,6 +144,15 @@ const EXPECTED_INFERRED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unknownMember,
 	params: { name: "nom", type: "object:{name:string;age:i8}" },
 });
+const EXPECTED_UNCONVERTIBLE_INTERPOLATION_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.unconvertibleTemplateExpression,
+	params: { type: "Persona" },
+});
+const EXPECTED_UNCONVERTIBLE_ARRAY_INTERPOLATION_MESSAGE =
+	formatDiagnosticMessage({
+		code: ERROR_CODE.unconvertibleTemplateExpression,
+		params: { type: "array" },
+	});
 const EXPECTED_MISSING_MAIN_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.missingRequiredFunction,
 	params: { name: "main" },
@@ -466,6 +517,89 @@ const checkUnknownMemberLspDiagnostic = () => {
 	);
 };
 
+const checkUnconvertibleInterpolationLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(
+		UNCONVERTIBLE_INTERPOLATION_SOURCE,
+	);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an unconvertible template interpolation at the expression location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unconvertibleTemplateExpression,
+			EXPECTED_UNCONVERTIBLE_INTERPOLATION_MESSAGE,
+			"8:17",
+		].join("|"),
+	);
+};
+
+const checkCompoundLiteralInterpolationLspDiagnostic = () => {
+	const emptyArrayDiagnostics = computeEntryDiagnostics(
+		EMPTY_ARRAY_INTERPOLATION_SOURCE,
+	);
+	const numberArrayDiagnostics = computeEntryDiagnostics(
+		NUMBER_ARRAY_INTERPOLATION_SOURCE,
+	);
+	const emptyArrayError = findErrorDiagnostic(emptyArrayDiagnostics);
+	const numberArrayError = findErrorDiagnostic(numberArrayDiagnostics);
+	const renderRange = (diagnostic) => {
+		if (!diagnostic) {
+			return "none";
+		}
+		const start = diagnostic.range.start;
+		const end = diagnostic.range.end;
+		return `${start.line + 1}:${start.character + 1}-${end.line + 1}:${end.character + 1}`;
+	};
+	return expectEqual(
+		"LSP shows unannotated array interpolations at the expression range",
+		[
+			countErrorDiagnostics(emptyArrayDiagnostics),
+			emptyArrayError?.code,
+			emptyArrayError?.message,
+			renderRange(emptyArrayError),
+			countErrorDiagnostics(numberArrayDiagnostics),
+			numberArrayError?.code,
+			numberArrayError?.message,
+			renderRange(numberArrayError),
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unconvertibleTemplateExpression,
+			EXPECTED_UNCONVERTIBLE_ARRAY_INTERPOLATION_MESSAGE,
+			"4:22-4:23",
+			1,
+			ERROR_CODE.unconvertibleTemplateExpression,
+			EXPECTED_UNCONVERTIBLE_ARRAY_INTERPOLATION_MESSAGE,
+			"4:22-4:27",
+		].join("|"),
+	);
+};
+
+const checkConvertibleInterpolationLspDiagnostics = () => {
+	const sources = [
+		SELF_MEMBER_INTERPOLATION_SOURCE,
+		SHADOWED_FUNCTION_INTERPOLATION_SOURCE,
+	];
+	const counts = sources.map((source) => {
+		return computeEntryDiagnostics(source).filter((diagnostic) => {
+			return diagnostic.code === ERROR_CODE.unconvertibleTemplateExpression;
+		}).length;
+	});
+	return expectEqual(
+		"LSP does not flag this.<field>, this.<method>() or shadowed function names as unconvertible",
+		counts.join("|"),
+		"0|0",
+	);
+};
+
 const checkInferredUnknownMemberLspDiagnostic = () => {
 	const diagnostics = computeEntryDiagnostics(INFERRED_UNKNOWN_MEMBER_SOURCE);
 	const errorDiagnostic = findErrorDiagnostic(diagnostics);
@@ -769,6 +903,9 @@ export const runLspDiagnosticsChecks = async () => {
 		checkLocalTypeErrorHasPriorityOverMissingSetup(),
 		checkUnknownMemberLspDiagnostic(),
 		checkInferredUnknownMemberLspDiagnostic(),
+		checkUnconvertibleInterpolationLspDiagnostic(),
+		checkCompoundLiteralInterpolationLspDiagnostic(),
+		checkConvertibleInterpolationLspDiagnostics(),
 		checkDanglingMemberParserErrorKeepsNextStatement(),
 		await checkDanglingMemberLspDiagnostic(),
 		checkMissingRequiredFunctionStillShownWithoutLocalErrors(),

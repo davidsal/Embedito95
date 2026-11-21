@@ -46,6 +46,7 @@ import {
 	collectObjectMethodReturnTypes,
 	resolveProjectTypes,
 } from "./return-projects.js";
+import { checkTemplateLiteralExpressions } from "./template-literal-checks.js";
 import { checkTypeArguments } from "./type-arguments.js";
 import { resolveWordDataType } from "./type-resolution.js";
 import { checkTypeUnions } from "./union-checks.js";
@@ -260,6 +261,7 @@ export const check = (ast, libs = {}) => {
 	checkTypeUnions(state);
 
 	checkMemberAccess(state);
+	checkTemplateLiteralExpressions(state);
 	checkAwaitUsage(state);
 	checkAsyncBuiltinCalls(state);
 	checkUnreachableCode(ast, errors, libs.source);

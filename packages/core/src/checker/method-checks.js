@@ -115,11 +115,11 @@ const resolveCastReceiver = (state, node, selfType) => {
 // just like the codegen does with `context.selfType`. `objectLiteralTypeMap`
 // already knows the type of each typed literal (a factory return or a typed
 // variable initializer); this stack carries the innermost one through the walk.
-const currentSelfType = (selfTypeStack) => {
+export const currentSelfType = (selfTypeStack) => {
 	return selfTypeStack[selfTypeStack.length - 1] ?? null;
 };
 
-const enterObjectLiteralSelfType = (state, selfTypeStack, node) => {
+export const enterObjectLiteralSelfType = (state, selfTypeStack, node) => {
 	if (node.type !== AST_NODE.objectLiteral) {
 		return;
 	}
@@ -129,7 +129,7 @@ const enterObjectLiteralSelfType = (state, selfTypeStack, node) => {
 	}
 };
 
-const exitObjectLiteralSelfType = (state, selfTypeStack, node) => {
+export const exitObjectLiteralSelfType = (state, selfTypeStack, node) => {
 	if (node.type !== AST_NODE.objectLiteral) {
 		return;
 	}

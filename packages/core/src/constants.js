@@ -81,6 +81,7 @@ export const ERROR_CODE = {
 	undefinedMethod: `${ERROR_PREFIX}undefinedMethod`,
 	invalidMemberAccess: `${ERROR_PREFIX}invalidMemberAccess`,
 	unknownMember: `${ERROR_PREFIX}unknownMember`,
+	unconvertibleTemplateExpression: `${ERROR_PREFIX}unconvertibleTemplateExpression`,
 	invalidReceiverCast: `${ERROR_PREFIX}invalidReceiverCast`,
 	exportNotAllowed: `${ERROR_PREFIX}exportNotAllowed`,
 	missingTypeAnnotation: `${ERROR_PREFIX}missingTypeAnnotation`,

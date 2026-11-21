@@ -55,6 +55,8 @@ const DIAG_MESSAGES = {
 	[ERROR_CODE.invalidMemberAccess]:
 		"Cannot access member '{name}' on type '{type}': '{type}' has no members.",
 	[ERROR_CODE.unknownMember]: "Type '{type}' has no member '{name}'.",
+	[ERROR_CODE.unconvertibleTemplateExpression]:
+		"Cannot interpolate a value of type '{type}' into a template literal: it is not convertible to 'string'.",
 	[ERROR_CODE.invalidReceiverCast]:
 		"Cannot call a method on a cast from '{source}' to '{target}': the cast target must be a handle type that matches the source.",
 	[ERROR_CODE.exportNotAllowed]: "'export' is only allowed in library files",
