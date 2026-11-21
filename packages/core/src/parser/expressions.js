@@ -6,7 +6,10 @@ import {
 } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { parseFunctionExpression } from "./functions.js";
-import { parseIdentifier } from "./imports.js";
+import {
+	makeIncompleteMemberProperty,
+	parseMemberProperty,
+} from "./imports.js";
 import { extendLocation, makeLocation, makeTokenRange } from "./location.js";
 import { parseCallExpression, parsePrimary } from "./primary.js";
 import { parseBlockStatement } from "./statements.js";
@@ -218,14 +221,18 @@ const parseMemberChain = (context, expression) => {
 	if (peek(context).type !== TOKEN_TYPE.dot) {
 		return null;
 	}
-	consume(context);
-	const property = parseIdentifier(context);
+	const dotToken = consume(context);
+	const parsedProperty = parseMemberProperty(context, dotToken);
+	const property = parsedProperty ?? makeIncompleteMemberProperty(dotToken);
 	const member = {
 		type: AST_NODE.memberExpression,
 		object: expression,
 		property,
 		loc: makeLocation(expression, property),
 	};
+	if (!parsedProperty) {
+		return member;
+	}
 	if (peek(context).type === TOKEN_TYPE.leftParenthesis) {
 		return parseCallExpression(context, member);
 	}

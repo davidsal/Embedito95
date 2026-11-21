@@ -8,6 +8,14 @@ const SNAPSHOTS_DIRECTORY = join(FORMATTER_DIRECTORY, "snapshots");
 const TEST_FILE_SUFFIX = ".test.e95";
 const SNAPSHOT_FILE_SUFFIX = ".snap.e95";
 const UTF8 = "utf-8";
+// Fixtures that intentionally keep an incomplete construct (a trailing dot,
+// for example) opt into parse errors through this marker so the formatter can
+// still be checked for preserving the source shape.
+const INCOMPLETE_FIXTURE_MARKER = "incomplete";
+
+const fixtureExpectsParseErrors = (sourceName) => {
+	return sourceName.includes(INCOMPLETE_FIXTURE_MARKER);
+};
 
 const listFormatterTestFileNames = () => {
 	return readdirSync(FORMATTER_DIRECTORY)
@@ -39,22 +47,27 @@ const assertCommentsPreserved = (
 	}
 };
 
-const parseSource = (source, sourceName) => {
+const parseSource = (source, sourceName, allowParseErrors = false) => {
 	const { tokens, errors: lexErrors } = tokenize(source);
 	if (lexErrors.length > 0) {
 		throw new Error(`${sourceName}: ${lexErrors.length} lex error(s)`);
 	}
 	const parsed = parse(tokens, source);
-	if (parsed.errors.length > 0) {
+	if (parsed.errors.length > 0 && !allowParseErrors) {
 		throw new Error(`${sourceName}: ${parsed.errors.length} parse error(s)`);
 	}
 	return parsed;
 };
 
 const formatSource = (source, sourceName) => {
-	const parsed = parseSource(source, sourceName);
+	const allowParseErrors = fixtureExpectsParseErrors(sourceName);
+	const parsed = parseSource(source, sourceName, allowParseErrors);
 	const formatted = format(parsed.ast, parsed.comments, source);
-	const reformattedParsed = parseSource(formatted, sourceName);
+	const reformattedParsed = parseSource(
+		formatted,
+		sourceName,
+		allowParseErrors,
+	);
 	assertCommentsPreserved(
 		parsed.comments,
 		reformattedParsed.comments,

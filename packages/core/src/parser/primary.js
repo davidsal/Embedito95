@@ -1,7 +1,12 @@
 import { AST_NODE, TOKEN_TYPE } from "../constants.js";
 import { parseExpression } from "./expressions.js";
 import { parseFunctionExpression } from "./functions.js";
-import { parseIdentifier, parseLiteral } from "./imports.js";
+import {
+	makeIncompleteMemberProperty,
+	parseIdentifier,
+	parseLiteral,
+	parseMemberProperty,
+} from "./imports.js";
 import {
 	parseArrayLiteral,
 	parseObjectLiteral,
@@ -71,14 +76,19 @@ const parseThisExpression = (context) => {
 	};
 
 	while (peek(context).type === TOKEN_TYPE.dot) {
-		consume(context);
-		const property = parseIdentifier(context);
+		const dotToken = consume(context);
+		const parsedProperty = parseMemberProperty(context, dotToken);
+		const property = parsedProperty ?? makeIncompleteMemberProperty(dotToken);
 		expression = {
 			type: AST_NODE.memberExpression,
 			object: expression,
 			property,
 			loc: makeLocation(expression, property),
 		};
+
+		if (!parsedProperty) {
+			break;
+		}
 
 		if (peek(context).type === TOKEN_TYPE.leftParenthesis) {
 			expression = parseCallExpression(context, expression);
@@ -88,30 +98,23 @@ const parseThisExpression = (context) => {
 	return expression;
 };
 
-const parseNumericProperty = (context) => {
-	const propertyToken = consume(context);
-	return {
-		type: AST_NODE.identifier,
-		name: String(propertyToken.value),
-		loc: makeLocation(propertyToken, extendLocation(propertyToken)),
-	};
-};
-
 const parseNamedExpression = (context) => {
 	let expression = parseIdentifier(context);
 
 	while (peek(context).type === TOKEN_TYPE.dot) {
-		consume(context);
-		const property =
-			peek(context).type === TOKEN_TYPE.number
-				? parseNumericProperty(context)
-				: parseIdentifier(context);
+		const dotToken = consume(context);
+		const parsedProperty = parseMemberProperty(context, dotToken);
+		const property = parsedProperty ?? makeIncompleteMemberProperty(dotToken);
 		expression = {
 			type: AST_NODE.memberExpression,
 			object: expression,
 			property,
 			loc: makeLocation(expression, property),
 		};
+
+		if (!parsedProperty) {
+			break;
+		}
 
 		if (peek(context).type === TOKEN_TYPE.leftParenthesis) {
 			expression = parseCallExpression(context, expression);

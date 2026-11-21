@@ -14,7 +14,12 @@ import {
 	reportParserError,
 	reportUnexpectedToken,
 } from "./token-stream.js";
-import { STATEMENT_START_KEYWORDS, TOKEN_LABELS } from "./tokens.js";
+import {
+	isLiteralKeyword,
+	isNameToken,
+	STATEMENT_START_KEYWORDS,
+	TOKEN_LABELS,
+} from "./tokens.js";
 
 export const parseIdentifier = (context) => {
 	const token = consume(context);
@@ -23,6 +28,64 @@ export const parseIdentifier = (context) => {
 		name: token.value,
 		loc: makeLocation(token, extendLocation(token)),
 	};
+};
+
+// `type` is both a declaration keyword and a common object shape field
+// (`data.type`), so it stays valid as a property only when attached to the dot.
+const SHAPE_FIELD_KEYWORD = "type";
+
+const isMemberPropertyToken = (token, dotToken) => {
+	if (token.type === TOKEN_TYPE.number) {
+		return true;
+	}
+	if (token.type === TOKEN_TYPE.identifier) {
+		return true;
+	}
+	if (isLiteralKeyword(token)) {
+		return true;
+	}
+	if (!isNameToken(token)) {
+		return false;
+	}
+	if (!STATEMENT_START_KEYWORDS.has(token.value)) {
+		return true;
+	}
+	return token.value === SHAPE_FIELD_KEYWORD && token.line === dotToken.line;
+};
+
+// Builds the property the formatter needs to keep a trailing dot (`persona.`)
+// instead of dropping it. The empty name keeps the checker from reporting it as
+// an unknown member; the syntax error is reported by `parseMemberProperty`.
+export const makeIncompleteMemberProperty = (dotToken) => {
+	return {
+		type: AST_NODE.identifier,
+		name: "",
+		loc: makeLocation(dotToken, extendLocation(dotToken)),
+	};
+};
+
+// Returns a parsed property, or `null` after reporting a syntax error when the
+// token after the dot cannot be a property. The offending token is never
+// consumed so a following statement keeps its own tokens.
+export const parseMemberProperty = (context, dotToken) => {
+	const token = peek(context);
+	if (!isMemberPropertyToken(token, dotToken)) {
+		reportUnexpectedToken(
+			context,
+			TOKEN_LABELS[TOKEN_TYPE.identifier],
+			dotToken,
+		);
+		return null;
+	}
+	if (token.type === TOKEN_TYPE.number) {
+		consume(context);
+		return {
+			type: AST_NODE.identifier,
+			name: String(token.value),
+			loc: makeLocation(token, extendLocation(token)),
+		};
+	}
+	return parseIdentifier(context);
 };
 
 const isNumericLiteralRaw = (raw) => {

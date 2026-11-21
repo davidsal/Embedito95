@@ -1,4 +1,4 @@
-import { ERROR_CODE } from "embedito95-core";
+import { ERROR_CODE, parse, tokenize } from "embedito95-core";
 import { expectEqual } from "./reporting.js";
 import {
 	checkSource,
@@ -69,6 +69,19 @@ const checkAnonymousPersonaBody = (bodyLines) => {
 	return checkSource(source, LIBRARIES).errors;
 };
 
+const parseForChecks = (source) => {
+	const { tokens } = tokenize(source);
+	return parse(tokens);
+};
+
+const memberPropertyName = (memberExpression) => {
+	return memberExpression?.property?.name;
+};
+
+const diagnosticPosition = (diagnostic) => {
+	return `${diagnostic?.location?.start?.line}:${diagnostic?.location?.start?.column}`;
+};
+
 const findUnknownMember = (errors) => {
 	return errors.find((error) => {
 		return error.code === ERROR_CODE.unknownMember;
@@ -107,6 +120,7 @@ const checkKnownObjectMembers = () => {
 	const errors = checkPersonaBody([
 		"    probandoTexto(persona.name)",
 		"    probandoEdad(persona.age)",
+		`    probandoTexto(\`\${persona.name}\`)`,
 	]);
 	return expectEqual(
 		"declared object fields do not report unknownMember",
@@ -152,6 +166,64 @@ const checkDanglingMemberAccess = () => {
 			true,
 		),
 	];
+};
+
+const checkDanglingMemberSyntaxErrors = () => {
+	const templateResult = parseForChecks(`const a = \`\${persona.}\``);
+	const statementResult = parseForChecks(
+		["const nombre = persona.", "const otro = 1"].join("\n"),
+	);
+	const eofResult = parseForChecks("persona.");
+	return [
+		expectEqual(
+			"a dangling member inside a template reports a syntax error at the dot",
+			`${templateResult.errors[0]?.code}@${diagnosticPosition(templateResult.errors[0])}`,
+			`${ERROR_CODE.unexpectedToken}@1:21`,
+		),
+		expectEqual(
+			"a dangling template keeps the dot and does not consume another token",
+			memberPropertyName(
+				templateResult.ast.body[0].declarations[0].init.expressions[0],
+			),
+			"",
+		),
+		expectEqual(
+			"a dangling initializer before another statement reports a syntax error at the dot",
+			`${statementResult.errors[0]?.code}@${diagnosticPosition(statementResult.errors[0])}`,
+			`${ERROR_CODE.unexpectedToken}@1:23`,
+		),
+		expectEqual(
+			"the statement after a dangling initializer is parsed separately",
+			`${statementResult.ast.body.length}:${statementResult.ast.body[1]?.declarations[0]?.id?.name}`,
+			"2:otro",
+		),
+		expectEqual(
+			"a dangling initializer does not take the next statement keyword as a member",
+			memberPropertyName(statementResult.ast.body[0].declarations[0].init),
+			"",
+		),
+		expectEqual(
+			"a dangling member at EOF reports a syntax error at the dot",
+			`${eofResult.errors[0]?.code}@${diagnosticPosition(eofResult.errors[0])}`,
+			`${ERROR_CODE.unexpectedToken}@1:8`,
+		),
+	];
+};
+
+const checkValidMemberChainsParseCleanly = () => {
+	const sources = [
+		"const a = persona.name",
+		"const a = a.b.c",
+		`const a = \`\${persona.name}\``,
+	];
+	const errorCounts = sources.map((source) => {
+		return parseForChecks(source).errors.length;
+	});
+	return expectEqual(
+		"valid member access chains parse without diagnostics",
+		errorCounts.join(","),
+		"0,0,0",
+	);
 };
 
 const checkAnonymousShapeUnknownMember = () => {
@@ -306,6 +378,8 @@ export const runMemberAccessChecks = () => {
 		checkKnownObjectMembers(),
 		...checkUnknownMemberInOtherPositions(),
 		...checkDanglingMemberAccess(),
+		...checkDanglingMemberSyntaxErrors(),
+		checkValidMemberChainsParseCleanly(),
 		...checkAnonymousShapeUnknownMember(),
 		checkAnonymousShapeKnownMembers(),
 		...checkAnonymousShapeDanglingMemberAccess(),

@@ -124,6 +124,12 @@ const MISSING_IMPORT_BRACE_TRAILING_SOURCE = [
 	"import { X",
 	"const setup = () => {}",
 ].join("\n");
+const DANGLING_MEMBER_TEMPLATE_SOURCE = `const a = \`\${persona.}\``;
+const DANGLING_MEMBER_STATEMENT_SOURCE = [
+	"const nombre = persona.",
+	"const otro = 1",
+].join("\n");
+const FOUND_DOT = '"."';
 const MISSING_IF_PARENTHESIS_SOURCE = "if (1 {}) {}";
 const NESTED_MISSING_IF_PARENTHESIS_SOURCE = [
 	"if (1) {",
@@ -482,6 +488,87 @@ const checkInferredUnknownMemberLspDiagnostic = () => {
 	);
 };
 
+const checkDanglingMemberParserErrorKeepsNextStatement = () => {
+	const templateResult = parseSource(DANGLING_MEMBER_TEMPLATE_SOURCE);
+	const templateError = templateResult.errors[0];
+	const statementResult = parseSource(DANGLING_MEMBER_STATEMENT_SOURCE);
+	const statementError = statementResult.errors[0];
+	const trailingStatement = statementResult.ast.body[1];
+	return expectEqual(
+		"parser reports a dangling member at the dot and keeps the next statement",
+		[
+			templateResult.errors.length,
+			templateError?.code,
+			formatUnexpectedToken(templateError?.params ?? {}),
+			`${templateError?.location?.start?.line}:${templateError?.location?.start?.column}`,
+			statementResult.errors.length,
+			statementError?.code,
+			formatUnexpectedToken(statementError?.params ?? {}),
+			`${statementError?.location?.start?.line}:${statementError?.location?.start?.column}`,
+			trailingStatement?.type,
+			trailingStatement?.declarations?.[0]?.id?.name,
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:21",
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:23",
+			AST_NODE.variableDeclaration,
+			"otro",
+		].join("|"),
+	);
+};
+
+const checkDanglingMemberLspDiagnostic = async () => {
+	const templateDiagnostics = await computeDiagnostics(
+		DANGLING_MEMBER_TEMPLATE_SOURCE,
+		null,
+		{},
+		false,
+		true,
+	);
+	const templateError = findErrorDiagnostic(templateDiagnostics);
+	const statementDiagnostics = await computeDiagnostics(
+		DANGLING_MEMBER_STATEMENT_SOURCE,
+		null,
+		{},
+		false,
+		true,
+	);
+	const statementError = findErrorDiagnostic(statementDiagnostics);
+	return expectEqual(
+		"LSP shows a dangling member syntax error at the dot",
+		[
+			countErrorDiagnostics(templateDiagnostics),
+			templateError?.code,
+			templateError?.message,
+			templateError
+				? `${templateError.range.start.line + 1}:${templateError.range.start.character + 1}`
+				: "none",
+			countErrorDiagnostics(statementDiagnostics),
+			statementError?.code,
+			statementError?.message,
+			statementError
+				? `${statementError.range.start.line + 1}:${statementError.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:21",
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:23",
+		].join("|"),
+	);
+};
+
 const checkMissingRequiredFunctionStillShownWithoutLocalErrors = () => {
 	const setupOnlyDiagnostics = computeEntryDiagnostics(SETUP_ONLY_SOURCE);
 	const setupOnlyError = findErrorDiagnostic(setupOnlyDiagnostics);
@@ -682,6 +769,8 @@ export const runLspDiagnosticsChecks = async () => {
 		checkLocalTypeErrorHasPriorityOverMissingSetup(),
 		checkUnknownMemberLspDiagnostic(),
 		checkInferredUnknownMemberLspDiagnostic(),
+		checkDanglingMemberParserErrorKeepsNextStatement(),
+		await checkDanglingMemberLspDiagnostic(),
 		checkMissingRequiredFunctionStillShownWithoutLocalErrors(),
 		checkLocalErrorOnLineFiveHasPriorityOverMissingMain(),
 		checkEarliestLocalErrorByLineIsVisible(),
