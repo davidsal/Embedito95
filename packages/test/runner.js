@@ -54,6 +54,7 @@ import {
 	STM32_DOCTOR_UNIT_CHECKS_GROUP,
 	STM32_FIRMWARE_UNIT_CHECKS_GROUP,
 	SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP,
+	TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP,
 	TEMPLATE_LITERAL_UNIT_CHECKS_GROUP,
 	TEST_SOURCES_DIRECTORY,
 	UPDATE_SNAPSHOTS_FLAG,
@@ -97,6 +98,7 @@ import { runStm32DoctorChecks } from "./stm32-doctor-checks.js";
 import { runStm32FirmwareChecks } from "./stm32-firmware-checks.js";
 import { runStm32ParallelCompileChecks } from "./stm32-parallel-compile-checks.js";
 import { runSupportedPlatformsChecks } from "./supported-platforms-checks.js";
+import { runTemplateCodegenGuardChecks } from "./template-codegen-guard-checks.js";
 import { runTemplateInterpolationChecks } from "./template-interpolation-checks.js";
 import { runTemplateLiteralChecks } from "./template-literal-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
@@ -383,6 +385,13 @@ export const run = async () => {
 		templateInterpolationResults,
 	);
 	collectMismatches(templateInterpolationResults, mismatches);
+
+	const templateCodegenGuardResults = await runTemplateCodegenGuardChecks();
+	reportUnitChecks(
+		TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP,
+		templateCodegenGuardResults,
+	);
+	collectMismatches(templateCodegenGuardResults, mismatches);
 
 	const lspHoverResults = await runLspHoverChecks();
 	reportUnitChecks(LSP_HOVER_UNIT_CHECKS_GROUP, lspHoverResults);

@@ -243,6 +243,10 @@ export const SHARED_CONSTANTS_UNIT_CHECKS_GROUP = "shared-constants";
 export const WORD_SIZE_UNIT_CHECKS_GROUP = "word-size";
 export const CAST_CONTEXT_UNIT_CHECKS_GROUP = "cast-context";
 export const TEMPLATE_LITERAL_UNIT_CHECKS_GROUP = "template-literal";
+export const TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP =
+	"template-codegen-guard";
+export const TEMPLATE_CODEGEN_GUARD_TEMP_DIRECTORY_PREFIX =
+	"embedito95-template-codegen-guard-";
 export const SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP = "supported-platforms";
 export const TEST_COMPILE_UNIT_CHECKS_GROUP = "test-compile";
 export const LINT_SCRIPT_NAME = "lint";

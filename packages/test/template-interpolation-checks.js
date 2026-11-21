@@ -202,7 +202,10 @@ const ENUM_NEGATIVE_SOURCE = [
 	"}",
 ].join("\n");
 
-const FORMATTER_SOURCE = "const a = `${nombre}`";
+const FORMATTER_SOURCES = [
+	"const a = `${nombre}`",
+	"const b = `${nombre}-${contador}-${ratio}-${flag}`",
+];
 
 const findUnconvertible = (errors) => {
 	return errors.find((error) => {
@@ -459,8 +462,25 @@ const checkConvertibleEnums = () => {
 	];
 };
 
+const MINIMAL_TYPE_BY_NAME = {
+	nombre: "string",
+	contador: "i32",
+	ratio: "f32",
+	doble: "f64",
+	flag: "boolean",
+	letra: "char",
+	quizas: "i32 | null",
+};
+
 const MINIMAL_RENDER_CONTEXT = {
-	renderStringLiteral: (value) => `"${value}"`,
+	ast: { body: [] },
+	enumNames: new Set(),
+	renderStringLiteral: (value) => {
+		return `"${value}"`;
+	},
+	resolveNameType: (name) => {
+		return MINIMAL_TYPE_BY_NAME[name] ?? null;
+	},
 };
 
 const renderTemplates = (source) => {
@@ -525,13 +545,15 @@ const formatSource = (source) => {
 };
 
 const checkFormatterPreservesValidTemplate = () => {
-	const { formatted, errors } = formatSource(FORMATTER_SOURCE);
-	const reformatted = formatSource(formatted).formatted;
-	return expectEqual(
-		"formatter keeps a valid interpolation and stays idempotent",
-		[errors.length, formatted.trimEnd(), reformatted].join("|"),
-		[0, FORMATTER_SOURCE, formatted].join("|"),
-	);
+	return FORMATTER_SOURCES.map((source) => {
+		const { formatted, errors } = formatSource(source);
+		const reformatted = formatSource(formatted).formatted;
+		return expectEqual(
+			`formatter keeps a valid interpolation and stays idempotent: ${source}`,
+			[errors.length, formatted.trimEnd(), reformatted].join("|"),
+			[0, source, formatted].join("|"),
+		);
+	});
 };
 
 // The checker runs before code generation, so an unconvertible interpolation

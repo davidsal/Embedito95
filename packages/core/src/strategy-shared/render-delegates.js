@@ -9,11 +9,16 @@ import {
 	resolveNegationType,
 } from "../checker/index.js";
 import { ARITHMETIC_OPERATORS, AST_NODE, DATA_TYPE } from "../constants.js";
+import {
+	isConvertibleTemplateType,
+	UnconvertibleTemplateExpressionError,
+} from "../template-convertibility.js";
 import { isFloatType } from "./c-types.js";
 import { castOperand } from "./cast.js";
 import { renderCondition, renderLogicalValue } from "./condition-render.js";
 import { renderExpression } from "./expression.js";
 import { formatFloat64Literal } from "./float-format.js";
+import { collectOwnedPODTypeNames } from "./object-ownership.js";
 import {
 	expressionDataType,
 	makeThisFieldResolver,
@@ -71,6 +76,59 @@ export const renderLiteral = (node, context) => {
 	return raw ?? String(value);
 };
 
+const describeTemplateExpressionType = (expression, type) => {
+	if (type) {
+		return type;
+	}
+	if (expression?.type === AST_NODE.arrayLiteral) {
+		return "array";
+	}
+	if (expression?.type === AST_NODE.objectLiteral) {
+		return "object";
+	}
+	return "unknown";
+};
+
+const resolveTemplateExpressionType = (expression, context) => {
+	return expressionDataType(
+		expression,
+		context.resolveNameType,
+		context.ast,
+		context.floatContext,
+		context.resolveCallType,
+		context.wordSize,
+		makeThisFieldResolver(context),
+		context.narrowingRegions,
+		makeThisMethodResolver(context),
+		context.objectTypes,
+	);
+};
+
+// Defense in depth: the checker is the source of truth and rejects
+// unconvertible interpolations before the strategy runs. The renderer still
+// guards here because other call paths (LSP previews, `--no-check` runs, or
+// tests that invoke the strategy directly) can reach it without the checker.
+// Without this guard they would emit invalid C++ such as
+// `core_string::String({ ... })` or `core_string::String(persona)`, which has
+// no matching overload.
+const assertConvertibleTemplateExpression = (
+	expression,
+	context,
+	enumTypeNames,
+) => {
+	const type = resolveTemplateExpressionType(expression, context);
+	if (
+		isConvertibleTemplateType(type, (enumType) => {
+			return enumTypeNames.has(enumType);
+		})
+	) {
+		return;
+	}
+	throw new UnconvertibleTemplateExpressionError(
+		describeTemplateExpressionType(expression, type),
+	);
+};
+
 export const renderTemplateLiteral = (node, context, lines) => {
 	const quasis = node.quasis ?? [];
 	const expressions = node.expressions ?? [];
@@ -79,6 +137,10 @@ export const renderTemplateLiteral = (node, context, lines) => {
 		return context.renderStringLiteral(quasis.join(""));
 	}
 
+	const enumTypeNames = collectOwnedPODTypeNames(
+		context.ast ?? {},
+		context.enumNames,
+	);
 	const parts = [];
 	for (let index = 0; index < expressions.length; index++) {
 		if (quasis[index]) {
@@ -87,6 +149,7 @@ export const renderTemplateLiteral = (node, context, lines) => {
 			});
 		}
 		const expression = expressions[index];
+		assertConvertibleTemplateExpression(expression, context, enumTypeNames);
 		const renderedExpression = renderExpression(expression, context, lines);
 		parts.push({
 			expression: `core_string::String(${renderedExpression})`,

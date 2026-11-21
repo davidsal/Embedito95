@@ -1,37 +1,15 @@
-import {
-	AST_NODE,
-	DATA_TYPE,
-	ERROR_CODE,
-	UNRESOLVED_TYPE,
-} from "../constants.js";
+import { AST_NODE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { isConvertibleTemplateType } from "../template-convertibility.js";
 import { resolveReceiverType } from "./expressions.js";
 import {
 	currentSelfType,
 	enterObjectLiteralSelfType,
 	exitObjectLiteralSelfType,
 } from "./method-checks.js";
-import {
-	getNonNullableType,
-	isNullableType,
-	isNumericType,
-	NULL_TYPE,
-} from "./types.js";
 import { walk } from "./walk.js";
 
 const FUNCTION_TYPE = "function";
-
-// The string runtime only exposes constructors for these primitives (and their
-// nullable variants). Everything else — objects, anonymous shapes, arrays,
-// functions, void — has no `String(...)` overload and would fail in C++.
-const isConvertiblePrimitive = (type) => {
-	return (
-		type === DATA_TYPE.string ||
-		type === DATA_TYPE.char ||
-		type === DATA_TYPE.boolean ||
-		isNumericType(type)
-	);
-};
 
 // Local enums are emitted as `typedef enum : underlying`, so they convert to
 // their underlying integer. Library enums behave the same way.
@@ -47,16 +25,9 @@ const isKnownEnum = (state, type) => {
 // `UNRESOLVED_TYPE` ("Pin"), a platform handle resolved during code generation.
 // A `null`-literal (`NULL_TYPE`) still has its dedicated nullable rendering.
 const isConvertibleType = (state, type) => {
-	if (type === UNRESOLVED_TYPE || type === NULL_TYPE) {
-		return true;
-	}
-	if (!type) {
-		return false;
-	}
-	if (isNullableType(type)) {
-		return isConvertibleType(state, getNonNullableType(type));
-	}
-	return isConvertiblePrimitive(type) || isKnownEnum(state, type);
+	return isConvertibleTemplateType(type, (enumType) => {
+		return isKnownEnum(state, enumType);
+	});
 };
 
 // Compound literals (`[]`, `{ ... }`, and their nested forms) are never
