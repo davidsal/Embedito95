@@ -38,6 +38,12 @@ const DEVICE_LIBRARIES = createLibraries({
 	},
 });
 
+const ANONYMOUS_PERSONA_DECLARATIONS = [
+	'const getAnonymousPersona = () => { return { name: "david", age: 31, address: { city: "Madrid" } } }',
+	"const probandoTexto = (value: string) => {}",
+	"const probandoEdad = (value: i32) => {}",
+];
+
 const buildPersonaSource = (bodyLines) => {
 	return [
 		...PERSONA_DECLARATIONS,
@@ -50,6 +56,17 @@ const buildPersonaSource = (bodyLines) => {
 
 const checkPersonaBody = (bodyLines) => {
 	return checkSource(buildPersonaSource(bodyLines), LIBRARIES).errors;
+};
+
+const checkAnonymousPersonaBody = (bodyLines) => {
+	const source = [
+		...ANONYMOUS_PERSONA_DECLARATIONS,
+		"const main = () => {",
+		"    const persona = getAnonymousPersona()",
+		...bodyLines,
+		"}",
+	].join("\n");
+	return checkSource(source, LIBRARIES).errors;
 };
 
 const findUnknownMember = (errors) => {
@@ -137,6 +154,117 @@ const checkDanglingMemberAccess = () => {
 	];
 };
 
+const checkAnonymousShapeUnknownMember = () => {
+	const argumentErrors = checkAnonymousPersonaBody([
+		"    probandoTexto(persona.noExiste)",
+	]);
+	const initializerErrors = checkAnonymousPersonaBody([
+		"    const nombre = persona.noExiste",
+	]);
+	const bareErrors = checkAnonymousPersonaBody(["    persona.noExiste"]);
+	const unknownError = findUnknownMember(argumentErrors);
+	return [
+		expectEqual(
+			"an unknown property of an anonymous shape reports unknownMember as an argument",
+			hasErrorCode(argumentErrors, ERROR_CODE.unknownMember),
+			true,
+		),
+		expectEqual(
+			"anonymous shape unknownMember keeps the property name",
+			unknownError?.params?.name,
+			"noExiste",
+		),
+		expectEqual(
+			"anonymous shape unknownMember reports the shape type",
+			typeof unknownError?.params?.type === "string" &&
+				unknownError.params.type.startsWith("object:"),
+			true,
+		),
+		expectEqual(
+			"anonymous shape unknownMember points at the property",
+			`${unknownError?.location?.start?.line}:${unknownError?.location?.start?.column}`,
+			"6:27",
+		),
+		expectEqual(
+			"an unknown anonymous shape property in an initializer reports unknownMember",
+			hasErrorCode(initializerErrors, ERROR_CODE.unknownMember),
+			true,
+		),
+		expectEqual(
+			"a bare unknown anonymous shape property reports unknownMember",
+			hasErrorCode(bareErrors, ERROR_CODE.unknownMember),
+			true,
+		),
+	];
+};
+
+const checkAnonymousShapeKnownMembers = () => {
+	const errors = checkAnonymousPersonaBody([
+		"    probandoTexto(persona.name)",
+		"    probandoEdad(persona.age)",
+	]);
+	return expectEqual(
+		"declared anonymous shape fields do not report unknownMember",
+		hasErrorCode(errors, ERROR_CODE.unknownMember),
+		false,
+	);
+};
+
+const checkAnonymousShapeDanglingMemberAccess = () => {
+	const danglingStatement = checkAnonymousPersonaBody(["    persona."]);
+	const danglingInitializer = checkAnonymousPersonaBody([
+		"    const nombre = persona.",
+	]);
+	const danglingTemplate = checkAnonymousPersonaBody([
+		`    probandoTexto(\`\${persona.}\`)`,
+	]);
+	return [
+		expectEqual(
+			"a dangling anonymous shape member statement reports expectedStatement",
+			hasErrorCode(danglingStatement, ERROR_CODE.expectedStatement),
+			true,
+		),
+		expectEqual(
+			"a dangling anonymous shape member statement does not invent unknownMember",
+			hasErrorCode(danglingStatement, ERROR_CODE.unknownMember),
+			false,
+		),
+		expectEqual(
+			"a dangling anonymous shape member initializer does not break the checker",
+			Array.isArray(danglingInitializer) &&
+				!hasErrorCode(danglingInitializer, ERROR_CODE.unknownMember),
+			true,
+		),
+		expectEqual(
+			"a dangling anonymous shape member inside a template does not invent unknownMember",
+			hasErrorCode(danglingTemplate, ERROR_CODE.unknownMember),
+			false,
+		),
+	];
+};
+
+const checkAnonymousShapeNestedMembers = () => {
+	const validErrors = checkAnonymousPersonaBody([
+		"    probandoTexto(persona.address.city)",
+	]);
+	const invalidErrors = checkAnonymousPersonaBody([
+		"    probandoTexto(persona.address.zip)",
+	]);
+	const unknownError = findUnknownMember(invalidErrors);
+	return [
+		expectEqual(
+			"a nested anonymous shape field does not report unknownMember",
+			hasErrorCode(validErrors, ERROR_CODE.unknownMember),
+			false,
+		),
+		expectEqual(
+			"an unknown nested anonymous shape field reports unknownMember",
+			unknownError?.params?.name,
+			"zip",
+		),
+	];
+};
+
 const checkLibraryObjectMembers = () => {
 	const source = [
 		`import { getDevice } from '${FAKE_DEVICE_LIBRARY}'`,
@@ -178,6 +306,10 @@ export const runMemberAccessChecks = () => {
 		checkKnownObjectMembers(),
 		...checkUnknownMemberInOtherPositions(),
 		...checkDanglingMemberAccess(),
+		...checkAnonymousShapeUnknownMember(),
+		checkAnonymousShapeKnownMembers(),
+		...checkAnonymousShapeDanglingMemberAccess(),
+		...checkAnonymousShapeNestedMembers(),
 		...checkLibraryObjectMembers(),
 	];
 };

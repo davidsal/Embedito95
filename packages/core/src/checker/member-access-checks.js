@@ -1,5 +1,6 @@
 import { AST_NODE, DATA_TYPE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { decodeObjectShape } from "./object-shapes.js";
 import { isNumericType, NULL_TYPE } from "./types.js";
 import { walk } from "./walk.js";
 
@@ -79,21 +80,29 @@ const isKnownObjectMember = (objectTypeDefinition, memberName) => {
 	);
 };
 
-// Returns true when the receiver is a nominal object type, so the caller stops
-// before the primitive-scalar check. Anonymous shapes are intentionally not
-// validated here (they have no `objectTypes` entry).
+// Returns true when the receiver is an object type the checker understands, so
+// the caller stops before the primitive-scalar check. Nominal types look up
+// their declaration in `objectTypes`; inferred anonymous shapes
+// (`object:{…}`) have no entry there and are validated through their decoded
+// fields instead.
 const checkObjectMemberAccess = (state, node, receiverType) => {
 	const objectTypeDefinition = receiverType
 		? state.objectTypes?.[receiverType]
 		: null;
-	if (!objectTypeDefinition) {
+	const anonymousFields = objectTypeDefinition
+		? null
+		: decodeObjectShape(receiverType);
+	if (!objectTypeDefinition && !anonymousFields) {
 		return false;
 	}
 	const memberName = node.property?.name;
 	if (!memberName || !IDENTIFIER_NAME_PATTERN.test(memberName)) {
 		return true;
 	}
-	if (!isKnownObjectMember(objectTypeDefinition, memberName)) {
+	const isKnownMember = objectTypeDefinition
+		? isKnownObjectMember(objectTypeDefinition, memberName)
+		: Object.hasOwn(anonymousFields, memberName);
+	if (!isKnownMember) {
 		pushUnknownMember(state, node, receiverType);
 	}
 	return true;

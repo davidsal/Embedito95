@@ -44,6 +44,16 @@ const UNKNOWN_MEMBER_SOURCE = [
 	"    probando(persona.nom)",
 	"}",
 ].join("\n");
+const INFERRED_UNKNOWN_MEMBER_SOURCE = [
+	'const getPersona = () => { return { name: "ana", age: 30 } }',
+	"const probando = (value: string) => {}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probando(persona.nom)",
+	"}",
+].join("\n");
 const SETUP_ONLY_SOURCE = "const setup = () => {}";
 const EMPTY_SOURCE = "";
 const LOCAL_ERROR_LINE_FIVE_SOURCE = [
@@ -87,6 +97,10 @@ const EXPECTED_TYPE_MISMATCH_MESSAGE = formatDiagnosticMessage({
 const EXPECTED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unknownMember,
 	params: { name: "nom", type: "Persona" },
+});
+const EXPECTED_INFERRED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.unknownMember,
+	params: { name: "nom", type: "object:{name:string;age:i8}" },
 });
 const EXPECTED_MISSING_MAIN_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.missingRequiredFunction,
@@ -446,6 +460,28 @@ const checkUnknownMemberLspDiagnostic = () => {
 	);
 };
 
+const checkInferredUnknownMemberLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(INFERRED_UNKNOWN_MEMBER_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an unknown member of an inferred anonymous shape at the property location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unknownMember,
+			EXPECTED_INFERRED_UNKNOWN_MEMBER_MESSAGE,
+			"7:22",
+		].join("|"),
+	);
+};
+
 const checkMissingRequiredFunctionStillShownWithoutLocalErrors = () => {
 	const setupOnlyDiagnostics = computeEntryDiagnostics(SETUP_ONLY_SOURCE);
 	const setupOnlyError = findErrorDiagnostic(setupOnlyDiagnostics);
@@ -645,6 +681,7 @@ export const runLspDiagnosticsChecks = async () => {
 		checkValidSourceStillParses(),
 		checkLocalTypeErrorHasPriorityOverMissingSetup(),
 		checkUnknownMemberLspDiagnostic(),
+		checkInferredUnknownMemberLspDiagnostic(),
 		checkMissingRequiredFunctionStillShownWithoutLocalErrors(),
 		checkLocalErrorOnLineFiveHasPriorityOverMissingMain(),
 		checkEarliestLocalErrorByLineIsVisible(),
