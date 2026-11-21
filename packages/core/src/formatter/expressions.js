@@ -271,6 +271,9 @@ const formatLiteral = (node, _depth, _commentMap, _source) => {
 const formatTemplateLiteral = (node, depth, commentMap, source) => {
 	const quasis = node.quasis ?? [];
 	const expressions = node.expressions ?? [];
+	if (expressions.length !== quasis.length - 1) {
+		return node.raw ?? "";
+	}
 	let result = "`";
 	for (let index = 0; index < expressions.length; index++) {
 		result += quasis[index] ?? "";

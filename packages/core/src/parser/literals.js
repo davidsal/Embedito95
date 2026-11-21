@@ -1,4 +1,5 @@
-import { AST_NODE, TOKEN_TYPE } from "../constants.js";
+import { AST_NODE, ERROR_CODE, NEWLINE, TOKEN_TYPE } from "../constants.js";
+import { makeDiagnostic } from "../errors.js";
 import { tokenize } from "../lexer/index.js";
 import { parseExpression } from "./expressions.js";
 import { extendLocation, makeLocation } from "./location.js";
@@ -11,6 +12,45 @@ import {
 } from "./token-stream.js";
 import { isObjectKeyToken } from "./tokens.js";
 
+const INTERPOLATION_OPENER_LENGTH = 2;
+const INTERPOLATION_FOUND = "'}'";
+const INTERPOLATION_EXPECTED = "expression";
+
+const hasSignificantToken = (tokens) => {
+	return tokens.some((token) => {
+		return token.type !== TOKEN_TYPE.eof && token.type !== TOKEN_TYPE.comment;
+	});
+};
+
+const computeExpressionEnd = (expression) => {
+	const source = expression.source ?? "";
+	let line = expression.line;
+	let column = expression.column;
+	for (const character of source) {
+		if (character === NEWLINE) {
+			line += 1;
+			column = 1;
+		} else {
+			column += 1;
+		}
+	}
+	return { line, column: column + 1 };
+};
+
+const buildEmptyInterpolationDiagnostic = (expression) => {
+	return makeDiagnostic({
+		code: ERROR_CODE.unexpectedToken,
+		params: { expected: INTERPOLATION_EXPECTED, found: INTERPOLATION_FOUND },
+		location: {
+			start: {
+				line: expression.line,
+				column: expression.column - INTERPOLATION_OPENER_LENGTH,
+			},
+			end: computeExpressionEnd(expression),
+		},
+	});
+};
+
 export const parseTemplateLiteral = (context, token) => {
 	const expressions = [];
 	for (const expression of token.expressions ?? []) {
@@ -21,6 +61,10 @@ export const parseTemplateLiteral = (context, token) => {
 			expression.column,
 		);
 		context.errors.push(...expressionErrors);
+		if (!hasSignificantToken(tokens)) {
+			context.errors.push(buildEmptyInterpolationDiagnostic(expression));
+			continue;
+		}
 		const expressionContext = createParserContext(tokens, context.errors);
 		const parsed = parseExpression(expressionContext);
 		if (parsed) {
