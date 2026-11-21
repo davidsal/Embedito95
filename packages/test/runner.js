@@ -11,6 +11,7 @@ import {
 	listTestDirectory,
 	validatePlatformTestParity,
 } from "./case-discovery.js";
+import { runCastContextChecks } from "./cast-context-checks.js";
 import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
 import { runConfigIncludeChecks } from "./config-include-checks.js";
@@ -18,6 +19,7 @@ import { runConsoleChecks } from "./console-checks.js";
 import {
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
+	CAST_CONTEXT_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
 	CONFIG_INCLUDE_UNIT_CHECKS_GROUP,
@@ -315,6 +317,10 @@ export const run = async () => {
 	const wordSizeResults = runWordSizeChecks();
 	reportUnitChecks(WORD_SIZE_UNIT_CHECKS_GROUP, wordSizeResults);
 	collectMismatches(wordSizeResults, mismatches);
+
+	const castContextResults = runCastContextChecks();
+	reportUnitChecks(CAST_CONTEXT_UNIT_CHECKS_GROUP, castContextResults);
+	collectMismatches(castContextResults, mismatches);
 
 	const vscodeIndentationResults = runVscodeIndentationChecks();
 	reportUnitChecks(

@@ -1,0 +1,42 @@
+// Contextual int|float casts: `500 as f32` is an exact, legal cast. With an
+// integer target the `int|f32` intermediate is i32 and the float operand is
+// truncated; with a float target the operation stays float. `1 + (2 as f32)`
+// keeps the i32 intermediate instead of folding down to the literal's width.
+const setup = () => {}
+
+const report = (intValue: i32, floatValue: f32, added: i32, restored: f32, truncated: i16) => {}
+
+const funI = (x: i32) => {}
+
+const funF = (x: f32) => {}
+
+type Box = { count: i32, ratio: f32 }
+
+const computeArguments = () => {
+    funI(500 as f32)
+    funI(1.5)
+    funF(500 as f32)
+    let box: Box = { count: 0, ratio: 0 }
+    box.count = 500 as f32
+    box.count = 1.5
+    box.ratio = 500 as f32
+}
+
+const computeContextualCast = () => {
+    const sensorValue: i32 = 100
+    const temperature = (sensorValue as i32 * 500 as f32) / 1023
+    const temperature2: f32 = (sensorValue as i32 * 500 as f32) / 1023
+    const added = 1 + (2 as f32)
+    const restored: f32 = (2 as f32) + 1
+    const truncated: i16 = 1.5
+
+    report(temperature, temperature2, added, restored, truncated)
+}
+
+const main = () => {
+    setup()
+    computeArguments()
+    computeContextualCast()
+}
+
+main()

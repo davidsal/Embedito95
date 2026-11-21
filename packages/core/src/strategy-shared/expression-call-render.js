@@ -5,7 +5,13 @@ import {
 } from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import { isFloatType } from "./c-types.js";
+import { isFloatToIntegerCast } from "./cast.js";
 import { renderExpression } from "./expression.js";
+import {
+	expressionDataType,
+	makeThisFieldResolver,
+	makeThisMethodResolver,
+} from "./type-resolve.js";
 
 const FREE_METHOD_RECEIVER_TEMP_PREFIX = "_e95_receiver";
 
@@ -33,12 +39,28 @@ const renderArgument = (argument, index, paramTypes, context, lines) => {
 	const savedFloatContext = context.floatContext;
 	context.floatContext = resolveArgumentFloatContext(paramType);
 	const rendered = renderExpression(argument, context, lines);
+	const argumentType = expressionDataType(
+		argument,
+		context.resolveNameType,
+		context.ast,
+		context.floatContext,
+		context.resolveCallType,
+		context.wordSize,
+		makeThisFieldResolver(context),
+		context.narrowingRegions,
+		makeThisMethodResolver(context),
+		context.objectTypes,
+	);
 	context.floatContext = savedFloatContext;
 	if (!rendered) {
 		return rendered;
 	}
 	if (shouldWrap) {
 		return `${context.toCType(paramType)}(${context.objectStorageCType(paramType)}${rendered})`;
+	}
+	const targetType = getNonNullableType(paramType);
+	if (isFloatToIntegerCast(argumentType, targetType)) {
+		return `(${context.toCType(targetType)})(${rendered})`;
 	}
 	return rendered;
 };

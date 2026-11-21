@@ -41,18 +41,22 @@ const isFiniteNumber = (value) => {
 	return typeof value === "number" && Number.isFinite(value);
 };
 
+const literalIsFloat = (node) => {
+	if (typeof node.value !== "number") {
+		return false;
+	}
+	return (
+		!Number.isInteger(node.value) ||
+		(typeof node.raw === "string" && node.raw.includes("."))
+	);
+};
+
 export const nodeIsFloat = (ast, node) => {
 	if (!node || typeof node !== "object") {
 		return false;
 	}
 	if (node.type === AST_NODE.literal) {
-		if (typeof node.value !== "number") {
-			return false;
-		}
-		return (
-			!Number.isInteger(node.value) ||
-			(typeof node.raw === "string" && node.raw.includes("."))
-		);
+		return literalIsFloat(node);
 	}
 	if (node.type === AST_NODE.parenthesizedExpression) {
 		return nodeIsFloat(ast, node.expression);
@@ -75,6 +79,50 @@ export const nodeIsFloat = (ast, node) => {
 	}
 	if (node.type === AST_NODE.awaitExpression) {
 		return nodeIsFloat(ast, node.argument);
+	}
+	return false;
+};
+
+// Any float value anywhere in the expression (literal, `as f32`/`as f64` cast or
+// a constant bound to one). Unlike `nodeIsFloat`, a mixed `int <op> float`
+// expression counts: the result table promotes it through the float operand, so
+// folding the constant value must not shrink the type below that intermediate.
+export const nodeContainsFloat = (ast, node) => {
+	if (!node || typeof node !== "object") {
+		return false;
+	}
+	if (node.type === AST_NODE.literal) {
+		return literalIsFloat(node);
+	}
+	if (node.type === AST_NODE.parenthesizedExpression) {
+		return nodeContainsFloat(ast, node.expression);
+	}
+	if (node.type === AST_NODE.asExpression) {
+		return (
+			node.targetType.name === DATA_TYPE.f32 ||
+			node.targetType.name === DATA_TYPE.f64
+		);
+	}
+	if (node.type === AST_NODE.identifier) {
+		const declaration = findConstantDeclaration(ast, node.name);
+		return declaration ? nodeContainsFloat(ast, declaration.init) : false;
+	}
+	if (node.type === AST_NODE.binaryExpression) {
+		return (
+			nodeContainsFloat(ast, node.left) || nodeContainsFloat(ast, node.right)
+		);
+	}
+	if (node.type === AST_NODE.unaryExpression) {
+		return nodeContainsFloat(ast, node.argument);
+	}
+	if (node.type === AST_NODE.awaitExpression) {
+		return nodeContainsFloat(ast, node.argument);
+	}
+	if (node.type === AST_NODE.conditionalExpression) {
+		return (
+			nodeContainsFloat(ast, node.consequent) ||
+			nodeContainsFloat(ast, node.alternate)
+		);
 	}
 	return false;
 };

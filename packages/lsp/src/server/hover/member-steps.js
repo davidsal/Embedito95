@@ -1,5 +1,6 @@
 import { collectLocalObjectTypes } from "../shared/type-inference.js";
 import { getObjectMemberDocSection } from "./doc-sections.js";
+import { formatCastWarningsSection } from "./formatting.js";
 import { NOT_HANDLED } from "./local-steps.js";
 import {
 	resolveObjectMemberFromType,
@@ -61,7 +62,11 @@ export const resolveMemberObjectHover = (context) => {
 	return {
 		contents: {
 			kind: "markdown",
-			value: `\`\`\`e95\n${memberSignature}\n\`\`\`${docSection}`,
+			value: `\`\`\`e95\n${memberSignature}\n\`\`\`${docSection}${formatCastWarningsSection(
+				context.line,
+				context.column,
+				context.allCastWarnings,
+			)}`,
 		},
 	};
 };

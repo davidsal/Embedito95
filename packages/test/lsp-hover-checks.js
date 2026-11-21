@@ -1002,6 +1002,147 @@ const checkStringMethodNestedNoFalsePositives = () => {
 	);
 };
 
+const CONTEXTUAL_CAST_HOVER_SOURCE = [
+	"const readSensor = (): i32 => { return 100 }",
+	"const main = () => {",
+	"    const sensorValue = readSensor()",
+	"    const temperature = (sensorValue as i32 * 500 as f32) / 1023",
+	"}",
+].join("\n");
+
+const checkContextualCastHoverAndDiagnostics = async () => {
+	const diagnostics = parseDiagnostics(CONTEXTUAL_CAST_HOVER_SOURCE).filter(
+		(diagnostic) => {
+			return diagnostic.includes(ERROR_CODE.explicitFloatInIntContext);
+		},
+	);
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		CONTEXTUAL_CAST_HOVER_SOURCE,
+		findPosition(
+			CONTEXTUAL_CAST_HOVER_SOURCE,
+			"const temperature",
+			"const ".length,
+		),
+	);
+	return [
+		expectEqual(
+			"LSP reports no explicitFloatInIntContext for `500 as f32` in an integer context",
+			diagnostics.join("\n"),
+			"",
+		),
+		expectEqual(
+			"LSP hover shows the i32 type the codegen uses for `500 as f32` in an integer context",
+			hover,
+			"```e95\nconst temperature: i32\n```",
+		),
+	];
+};
+
+const TRUNCATION_HOVER_SOURCE = [
+	"const funI = (x: i32) => { }",
+	"const funF = (x: f32) => { }",
+	"type Box = { count: i32, ratio: f32 }",
+	"const run = () => {",
+	"    funI(500 as f32)",
+	"    funI(1.5)",
+	"    funF(500 as f32)",
+	"    let box: Box = { count: 0, ratio: 0 }",
+	"    box.count = 500 as f32",
+	"    box.count = 1.5",
+	"}",
+].join("\n");
+
+const TRUNCATION_WARNING_SUFFIX =
+	"\n\n⚠ `the argument` is `f32` while the parameter expects `i32`. An automatic cast is applied, which may truncate the value.";
+
+const MEMBER_TRUNCATION_WARNING_SUFFIX = (name) => {
+	return `\n\n⚠ \`${name}\` is \`i32\` while the right-hand expression is \`f32\`. An automatic cast is applied, which may truncate the value.`;
+};
+
+const DECLARATION_TRUNCATION_SOURCE = "const x: i16 = 1.5";
+
+const hoverTruncationAt = async (source, marker, offset) => {
+	return hoverInDocument(
+		DOCUMENT_URI,
+		source,
+		findPosition(source, marker, offset),
+	);
+};
+
+const checkFloatArgumentTruncationHover = async () => {
+	const castArgumentHover = await hoverTruncationAt(
+		TRUNCATION_HOVER_SOURCE,
+		"funI(500 as f32)",
+		"funI(".length,
+	);
+	const literalArgumentHover = await hoverTruncationAt(
+		TRUNCATION_HOVER_SOURCE,
+		"funI(1.5)",
+		"funI(".length,
+	);
+	const floatParameterHover = await hoverTruncationAt(
+		TRUNCATION_HOVER_SOURCE,
+		"funF(500 as f32)",
+		"funF(".length,
+	);
+	return [
+		expectEqual(
+			"LSP hover warns when `500 as f32` is passed to an i32 parameter",
+			castArgumentHover,
+			`\`\`\`e95\nliteral i16 = 500\n\`\`\`${TRUNCATION_WARNING_SUFFIX}`,
+		),
+		expectEqual(
+			"LSP hover warns when the float literal 1.5 is passed to an i32 parameter",
+			literalArgumentHover,
+			`\`\`\`e95\nliteral f32 = 1.5\n\`\`\`${TRUNCATION_WARNING_SUFFIX}`,
+		),
+		expectEqual(
+			"LSP hover keeps `500 as f32` warning-free for an f32 parameter",
+			floatParameterHover,
+			"```e95\nliteral i16 = 500\n```",
+		),
+	];
+};
+
+const checkFloatMemberAssignmentTruncationHover = async () => {
+	const castMemberHover = await hoverTruncationAt(
+		TRUNCATION_HOVER_SOURCE,
+		"box.count = 500",
+		"box.".length,
+	);
+	const literalMemberHover = await hoverTruncationAt(
+		TRUNCATION_HOVER_SOURCE,
+		"box.count = 1.5",
+		"box.".length,
+	);
+	return [
+		expectEqual(
+			"LSP hover warns when `500 as f32` is stored in an i32 property",
+			castMemberHover,
+			`\`\`\`e95\ncount: i32\n\`\`\`${MEMBER_TRUNCATION_WARNING_SUFFIX("box.count")}`,
+		),
+		expectEqual(
+			"LSP hover warns when the float literal 1.5 is stored in an i32 property",
+			literalMemberHover,
+			`\`\`\`e95\ncount: i32\n\`\`\`${MEMBER_TRUNCATION_WARNING_SUFFIX("box.count")}`,
+		),
+	];
+};
+
+const checkDeclarationTruncationHover = async () => {
+	const hover = await hoverTruncationAt(
+		DECLARATION_TRUNCATION_SOURCE,
+		"const x",
+		"const ".length,
+	);
+	return expectEqual(
+		"LSP hover warns when a float literal is truncated into an i16 declaration",
+		hover,
+		"```e95\nconst x: i16 = 1.5\n```\n\n⚠ `x` is `i16` while the right-hand expression is `f32`. An automatic cast is applied, which may truncate the value.",
+	);
+};
+
 const hoverAsyncTaskAt = async (marker, offset = 0) => {
 	return hoverInDocument(
 		ASYNC_TASK_DOCUMENT_URI,
@@ -1425,6 +1566,10 @@ export const runLspHoverChecks = async () => {
 		checkStringMethodNestedDiagnostics(),
 		checkStringMethodArgumentTypeDiagnostics(),
 		checkStringMethodNestedNoFalsePositives(),
+		...(await checkContextualCastHoverAndDiagnostics()),
+		...(await checkFloatArgumentTruncationHover()),
+		...(await checkFloatMemberAssignmentTruncationHover()),
+		await checkDeclarationTruncationHover(),
 		await checkAsyncFunctionHover(),
 		await checkAsyncTaskVariableHover(),
 		await checkAsyncTaskFieldHover(),

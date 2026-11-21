@@ -234,6 +234,7 @@ export const LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP = "lsp-diagnostics";
 export const VSCODE_INDENTATION_UNIT_CHECKS_GROUP = "vscode-indentation";
 export const SHARED_CONSTANTS_UNIT_CHECKS_GROUP = "shared-constants";
 export const WORD_SIZE_UNIT_CHECKS_GROUP = "word-size";
+export const CAST_CONTEXT_UNIT_CHECKS_GROUP = "cast-context";
 export const SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP = "supported-platforms";
 export const TEST_COMPILE_UNIT_CHECKS_GROUP = "test-compile";
 export const LINT_SCRIPT_NAME = "lint";

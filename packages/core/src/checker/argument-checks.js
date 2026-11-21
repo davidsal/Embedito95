@@ -65,6 +65,11 @@ const checkCastArgument = (state, argument, param) => {
 		castType !== param.type &&
 		(INTEGER_TYPES.has(castType) || FLOAT_TYPES.has(castType))
 	) {
+		if (FLOAT_TYPES.has(castType) && INTEGER_TYPES.has(param.type)) {
+			// `funI(500 as f32)` truncates the float argument; the hover warning
+			// reports it instead of an error, matching declarations and members.
+			return;
+		}
 		state.errors.push(
 			makeDiagnostic({
 				code: ERROR_CODE.argumentTypeMismatch,

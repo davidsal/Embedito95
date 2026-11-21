@@ -65,6 +65,7 @@ export const collectCastWarnings = (
 	return [
 		...collectAssignmentCastWarnings(syntaxTree, {
 			variableTypes,
+			objectTypes,
 			wordSize,
 		}),
 		...collectArgumentCastWarnings(syntaxTree, {
