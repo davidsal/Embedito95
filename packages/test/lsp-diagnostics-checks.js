@@ -33,6 +33,17 @@ const LSP_SEVERITY_NAMES = {
 const ERROR_SEVERITY_LABEL = LSP_SEVERITY_NAMES[LSP_SEVERITY.error];
 
 const TYPE_MISMATCH_SOURCE = 'const x: u8 = "hola";';
+const UNKNOWN_MEMBER_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
+	"const probando = (value: string) => {}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probando(persona.nom)",
+	"}",
+].join("\n");
 const SETUP_ONLY_SOURCE = "const setup = () => {}";
 const EMPTY_SOURCE = "";
 const LOCAL_ERROR_LINE_FIVE_SOURCE = [
@@ -72,6 +83,10 @@ const MISSING_SETUP_CALL_ONLY_SOURCE = [
 const EXPECTED_TYPE_MISMATCH_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.assignmentTypeMismatch,
 	params: { rhsType: "string", name: "x", type: "u8" },
+});
+const EXPECTED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.unknownMember,
+	params: { name: "nom", type: "Persona" },
 });
 const EXPECTED_MISSING_MAIN_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.missingRequiredFunction,
@@ -412,6 +427,25 @@ const checkLocalTypeErrorHasPriorityOverMissingSetup = () => {
 	);
 };
 
+const checkUnknownMemberLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(UNKNOWN_MEMBER_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an unknown object member at the property location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[1, ERROR_CODE.unknownMember, EXPECTED_UNKNOWN_MEMBER_MESSAGE, "8:22"].join(
+			"|",
+		),
+	);
+};
+
 const checkMissingRequiredFunctionStillShownWithoutLocalErrors = () => {
 	const setupOnlyDiagnostics = computeEntryDiagnostics(SETUP_ONLY_SOURCE);
 	const setupOnlyError = findErrorDiagnostic(setupOnlyDiagnostics);
@@ -610,6 +644,7 @@ export const runLspDiagnosticsChecks = async () => {
 		checkParserAlwaysReturnsTraversableAst(),
 		checkValidSourceStillParses(),
 		checkLocalTypeErrorHasPriorityOverMissingSetup(),
+		checkUnknownMemberLspDiagnostic(),
 		checkMissingRequiredFunctionStillShownWithoutLocalErrors(),
 		checkLocalErrorOnLineFiveHasPriorityOverMissingMain(),
 		checkEarliestLocalErrorByLineIsVisible(),

@@ -54,6 +54,7 @@ const DIAG_MESSAGES = {
 	[ERROR_CODE.undefinedMethod]: "'{name}' is not a method of type '{typeName}'",
 	[ERROR_CODE.invalidMemberAccess]:
 		"Cannot access member '{name}' on type '{type}': '{type}' has no members.",
+	[ERROR_CODE.unknownMember]: "Type '{type}' has no member '{name}'.",
 	[ERROR_CODE.invalidReceiverCast]:
 		"Cannot call a method on a cast from '{source}' to '{target}': the cast target must be a handle type that matches the source.",
 	[ERROR_CODE.exportNotAllowed]: "'export' is only allowed in library files",

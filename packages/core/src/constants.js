@@ -80,6 +80,7 @@ export const ERROR_CODE = {
 	duplicateDeclaration: `${ERROR_PREFIX}duplicateDeclaration`,
 	undefinedMethod: `${ERROR_PREFIX}undefinedMethod`,
 	invalidMemberAccess: `${ERROR_PREFIX}invalidMemberAccess`,
+	unknownMember: `${ERROR_PREFIX}unknownMember`,
 	invalidReceiverCast: `${ERROR_PREFIX}invalidReceiverCast`,
 	exportNotAllowed: `${ERROR_PREFIX}exportNotAllowed`,
 	missingTypeAnnotation: `${ERROR_PREFIX}missingTypeAnnotation`,

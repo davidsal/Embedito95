@@ -35,6 +35,7 @@ import {
 	LSP_COMPLETION_UNIT_CHECKS_GROUP,
 	LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
 	LSP_HOVER_UNIT_CHECKS_GROUP,
+	MEMBER_ACCESS_UNIT_CHECKS_GROUP,
 	MONITOR_STATE_UNIT_CHECKS_GROUP,
 	POSIX_STRATEGY_UNIT_CHECKS_GROUP,
 	RED_CROSS,
@@ -78,6 +79,7 @@ import { runLspString3Checks } from "./lsp-string3-checks.js";
 import { runLspUnionChecks } from "./lsp-union-checks.js";
 import { runLspWireChecks } from "./lsp-wire-checks.js";
 import { runLspWireSlaveChecks } from "./lsp-wire-slave-checks.js";
+import { runMemberAccessChecks } from "./member-access-checks.js";
 import { runPosixStrategyChecks } from "./posix-strategy-checks.js";
 import { buildEntry, copyEntryFiles, createProject } from "./project-setup.js";
 import { runRegistryCoreParityChecks } from "./registry-core-parity-checks.js";
@@ -240,6 +242,10 @@ export const run = async () => {
 	const asyncTaskTypeResults = runAsyncTaskTypeChecks();
 	reportUnitChecks(ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP, asyncTaskTypeResults);
 	collectMismatches(asyncTaskTypeResults, mismatches);
+
+	const memberAccessResults = runMemberAccessChecks();
+	reportUnitChecks(MEMBER_ACCESS_UNIT_CHECKS_GROUP, memberAccessResults);
+	collectMismatches(memberAccessResults, mismatches);
 
 	const functionTypeParserResults = runFunctionTypeParserChecks();
 	reportUnitChecks(

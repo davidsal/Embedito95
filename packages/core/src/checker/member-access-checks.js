@@ -4,6 +4,7 @@ import { isNumericType, NULL_TYPE } from "./types.js";
 import { walk } from "./walk.js";
 
 const UNKNOWN_MEMBER_NAME = "?";
+const IDENTIFIER_NAME_PATTERN = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
 // A scalar primitive has no fields or methods. Strings, arrays, enums, object
 // types and shapes are excluded on purpose: they either expose members or are
@@ -54,11 +55,58 @@ const pushInvalidMemberAccess = (state, node, receiverType) => {
 	);
 };
 
+const pushUnknownMember = (state, node, receiverType) => {
+	state.errors.push(
+		makeDiagnostic({
+			code: ERROR_CODE.unknownMember,
+			params: {
+				name: node.property?.name ?? UNKNOWN_MEMBER_NAME,
+				type: receiverType,
+			},
+			location: node.property?.loc ?? node.loc,
+		}),
+	);
+};
+
+// A field is data (`fields`), a method exposed by the type, or a value captured
+// by a closure factory. Checking all three keeps valid member access from being
+// reported while still rejecting names the type does not declare.
+const isKnownObjectMember = (objectTypeDefinition, memberName) => {
+	return (
+		Object.hasOwn(objectTypeDefinition.fields ?? {}, memberName) ||
+		Object.hasOwn(objectTypeDefinition.methods ?? {}, memberName) ||
+		objectTypeDefinition.capturedFieldTypes?.has(memberName) === true
+	);
+};
+
+// Returns true when the receiver is a nominal object type, so the caller stops
+// before the primitive-scalar check. Anonymous shapes are intentionally not
+// validated here (they have no `objectTypes` entry).
+const checkObjectMemberAccess = (state, node, receiverType) => {
+	const objectTypeDefinition = receiverType
+		? state.objectTypes?.[receiverType]
+		: null;
+	if (!objectTypeDefinition) {
+		return false;
+	}
+	const memberName = node.property?.name;
+	if (!memberName || !IDENTIFIER_NAME_PATTERN.test(memberName)) {
+		return true;
+	}
+	if (!isKnownObjectMember(objectTypeDefinition, memberName)) {
+		pushUnknownMember(state, node, receiverType);
+	}
+	return true;
+};
+
 const checkMemberExpression = (state, node, methodCallees) => {
 	if (methodCallees.has(node)) {
 		return;
 	}
 	const receiverType = state.context.resolveCheckExpressionType(node.object);
+	if (checkObjectMemberAccess(state, node, receiverType)) {
+		return;
+	}
 	if (!isMemberlessScalarType(receiverType)) {
 		return;
 	}
