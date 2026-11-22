@@ -6,6 +6,7 @@ import {
 	buildIncludeSections,
 	buildSplitLibraryArtifacts,
 	renderSetupAndMain,
+	renderTypeDeclarations,
 } from "./codegen-assembly.js";
 import {
 	buildClosureMetadata,
@@ -163,11 +164,7 @@ export const generateCode = ({
 		float64Software: isSoftwareFloat64(platform),
 	});
 
-	const { typeDeclarations, mainBody } = renderSetupAndMain(
-		ast,
-		renderContext,
-		libraryModules,
-	);
+	const { mainBody } = renderSetupAndMain(ast, renderContext, libraryModules);
 
 	const { userFunctions, sharedFunctionPrototypes } = renderUserCode(
 		ast,
@@ -188,6 +185,16 @@ export const generateCode = ({
 		userTypeNames,
 		importNamespaces,
 		objectTypes,
+	);
+
+	// Render the struct declarations once every expression has been visited:
+	// rendering the main body/user functions registers the anonymous shapes they
+	// use (`mainReturn`, literal shapes inside functions), and a shape must be
+	// declared before the named struct that stores it.
+	const typeDeclarations = renderTypeDeclarations(
+		ast,
+		renderContext,
+		anonymousObjectTypes,
 	);
 
 	const { includeSections, engineIncludes } = buildIncludeSections(

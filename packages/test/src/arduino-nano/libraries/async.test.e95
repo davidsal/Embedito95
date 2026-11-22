@@ -13,6 +13,19 @@ const blink = async () => {
     setDigital(Pin.10, LOW)
 }
 
+// Regression: an async task that captures a local whose inferred type is an
+// anonymous shape must keep it as a shared `Object<Shape>` field, declared
+// after the shape struct and with its trace/TypeInfo wired in.
+const getPersona = () => {
+    return { name: "David", age: 31 }
+}
+
+const readPersona = async () => {
+    const persona = getPersona()
+    await readSensor()
+    delay(persona.age)
+}
+
 const setup = () => {
     setMode(Pin.10, PinMode.OUTPUT)
 }
@@ -20,6 +33,7 @@ const setup = () => {
 const main = () => {
     setup()
     blink()
+    readPersona()
 }
 
 main()

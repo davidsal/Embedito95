@@ -1,4 +1,8 @@
-import { parseArrayType } from "../checker/index.js";
+import {
+	decodeObjectShape,
+	isObjectShapeType,
+	parseArrayType,
+} from "../checker/index.js";
 import { INDENT } from "../constants.js";
 import {
 	ADD_TASK_FUNCTION_NAME,
@@ -91,6 +95,18 @@ const defaultObjectValue = (typeName, objectTypes, visited) => {
 	return `{ ${values.join(", ")} }`;
 };
 
+const defaultShapeValue = (shapeType, objectTypes, visited) => {
+	const fields = decodeObjectShape(shapeType) ?? {};
+	const values = Object.entries(fields)
+		.filter(([, definition]) => {
+			return !definition.optional;
+		})
+		.map(([fieldName, definition]) => {
+			return `${fieldName}: ${defaultFieldValue(definition.type, objectTypes, visited)}`;
+		});
+	return `{ ${values.join(", ")} }`;
+};
+
 const defaultFieldValue = (type, objectTypes, visited) => {
 	if (type === "boolean") {
 		return "false";
@@ -98,11 +114,16 @@ const defaultFieldValue = (type, objectTypes, visited) => {
 	if (type === "string") {
 		return '""';
 	}
-	if (objectTypes?.[type]) {
-		return defaultObjectValue(type, objectTypes, visited);
-	}
+	// An array of shapes (`object:{…}[]`) also starts with the shape prefix, so
+	// the array check must come first or the default would be a single object.
 	if (isArrayType(type)) {
 		return "[]";
+	}
+	if (isObjectShapeType(type)) {
+		return defaultShapeValue(type, objectTypes, visited);
+	}
+	if (objectTypes?.[type]) {
+		return defaultObjectValue(type, objectTypes, visited);
 	}
 	if (isUnionType(type)) {
 		return "null";

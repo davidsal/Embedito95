@@ -207,12 +207,16 @@ export const COMPILE_SIZES_SNAPSHOT_STATUS = {
 };
 
 export const ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP = "async-local-types";
+export const ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP = "async-intermediate";
+export const ASYNC_INTERMEDIATE_TEMP_DIRECTORY_PREFIX =
+	"embedito95-async-intermediate-";
 export const ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP = "async-task-type";
 export const MEMBER_ACCESS_UNIT_CHECKS_GROUP = "member-access";
 export const UNUSED_SCOPE_UNIT_CHECKS_GROUP = "unused-scope";
 export const FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP = "function-type-parser";
 export const CLI_PROJECT_UNIT_CHECKS_GROUP = "cli-project";
 export const MONITOR_STATE_UNIT_CHECKS_GROUP = "monitor-state";
+export const TOOLING_UNIT_CHECKS_GROUP = "tooling";
 export const CYCLES_FLAG_UNIT_CHECKS_GROUP = "cycles-flag";
 export const CONFIG_INCLUDE_UNIT_CHECKS_GROUP = "config-include";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";

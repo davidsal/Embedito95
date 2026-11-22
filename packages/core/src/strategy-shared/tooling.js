@@ -1,6 +1,58 @@
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 
+const FAILURE_OUTPUT_MAX_LINES = 30;
+const ERROR_LINE_PATTERN = /error/i;
+
+const summarizeFailureOutput = (output) => {
+	const lines = output.split(/\r?\n/);
+	const errorLines = lines.filter((line) => {
+		return ERROR_LINE_PATTERN.test(line);
+	});
+	const selected =
+		errorLines.length > 0
+			? errorLines
+			: lines
+					.filter((line) => line.trim().length > 0)
+					.slice(-FAILURE_OUTPUT_MAX_LINES);
+	if (selected.length === 0) {
+		return "";
+	}
+	const truncated = selected.slice(0, FAILURE_OUTPUT_MAX_LINES);
+	if (selected.length > FAILURE_OUTPUT_MAX_LINES) {
+		truncated.push(
+			`... ${selected.length - FAILURE_OUTPUT_MAX_LINES} more error line(s)`,
+		);
+	}
+	return truncated.join("\n");
+};
+
+// Build the failure message for a spawned tool. `arduino-cli compile --json`
+// writes its diagnostics to stdout (stderr stays empty), so both streams are
+// combined; the raw output is trimmed to its `error` lines (or the last lines
+// when none match) to keep the message readable. In `verbose` mode the caller
+// inherited stdio, so the full output already reached the terminal and only the
+// command/exit code are reported.
+export const formatToolFailure = ({
+	command,
+	args = [],
+	code,
+	stdout = "",
+	stderr = "",
+	verbose = false,
+}) => {
+	const commandLine = [command, ...args].join(" ");
+	if (verbose) {
+		return `"${commandLine}" failed with exit code ${code}`;
+	}
+	const output = [stderr.trim(), stdout.trim()].filter(Boolean).join("\n");
+	const summary = summarizeFailureOutput(output);
+	if (!summary) {
+		return `"${commandLine}" failed with exit code ${code}`;
+	}
+	return `"${commandLine}" failed with exit code ${code}:\n${summary}`;
+};
+
 const USB_SERIAL_PORT_PATTERNS = {
 	darwin: [/^cu\.(usb|usbserial|wchusbserial|SLAB)/],
 	linux: [/^ttyUSB/, /^ttyACM/, /^ttyAMA/],
@@ -103,10 +155,16 @@ export const runTool = async (
 	});
 
 	if (code !== 0) {
-		const message = verbose
-			? `"${command}" failed with exit code ${code}`
-			: `"${command}" failed: ${stderr.trim() || `exit code ${code}`}`;
-		throw new Error(message);
+		throw new Error(
+			formatToolFailure({
+				command,
+				args,
+				code,
+				stdout,
+				stderr,
+				verbose,
+			}),
+		);
 	}
 	return capture ? stdout : undefined;
 };

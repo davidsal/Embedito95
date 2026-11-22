@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { UTF8 } from "embedito95-core";
+import { runAsyncIntermediateChecks } from "./async-intermediate-checks.js";
 import { runAsyncLocalChecks } from "./async-locals-checks.js";
 import { runAsyncTaskTypeChecks } from "./async-task-type-checks.js";
 import {
@@ -17,6 +18,7 @@ import { runClosureFactoryChecks } from "./closure-factory-checks.js";
 import { runConfigIncludeChecks } from "./config-include-checks.js";
 import { runConsoleChecks } from "./console-checks.js";
 import {
+	ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP,
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
 	CAST_CONTEXT_UNIT_CHECKS_GROUP,
@@ -57,6 +59,7 @@ import {
 	TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP,
 	TEMPLATE_LITERAL_UNIT_CHECKS_GROUP,
 	TEST_SOURCES_DIRECTORY,
+	TOOLING_UNIT_CHECKS_GROUP,
 	UNUSED_SCOPE_UNIT_CHECKS_GROUP,
 	UPDATE_SNAPSHOTS_FLAG,
 	VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
@@ -102,6 +105,7 @@ import { runSupportedPlatformsChecks } from "./supported-platforms-checks.js";
 import { runTemplateCodegenGuardChecks } from "./template-codegen-guard-checks.js";
 import { runTemplateInterpolationChecks } from "./template-interpolation-checks.js";
 import { runTemplateLiteralChecks } from "./template-literal-checks.js";
+import { runToolingChecks } from "./tooling-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
 import { runUnusedScopeChecks } from "./unused-scope-checks.js";
 import { runVscodeIndentationChecks } from "./vscode-indentation-checks.js";
@@ -236,6 +240,10 @@ export const run = async () => {
 	reportUnitChecks(CORE_SURFACE_UNIT_CHECKS_GROUP, coreSurfaceResults);
 	collectMismatches(coreSurfaceResults, mismatches);
 
+	const toolingResults = await runToolingChecks();
+	reportUnitChecks(TOOLING_UNIT_CHECKS_GROUP, toolingResults);
+	collectMismatches(toolingResults, mismatches);
+
 	const cyclesFlagResults = await runCyclesFlagChecks();
 	reportUnitChecks(CYCLES_FLAG_UNIT_CHECKS_GROUP, cyclesFlagResults);
 	collectMismatches(cyclesFlagResults, mismatches);
@@ -247,6 +255,13 @@ export const run = async () => {
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);
 	collectMismatches(asyncLocalResults, mismatches);
+
+	const asyncIntermediateResults = await runAsyncIntermediateChecks();
+	reportUnitChecks(
+		ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP,
+		asyncIntermediateResults,
+	);
+	collectMismatches(asyncIntermediateResults, mismatches);
 
 	const asyncTaskTypeResults = runAsyncTaskTypeChecks();
 	reportUnitChecks(ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP, asyncTaskTypeResults);

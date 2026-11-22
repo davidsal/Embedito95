@@ -63,6 +63,7 @@ export { downloadStm32FirmwareCache } from "./stm32-firmware.js";
 export { loadTemplates } from "./templates.js";
 export {
 	detectUsbSerialPorts,
+	formatToolFailure,
 	runSpawnedProcess,
 	runTool,
 } from "./tooling.js";
