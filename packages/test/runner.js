@@ -57,6 +57,7 @@ import {
 	TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP,
 	TEMPLATE_LITERAL_UNIT_CHECKS_GROUP,
 	TEST_SOURCES_DIRECTORY,
+	UNUSED_SCOPE_UNIT_CHECKS_GROUP,
 	UPDATE_SNAPSHOTS_FLAG,
 	VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
 	VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP,
@@ -102,6 +103,7 @@ import { runTemplateCodegenGuardChecks } from "./template-codegen-guard-checks.j
 import { runTemplateInterpolationChecks } from "./template-interpolation-checks.js";
 import { runTemplateLiteralChecks } from "./template-literal-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
+import { runUnusedScopeChecks } from "./unused-scope-checks.js";
 import { runVscodeIndentationChecks } from "./vscode-indentation-checks.js";
 import { runVscodeQuickSuggestionsChecks } from "./vscode-quick-suggestions-checks.js";
 import { runWordSizeChecks } from "./word-size-checks.js";
@@ -253,6 +255,10 @@ export const run = async () => {
 	const memberAccessResults = runMemberAccessChecks();
 	reportUnitChecks(MEMBER_ACCESS_UNIT_CHECKS_GROUP, memberAccessResults);
 	collectMismatches(memberAccessResults, mismatches);
+
+	const unusedScopeResults = runUnusedScopeChecks();
+	reportUnitChecks(UNUSED_SCOPE_UNIT_CHECKS_GROUP, unusedScopeResults);
+	collectMismatches(unusedScopeResults, mismatches);
 
 	const functionTypeParserResults = runFunctionTypeParserChecks();
 	reportUnitChecks(

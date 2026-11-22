@@ -3,7 +3,7 @@ import { makeDiagnostic } from "../errors.js";
 import { stripTypeArguments } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import { getRootName } from "./types.js";
-import { walk } from "./walk.js";
+import { SCOPE_NODE_TYPES, walk } from "./walk.js";
 
 const collectTypeNames = (name, target) => {
 	if (typeof name !== "string") {
@@ -60,18 +60,80 @@ const collectReferencedTypes = (node, target) => {
 	}
 };
 
-export const collectUsageInfo = (state) => {
+const createDeclarationRecord = ({ name, statement, declaration }) => {
+	return { name, statement, declaration, used: false };
+};
+
+const createBlockScope = () => {
+	return { declarations: new Map() };
+};
+
+// Function parameters belong to the function body scope so a reference inside
+// the function resolves to the parameter instead of an outer homonym.
+const createParameterScope = (functionExpression) => {
+	const declarations = new Map();
+	for (const parameter of functionExpression.params ?? []) {
+		if (parameter?.name) {
+			declarations.set(
+				parameter.name,
+				createDeclarationRecord({
+					name: parameter.name,
+					statement: functionExpression,
+					declaration: null,
+				}),
+			);
+		}
+	}
+	return { declarations };
+};
+
+const createGlobalScope = (defined) => {
+	const declarations = new Map();
+	for (const [name, statement] of defined) {
+		declarations.set(
+			name,
+			createDeclarationRecord({
+				name,
+				statement,
+				declaration: getDeclaration(statement),
+			}),
+		);
+	}
+	return { declarations };
+};
+
+const currentScope = (scopeStack) => {
+	return scopeStack[scopeStack.length - 1];
+};
+
+const resolveReference = (scopeStack, name) => {
+	for (let index = scopeStack.length - 1; index >= 0; index -= 1) {
+		const record = scopeStack[index].declarations.get(name);
+		if (record) {
+			return record;
+		}
+	}
+	return null;
+};
+
+// Registers every local declaration in the nearest enclosing block/loop scope,
+// keyed by scope node, before references are resolved. This keeps resolution
+// lexical (a reference sees a declaration that appears later in the same scope)
+// without leaking a name across sibling scopes.
+const collectScopeDeclarations = (state) => {
+	const scopeDeclarations = new Map();
+	const pendingFunctionBodies = new Map();
+	const scopeStack = [];
 	walk(state.ast, {
 		skipKeys: ["id", "nameIdent"],
 		enter: (node) => {
-			if (
-				node.type === AST_NODE.callExpression &&
-				node.callee?.type === AST_NODE.identifier
-			) {
-				state.calls.push({ name: node.callee.name, location: node.callee.loc });
+			if (node.type === AST_NODE.functionExpression) {
+				pendingFunctionBodies.set(node.body, createParameterScope(node));
 			}
-			if (node.type === AST_NODE.identifier) {
-				state.referencedNames.add(node.name);
+			if (SCOPE_NODE_TYPES.has(node.type)) {
+				const scope = pendingFunctionBodies.get(node) ?? createBlockScope();
+				scopeStack.push(scope);
+				scopeDeclarations.set(node, scope);
 			}
 			if (
 				node.type === AST_NODE.variableDeclaration &&
@@ -80,12 +142,56 @@ export const collectUsageInfo = (state) => {
 				const declaration = getDeclaration(node);
 				const name = declaration?.id?.name;
 				if (name) {
-					state.localDeclarations.push({
+					const record = createDeclarationRecord({
 						name,
 						statement: node,
 						declaration,
 					});
+					currentScope(scopeStack).declarations.set(name, record);
+					state.localDeclarations.push(record);
 				}
+			}
+		},
+		exit: (node) => {
+			if (node.type === AST_NODE.functionExpression) {
+				pendingFunctionBodies.delete(node.body);
+			}
+			if (SCOPE_NODE_TYPES.has(node.type)) {
+				scopeStack.pop();
+			}
+		},
+	});
+	return scopeDeclarations;
+};
+
+export const collectUsageInfo = (state) => {
+	const globalScope = createGlobalScope(state.defined);
+	state.globalDeclarationRecords = globalScope.declarations;
+	const scopeDeclarations = collectScopeDeclarations(state);
+	const scopeStack = [globalScope];
+	walk(state.ast, {
+		skipKeys: ["id", "nameIdent"],
+		enter: (node) => {
+			if (SCOPE_NODE_TYPES.has(node.type)) {
+				scopeStack.push(scopeDeclarations.get(node) ?? createBlockScope());
+			}
+			if (
+				node.type === AST_NODE.callExpression &&
+				node.callee?.type === AST_NODE.identifier
+			) {
+				state.calls.push({ name: node.callee.name, location: node.callee.loc });
+			}
+			if (node.type === AST_NODE.identifier) {
+				state.referencedNames.add(node.name);
+				const record = resolveReference(scopeStack, node.name);
+				if (record) {
+					record.used = true;
+				}
+			}
+		},
+		exit: (node) => {
+			if (SCOPE_NODE_TYPES.has(node.type)) {
+				scopeStack.pop();
 			}
 		},
 	});
@@ -104,17 +210,13 @@ export const checkUnusedDeclarations = (state) => {
 		return;
 	}
 	const unusedCandidates = [
-		...[...state.defined].map(([name, statement]) => ({
-			name,
-			statement,
-			declaration: getDeclaration(statement),
-		})),
+		...state.globalDeclarationRecords.values(),
 		...state.localDeclarations,
 	];
 
-	for (const { name, statement, declaration } of unusedCandidates) {
+	for (const { name, statement, declaration, used } of unusedCandidates) {
 		if (
-			state.referencedNames.has(name) ||
+			used ||
 			statement.export ||
 			statement.type === AST_NODE.enumDeclaration
 		) {

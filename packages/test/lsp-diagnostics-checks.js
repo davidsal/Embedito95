@@ -109,6 +109,19 @@ const TWO_UNUSED_CONSTANTS_SOURCE = [
 	"const first = 1;",
 	"const second = 2;",
 ].join("\n");
+const SHADOWED_UNUSED_LOCAL_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
+	"const other = () => {",
+	"    const persona = 1",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = 2",
+	`    const value = \`\${persona}\``,
+	"}",
+].join("\n");
 const TWO_LOCAL_ERRORS_SOURCE = [
 	"const setup = () => {}",
 	"const main = () => {",
@@ -889,6 +902,28 @@ const checkWarningsAreAllEmitted = () => {
 	);
 };
 
+const checkShadowedUnusedLocalLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(SHADOWED_UNUSED_LOCAL_SOURCE);
+	const unusedConstants = diagnostics.filter((diagnostic) => {
+		return diagnostic.code === ERROR_CODE.unusedConstant;
+	});
+	const otherDeclarationLine = 3;
+	const mainDeclarationLine = 8;
+	const otherDeclarationShown = unusedConstants.some((diagnostic) => {
+		return diagnostic.range.start.line === otherDeclarationLine;
+	});
+	const mainDeclarationShown = unusedConstants.some((diagnostic) => {
+		return diagnostic.range.start.line === mainDeclarationLine;
+	});
+	return expectEqual(
+		"LSP keeps the unused warning for a local shadowed by a used homonym",
+		[unusedConstants.length, otherDeclarationShown, mainDeclarationShown].join(
+			"|",
+		),
+		"2|true|false",
+	);
+};
+
 export const runLspDiagnosticsChecks = async () => {
 	return [
 		checkMissingImportBraceReportsSingleError(),
@@ -916,6 +951,7 @@ export const runLspDiagnosticsChecks = async () => {
 		checkMissingSetupCallShownWithoutLocalErrors(),
 		checkExactlyOneVisibleErrorPerFile(),
 		checkWarningsAreAllEmitted(),
+		checkShadowedUnusedLocalLspDiagnostic(),
 	];
 };
 
