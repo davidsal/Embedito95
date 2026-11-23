@@ -5,17 +5,33 @@ import {
 } from "embedito95-core";
 import { formatObjectShapeType } from "./formatting.js";
 
+const formatFunctionParameter = (parameter, type) => {
+	const optional = parameter.defaultValue ? "?" : "";
+	const typeSuffix = type ? `: ${type}` : "";
+	const defaultValue = parameter.defaultValue
+		? ` = ${formatExpression(parameter.defaultValue)}`
+		: "";
+	return `${parameter.name}${optional}${typeSuffix}${defaultValue}`;
+};
+
+// Library exports carry their parameter list and return type already resolved by
+// the checker, so the value hover renders the same callable shape without
+// re-inferring the library body.
+export const getLibraryFunctionSignature = (libraryFunction) => {
+	const parameters = (libraryFunction.params ?? [])
+		.map((parameter) => {
+			return formatFunctionParameter(parameter, parameter.type);
+		})
+		.join(", ");
+	const returnType = libraryFunction.returnType ?? "void";
+
+	return `(${parameters}) => ${formatObjectShapeType(returnType)}`;
+};
+
 const formatFunctionExpressionParameters = (functionExpression) => {
 	return functionExpression.params
 		.map((parameter) => {
-			const optional = parameter.defaultValue ? "?" : "";
-			const type = parameter.typeAnnotation
-				? `: ${parameter.typeAnnotation.type}`
-				: "";
-			const defaultValue = parameter.defaultValue
-				? ` = ${formatExpression(parameter.defaultValue)}`
-				: "";
-			return `${parameter.name}${optional}${type}${defaultValue}`;
+			return formatFunctionParameter(parameter, parameter.typeAnnotation?.type);
 		})
 		.join(", ");
 };

@@ -32,6 +32,7 @@ import { checkNullableUses } from "./nullable-checks.js";
 import {
 	checkAsyncBuiltinCalls,
 	checkAwaitUsage,
+	checkCallExpressionTargets,
 	checkSwitchStatements,
 	checkUnreachableCode,
 } from "./passes.js";
@@ -263,6 +264,7 @@ export const check = (ast, libs = {}) => {
 	checkTypeUnions(state);
 
 	checkMemberAccess(state);
+	checkCallExpressionTargets(state);
 	checkTemplateLiteralExpressions(state);
 	checkAwaitUsage(state);
 	checkAsyncBuiltinCalls(state);

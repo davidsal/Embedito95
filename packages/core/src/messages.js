@@ -62,6 +62,12 @@ const DIAG_MESSAGES = {
 		"Type '{type}' has no member '{name}': await the async call that produces the value before using its result, e.g. 'const value = await getResult()'.",
 	[ERROR_CODE.asyncTaskArgument]:
 		"Argument '{name}' expects type '{expected}' but receives the AsyncTask wrapper '{actual}'; await the async call that produces the value instead of awaiting the variable, e.g. 'consume(await getValue())'.",
+	[ERROR_CODE.asyncTaskCall]:
+		"'{name}' is an '{type}' wrapper and cannot be called; await it first, e.g. 'const value = await {name}'.",
+	[ERROR_CODE.callTargetNotCallable]:
+		"Cannot call '{name}': its type '{type}' is not a function.",
+	[ERROR_CODE.functionReferenceCall]:
+		"'{name}' is a function reference; e95 does not support calling functions through variables. Call '{target}' directly.",
 	[ERROR_CODE.unconvertibleTemplateExpression]:
 		"Cannot interpolate a value of type '{type}' into a template literal: it is not convertible to 'string'.",
 	[ERROR_CODE.invalidReceiverCast]:

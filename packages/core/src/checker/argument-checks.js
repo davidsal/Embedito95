@@ -24,7 +24,7 @@ import { CHARACTER_TYPES, INTEGER_TYPES, TYPE_RANGES } from "./types.js";
 // argument and points at the missing `await`. Parameters that declare
 // `AsyncTask`/`AsyncTask<T>` are the correct way to hand a task around, so they
 // are skipped.
-const checkAsyncTaskArgument = (state, argument, param) => {
+export const checkAsyncTaskArgument = (state, argument, param) => {
 	const argumentType = state.context.resolveCheckExpressionType(argument);
 	if (parseAsyncTaskType(argumentType) === null) {
 		return false;

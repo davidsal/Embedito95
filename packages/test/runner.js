@@ -5,6 +5,7 @@ import { UTF8 } from "embedito95-core";
 import { runAsyncIntermediateChecks } from "./async-intermediate-checks.js";
 import { runAsyncLocalChecks } from "./async-locals-checks.js";
 import { runAsyncTaskTypeChecks } from "./async-task-type-checks.js";
+import { runCallTargetChecks } from "./call-target-checks.js";
 import {
 	listCategories,
 	listEntryFiles,
@@ -22,6 +23,7 @@ import {
 	ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP,
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
+	CALL_TARGET_UNIT_CHECKS_GROUP,
 	CAST_CONTEXT_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
@@ -41,6 +43,7 @@ import {
 	LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
 	LSP_HOVER_UNIT_CHECKS_GROUP,
 	MEMBER_ACCESS_UNIT_CHECKS_GROUP,
+	METHOD_ARGUMENT_UNIT_CHECKS_GROUP,
 	MONITOR_STATE_UNIT_CHECKS_GROUP,
 	POSIX_STRATEGY_UNIT_CHECKS_GROUP,
 	RED_CROSS,
@@ -92,6 +95,7 @@ import { runLspUnionChecks } from "./lsp-union-checks.js";
 import { runLspWireChecks } from "./lsp-wire-checks.js";
 import { runLspWireSlaveChecks } from "./lsp-wire-slave-checks.js";
 import { runMemberAccessChecks } from "./member-access-checks.js";
+import { runMethodArgumentChecks } from "./method-argument-checks.js";
 import { runPosixStrategyChecks } from "./posix-strategy-checks.js";
 import { buildEntry, copyEntryFiles, createProject } from "./project-setup.js";
 import { runRegistryCoreParityChecks } from "./registry-core-parity-checks.js";
@@ -280,6 +284,14 @@ export const run = async () => {
 	const memberAccessResults = runMemberAccessChecks();
 	reportUnitChecks(MEMBER_ACCESS_UNIT_CHECKS_GROUP, memberAccessResults);
 	collectMismatches(memberAccessResults, mismatches);
+
+	const methodArgumentResults = runMethodArgumentChecks();
+	reportUnitChecks(METHOD_ARGUMENT_UNIT_CHECKS_GROUP, methodArgumentResults);
+	collectMismatches(methodArgumentResults, mismatches);
+
+	const callTargetResults = await runCallTargetChecks();
+	reportUnitChecks(CALL_TARGET_UNIT_CHECKS_GROUP, callTargetResults);
+	collectMismatches(callTargetResults, mismatches);
 
 	const unusedScopeResults = runUnusedScopeChecks();
 	reportUnitChecks(UNUSED_SCOPE_UNIT_CHECKS_GROUP, unusedScopeResults);

@@ -7,6 +7,7 @@ import {
 	resolveVariableType,
 } from "embedito95-core";
 import { formatDocComment, getDocComment } from "../shared/doc-comments.js";
+import { findLibraryFunctionExport } from "../shared/type-inference.js";
 import {
 	findFunctionDeclaration,
 	findVariableDeclaration,
@@ -16,7 +17,10 @@ import {
 	formatCastWarningsSection,
 	formatObjectShapeType,
 } from "./formatting.js";
-import { getFunctionSignature } from "./function-signature.js";
+import {
+	getFunctionSignature,
+	getLibraryFunctionSignature,
+} from "./function-signature.js";
 import {
 	formatHoverValue,
 	resolveCallExpressionType,
@@ -37,15 +41,94 @@ export const resolveParameterHover = (context) => {
 	return parameterHover ?? NOT_HANDLED;
 };
 
-const resolveVariableDisplayType = (variableDeclaration, context) => {
-	const init = variableDeclaration.declarations?.[0]?.init;
-	const callType = resolveCallExpressionType(
-		init,
+const FUNCTION_TYPE_PATTERN = /^\(.*\)\s*=>/;
+
+// A `const p = fn` binds the callable value, not its return type, so the hover
+// renders the function signature: the local declaration or the library export
+// the identifier names.
+const resolveFunctionValueType = (initializer, context) => {
+	if (initializer?.type !== AST_NODE.identifier) {
+		return null;
+	}
+
+	const localFunction = findFunctionDeclaration(
+		context.syntaxTree,
+		initializer.name,
+	);
+
+	if (localFunction) {
+		return getFunctionSignature(
+			localFunction,
+			context.resolveNameType,
+			context.resolveCallType,
+			context.hoverWordSize,
+			context.syntaxTree,
+			context.objectTypes,
+		);
+	}
+
+	const libraryFunction = findLibraryFunctionExport(
+		initializer.name,
 		context.allExports,
 		context.importAliases,
 	);
-	const variableType =
-		callType ??
+
+	if (libraryFunction) {
+		return getLibraryFunctionSignature(libraryFunction);
+	}
+
+	return null;
+};
+
+// Returns `false` only when the callee resolves to a known value that is not
+// callable (a scalar, an object or an `AsyncTask`); `null` means the name is
+// unknown, so the initializer keeps the regular value/word-type inference.
+const resolveCallableStatus = (callee, context) => {
+	const name = callee?.name;
+
+	if (!name) {
+		return null;
+	}
+
+	if (findFunctionDeclaration(context.syntaxTree, name)) {
+		return true;
+	}
+
+	if (
+		findLibraryFunctionExport(name, context.allExports, context.importAliases)
+	) {
+		return true;
+	}
+
+	const valueType = context.resolveNameType?.(name, callee.loc);
+
+	if (!valueType) {
+		return null;
+	}
+
+	return FUNCTION_TYPE_PATTERN.test(valueType);
+};
+
+// `const x = n()` with a non-callable `n` has no usable type: the word-type
+// fallback would invent `i16`, so the hover must report no type instead.
+const isNonCallableCall = (initializer, context) => {
+	if (initializer?.type !== AST_NODE.callExpression) {
+		return false;
+	}
+
+	return resolveCallableStatus(initializer.callee, context) === false;
+};
+
+const resolveVariableDisplayType = (variableDeclaration, context) => {
+	const init = variableDeclaration.declarations?.[0]?.init;
+	// Fall back to `context.wordType` only for genuinely unknown initializers
+	// (no initializer, or an expression that resolves to no type at all).
+	const inferredType =
+		resolveCallExpressionType(
+			init,
+			context.allExports,
+			context.importAliases,
+		) ??
 		resolveVariableType(
 			context.syntaxTree,
 			variableDeclaration,
@@ -56,6 +139,10 @@ const resolveVariableDisplayType = (variableDeclaration, context) => {
 			context.objectTypes,
 		) ??
 		context.wordType;
+	const functionValueType = resolveFunctionValueType(init, context);
+	const variableType =
+		functionValueType ??
+		(isNonCallableCall(init, context) ? null : inferredType);
 	const narrowedVariableType =
 		context.identifier &&
 		isNarrowedAt(
@@ -147,6 +234,13 @@ export const resolveVariableHover = (context) => {
 		variableDeclaration,
 		context,
 	);
+
+	// A call to a non-callable value has no type to show; returning `null`
+	// stops the hover chain so the editor displays nothing for the declaration.
+	if (variableType === null) {
+		return null;
+	}
+
 	const resolvedValue = resolveVariableValue(
 		variableDeclaration,
 		variableType,

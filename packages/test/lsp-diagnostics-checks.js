@@ -86,6 +86,15 @@ const ASYNC_TASK_ARGUMENT_SOURCE = [
 	"}",
 	"main()",
 ].join("\n");
+const CALL_TARGET_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const n = 1",
+	"    const m = n()",
+	"}",
+	"main()",
+].join("\n");
 const UNCONVERTIBLE_INTERPOLATION_SOURCE = [
 	"type Persona = { name: string, age: i32 }",
 	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
@@ -214,6 +223,10 @@ const EXPECTED_ASYNC_TASK_ARGUMENT_MESSAGE = formatDiagnosticMessage({
 		expected: "Persona",
 		actual: "AsyncTask<object:{name:string;age:i8}>",
 	},
+});
+const EXPECTED_CALL_TARGET_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.callTargetNotCallable,
+	params: { name: "n", type: "i8" },
 });
 const EXPECTED_UNCONVERTIBLE_INTERPOLATION_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unconvertibleTemplateExpression,
@@ -741,6 +754,28 @@ const checkAsyncTaskArgumentLspDiagnostic = () => {
 	);
 };
 
+const checkCallTargetLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(CALL_TARGET_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows a call on a non-callable variable at the callee",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}-${errorDiagnostic.range.end.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.callTargetNotCallable,
+			EXPECTED_CALL_TARGET_MESSAGE,
+			"5:15-16",
+		].join("|"),
+	);
+};
+
 const checkDanglingMemberParserErrorKeepsNextStatement = () => {
 	const templateResult = parseSource(DANGLING_MEMBER_TEMPLATE_SOURCE);
 	const templateError = templateResult.errors[0];
@@ -1086,6 +1121,7 @@ export const runLspDiagnosticsChecks = async () => {
 		checkInferredUnknownMemberLspDiagnostic(),
 		checkAsyncTaskMemberAccessLspDiagnostic(),
 		checkAsyncTaskArgumentLspDiagnostic(),
+		checkCallTargetLspDiagnostic(),
 		checkUnconvertibleInterpolationLspDiagnostic(),
 		checkCompoundLiteralInterpolationLspDiagnostic(),
 		checkConvertibleInterpolationLspDiagnostics(),

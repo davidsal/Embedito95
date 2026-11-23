@@ -366,6 +366,20 @@ export const buildCheckContext = ({
 				ast,
 			);
 		}
+		if (node?.type === AST_NODE.awaitExpression) {
+			// `await AsyncTask<T>` yields `T`; the expression resolver already
+			// unwraps the task payload, so the method argument path delegates to
+			// it instead of duplicating the unwrapping.
+			return resolveExpressionType(
+				resolveVariableTypeAt,
+				node,
+				undefined,
+				resolveCallType,
+				wordSize,
+				objectTypes,
+				ast,
+			);
+		}
 		if (node?.type === AST_NODE.callExpression) {
 			if (node.callee?.type === AST_NODE.identifier) {
 				return resolveCallType(node.callee.name) ?? null;

@@ -212,6 +212,8 @@ export const ASYNC_INTERMEDIATE_TEMP_DIRECTORY_PREFIX =
 	"embedito95-async-intermediate-";
 export const ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP = "async-task-type";
 export const MEMBER_ACCESS_UNIT_CHECKS_GROUP = "member-access";
+export const METHOD_ARGUMENT_UNIT_CHECKS_GROUP = "method-argument";
+export const CALL_TARGET_UNIT_CHECKS_GROUP = "call-target";
 export const UNUSED_SCOPE_UNIT_CHECKS_GROUP = "unused-scope";
 export const UNUSED_PARAMETERS_UNIT_CHECKS_GROUP = "unused-parameters";
 export const ENTRY_POINT_UNIT_CHECKS_GROUP = "entry-point";
@@ -257,6 +259,7 @@ export const TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP =
 	"template-codegen-guard";
 export const TEMPLATE_CODEGEN_GUARD_TEMP_DIRECTORY_PREFIX =
 	"embedito95-template-codegen-guard-";
+export const CALL_TARGET_TEMP_DIRECTORY_PREFIX = "embedito95-call-target-";
 export const SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP = "supported-platforms";
 export const TEST_COMPILE_UNIT_CHECKS_GROUP = "test-compile";
 export const LINT_SCRIPT_NAME = "lint";

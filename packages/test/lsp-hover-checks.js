@@ -292,6 +292,44 @@ const SOURCE = [
 	"screen.paint()",
 ].join("\n");
 
+const FUNCTION_VALUE_SOURCE = [
+	"const paint = () => { }",
+	"const p = paint",
+	"const getNumberAsync = async () => {",
+	"    return 20",
+	"}",
+	"const asyncP = getNumberAsync",
+	"const makeNumber = (): i16 => {",
+	"    return 2",
+	"}",
+	"const count = makeNumber()",
+	"const scalar: i16 = 1",
+	"const badCall = scalar()",
+	"const persona: AsyncTask<i16> = null",
+	"const badTask = persona()",
+].join("\n");
+
+const MATH_FUNCTION_VALUE_SOURCE = [
+	"import { clamp as limit } from '@embedito95/math'",
+	"const constrained = limit",
+].join("\n");
+
+const ASYNC_LIBRARY_DOCUMENT_URI = pathToFileURL(
+	join(
+		REPOSITORY_ROOT,
+		"packages",
+		"registry",
+		"src",
+		"core",
+		"async",
+		"main.e95",
+	),
+).href;
+const ASYNC_FUNCTION_VALUE_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const pause = sleep",
+].join("\n");
+
 const FUNCTION_TYPE_SOURCE = [
 	"const observe = (callback: () => void) => { callback() }",
 	"const report = (callback: (value: i16) => void): i16 => {",
@@ -1258,6 +1296,98 @@ const checkLocalClosureHover = async () => {
 	);
 };
 
+const checkLocalFunctionValueHover = async () => {
+	const syncHover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_VALUE_SOURCE,
+		findPosition(FUNCTION_VALUE_SOURCE, "const p = paint", "const ".length),
+	);
+	const asyncHover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_VALUE_SOURCE,
+		findPosition(FUNCTION_VALUE_SOURCE, "const asyncP", "const ".length),
+	);
+	return [
+		expectEqual(
+			"LSP hover of a variable bound to a local function shows its callable signature",
+			syncHover,
+			"```e95\nconst p: () => void\n```",
+		),
+		expectEqual(
+			"LSP hover of a variable bound to an async local function wraps the return in AsyncTask",
+			asyncHover,
+			"```e95\nconst asyncP: () => AsyncTask<i8>\n```",
+		),
+	];
+};
+
+const checkLibraryFunctionValueHover = async () => {
+	const mathHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_FUNCTION_VALUE_SOURCE,
+		findPosition(
+			MATH_FUNCTION_VALUE_SOURCE,
+			"const constrained",
+			"const ".length,
+		),
+	);
+	const asyncHover = await hoverInDocument(
+		ASYNC_LIBRARY_DOCUMENT_URI,
+		ASYNC_FUNCTION_VALUE_SOURCE,
+		findPosition(ASYNC_FUNCTION_VALUE_SOURCE, "const pause", "const ".length),
+	);
+	return [
+		expectEqual(
+			"LSP hover of a variable bound to an aliased library function shows its signature",
+			mathHover,
+			"```e95\nconst constrained: (value: i32, minimum: i32, maximum: i32) => i32\n```",
+		),
+		expectEqual(
+			"LSP hover of a variable bound to a library async function shows its parameters and task return",
+			asyncHover,
+			"```e95\nconst pause: (milliseconds?: u32 = 0) => AsyncTask\n```",
+		),
+	];
+};
+
+const checkFunctionCallValueHover = async () => {
+	const hover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_VALUE_SOURCE,
+		findPosition(FUNCTION_VALUE_SOURCE, "const count", "const ".length),
+	);
+	return expectEqual(
+		"LSP hover of a variable bound to a function call keeps the call result type",
+		hover,
+		"```e95\nconst count: i16\n```",
+	);
+};
+
+const checkNonCallableCallHover = async () => {
+	const scalarHover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_VALUE_SOURCE,
+		findPosition(FUNCTION_VALUE_SOURCE, "const badCall", "const ".length),
+	);
+	const taskHover = await hoverInDocument(
+		DOCUMENT_URI,
+		FUNCTION_VALUE_SOURCE,
+		findPosition(FUNCTION_VALUE_SOURCE, "const badTask", "const ".length),
+	);
+	return [
+		expectEqual(
+			"LSP hover of a call to a scalar value shows no type instead of the word type",
+			scalarHover,
+			null,
+		),
+		expectEqual(
+			"LSP hover of a call to an AsyncTask value shows no type instead of the word type",
+			taskHover,
+			null,
+		),
+	];
+};
+
 const checkLocalVariableHover = async () => {
 	const hover = await hoverAt(
 		findPosition(SOURCE, "const value", "const ".length),
@@ -1522,6 +1652,10 @@ const checkF64Availability = async (platformName) => {
 export const runLspHoverChecks = async () => {
 	return [
 		await checkLocalClosureHover(),
+		...(await checkLocalFunctionValueHover()),
+		...(await checkLibraryFunctionValueHover()),
+		await checkFunctionCallValueHover(),
+		...(await checkNonCallableCallHover()),
 		await checkLocalVariableHover(),
 		await checkAsyncLocalVariableHover(),
 		checkAsyncLocalNestedDiagnostics(),

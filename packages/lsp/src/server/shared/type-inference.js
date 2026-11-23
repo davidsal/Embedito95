@@ -52,11 +52,25 @@ export const collectProjectObjectTypes = (syntaxTree, allExports) => {
 	};
 };
 
-export const resolveLibraryReturnType = (name, allExports, importAliases) => {
+// Resolves an imported name to its library function export, reapplying the
+// local import alias to match the export's original name. Hover needs the whole
+// export (parameters included) when a function is bound as a value, not only its
+// return type.
+export const findLibraryFunctionExport = (name, allExports, importAliases) => {
 	const originalName = importAliases?.get(name) ?? name;
-	const libraryFunction = allExports.find((exportItem) => {
-		return exportItem.name === originalName && exportItem.kind === "function";
-	});
+	return (
+		allExports?.find((exportItem) => {
+			return exportItem.name === originalName && exportItem.kind === "function";
+		}) ?? null
+	);
+};
+
+export const resolveLibraryReturnType = (name, allExports, importAliases) => {
+	const libraryFunction = findLibraryFunctionExport(
+		name,
+		allExports,
+		importAliases,
+	);
 
 	return libraryFunction?.returnType ?? null;
 };

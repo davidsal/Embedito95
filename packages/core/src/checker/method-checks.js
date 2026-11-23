@@ -1,5 +1,6 @@
 import { AST_NODE, DATA_TYPE, DATA_TYPES, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
+import { checkAsyncTaskArgument } from "./argument-checks.js";
 import { checkMethodArgument } from "./arguments.js";
 import { resolveArrayMethod } from "./array-methods.js";
 import { parseArrayType } from "./arrays.js";
@@ -213,6 +214,9 @@ const validateResolvedMethod = (
 	for (let index = 0; index < node.arguments.length; index++) {
 		const argument = unwrapParentheses(node.arguments[index]);
 		checkCallbackSignatureArgument(state, argument, method.params[index]);
+		if (checkAsyncTaskArgument(state, argument, method.params[index])) {
+			continue;
+		}
 		checkMethodArgument(
 			argument,
 			method.params[index],
@@ -221,6 +225,7 @@ const validateResolvedMethod = (
 			state.libEnumMembersByType,
 			state.libEnumTypeNames,
 			state.context.resolveMethodArgumentType,
+			state.objectTypes,
 		);
 	}
 };
