@@ -22,8 +22,14 @@ pnpm run test          # Language, codegen and snapshot suites
 pnpm run test:runtime  # Host runtime tests and ARM syntax checks
 pnpm run test:run      # Executable codegen scenarios
 pnpm run test:leak     # Codegen leak scenarios (hermetic)
+pnpm run test:full     # Everything, including the compile suites
 pnpm run test:snapshot # Regenerate snapshots
 ```
+
+`test:full` runs `lint`, `test`, `test:run`, `test:leak`, `test:compile:checks`,
+`test:runtime` and `test:compile` in that order. It needs both the AVR
+(`arduino-cli`) and ARM toolchains and takes several minutes; use it before
+opening a pull request, and the narrower scripts while iterating.
 
 The workspace uses the `hoisted` node linker (`pnpm-workspace.yaml`). The CLI
 package needs it to bundle `embedito95-core` and `embedito95-registry` inside
