@@ -51,6 +51,17 @@ const addReturnValueField = (fields, returnType) => {
 	});
 };
 
+// The function node only carries an EXPLICIT `: Type` annotation. An async
+// helper with an inferred anonymous object return has no annotation, so the
+// payload must come from the project's resolved return types instead of
+// falling back to the scalar default.
+const resolveFunctionReturnType = (functionNode, resolvedReturnType) => {
+	if (functionNode.returnType?.name) {
+		return functionNode.returnType;
+	}
+	return resolvedReturnType ? { name: resolvedReturnType } : null;
+};
+
 export const desugarAsyncFunction = (
 	name,
 	typeName,
@@ -61,6 +72,7 @@ export const desugarAsyncFunction = (
 	inlineAsyncNames = new Set(),
 	asyncParams = new Map(),
 	variableTypes = null,
+	resolvedReturnType = null,
 ) => {
 	const params = collectTaskParams(functionNode);
 	const fields = hoistTaskLocals(
@@ -99,7 +111,10 @@ export const desugarAsyncFunction = (
 	}
 
 	if (state.hasReturnValue) {
-		addReturnValueField(fields, functionNode.returnType);
+		addReturnValueField(
+			fields,
+			resolveFunctionReturnType(functionNode, resolvedReturnType),
+		);
 	}
 
 	fields.push(...state.inlineFields);

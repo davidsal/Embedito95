@@ -131,6 +131,16 @@ const defaultFieldValue = (type, objectTypes, visited) => {
 	return "0";
 };
 
+// Object fields start as a non-allocating `null` handle: the task payload may
+// not be produced until a later step (`await`, return), and allocating an empty
+// object up front would both waste heap and diverge from the real value.
+const defaultWrapperFieldValue = (type, objectTypes, visited) => {
+	if (isObjectShapeType(type) || objectTypes?.[type]) {
+		return "null";
+	}
+	return defaultFieldValue(type, objectTypes, visited);
+};
+
 const buildWrapperObject = (members, objectTypes) => {
 	const values = members.map((member) => {
 		if (member.optional) {
@@ -138,7 +148,7 @@ const buildWrapperObject = (members, objectTypes) => {
 		}
 		const value = member.isParam
 			? member.name
-			: defaultFieldValue(member.type, objectTypes, new Set());
+			: defaultWrapperFieldValue(member.type, objectTypes, new Set());
 		return `${member.name}: ${value}`;
 	});
 

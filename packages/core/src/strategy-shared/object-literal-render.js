@@ -125,6 +125,16 @@ export const renderTypedObjectLiteral = (node, typeName, context, lines) => {
 			continue;
 		}
 		if (isNullLiteralNode(property.value)) {
+			// A generated task default uses a `null` field to say "no allocation
+			// yet": emit the shared handle's non-allocating `null()` factory.
+			const fieldDefinition = fields[property.key];
+			if (
+				!fieldDefinition?.optional &&
+				context.isObjectHandle?.(fieldDefinition?.type)
+			) {
+				providedValues[property.key] =
+					`${context.toCType(fieldDefinition.type)}::null()`;
+			}
 			continue;
 		}
 		providedValues[property.key] = renderFieldInit(

@@ -251,6 +251,7 @@ const desugarLibraryDeclarations = (
 			inlineAsyncNames,
 			asyncParams,
 			variableTypes,
+			functionReturnTypes?.[declaration.name] ?? null,
 		);
 
 		if (!desugared.statement) {

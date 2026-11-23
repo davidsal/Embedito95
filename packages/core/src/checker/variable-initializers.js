@@ -11,7 +11,7 @@ import {
 	resolveSelfFieldForType,
 } from "./expression-objects.js";
 import { resolveExpressionType } from "./expressions.js";
-import { encodeObjectShape } from "./object-shapes.js";
+import { encodeObjectShape, resolveObjectFieldType } from "./object-shapes.js";
 import {
 	resolveConstIntegerType,
 	resolveFoldedNaturalType,
@@ -57,6 +57,22 @@ export const resolveInitializerType = (
 				resolveSelfFieldForType(initializer.property?.name, objectTypes)
 					?.type ?? null
 			);
+		}
+		if (
+			initializer.object?.type === AST_NODE.identifier &&
+			initializer.property?.type === AST_NODE.identifier
+		) {
+			const objectType = resolveNameType?.(initializer.object.name);
+			const fieldType = objectType
+				? resolveObjectFieldType(
+						objectType,
+						initializer.property.name,
+						objectTypes,
+					)
+				: null;
+			if (fieldType) {
+				return fieldType;
+			}
 		}
 		return initializer.object?.type === AST_NODE.identifier
 			? UNRESOLVED_TYPE

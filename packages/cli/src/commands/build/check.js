@@ -45,7 +45,11 @@ export const checkProject = (
 	);
 	const wordSize = platform?.specs?.wordSize ?? DEFAULT_WORD_SIZE;
 	const platformTypes = resolvePlatformTypes(platform);
-	const { errors: checkErrors, variableTypes } = check(ast, {
+	const {
+		errors: checkErrors,
+		variableTypes,
+		userFunctionReturnTypes,
+	} = check(ast, {
 		...libraries,
 		isLibrary: false,
 		comments,
@@ -69,6 +73,7 @@ export const checkProject = (
 		projectLibraries,
 		localModules,
 		variableTypes,
+		userFunctionReturnTypes,
 		libraryTypeContext,
 	};
 };

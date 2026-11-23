@@ -1,3 +1,4 @@
+import { isObjectShapeType } from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import {
 	DEFAULT_LOCAL_TYPE,
@@ -100,21 +101,32 @@ export const resolveLocalType = (
 	if (declarator.id?.typeAnnotation?.type) {
 		return declarator.id.typeAnnotation.type;
 	}
+	const init = declarator.init;
+	const call = init?.type === AST_NODE.awaitExpression ? init.argument : init;
+	const callType =
+		call?.type === AST_NODE.callExpression &&
+		call.callee?.type === AST_NODE.identifier
+			? functionReturnTypes?.[call.callee.name]
+			: null;
 	const inferredType = variableTypes?.resolve?.(
 		declarator.id?.name,
 		declarator.loc,
 	);
+	// A resolved return type may be a named alias of the inferred anonymous
+	// shape (the async lowering names object payloads); prefer it so the task
+	// field and the awaited local share one struct.
+	if (
+		callType &&
+		isObjectShapeType(inferredType) &&
+		!isObjectShapeType(callType)
+	) {
+		return callType;
+	}
 	if (inferredType) {
 		return inferredType;
 	}
-	const init = declarator.init;
-	const call = init?.type === AST_NODE.awaitExpression ? init.argument : init;
-	if (
-		call?.type === AST_NODE.callExpression &&
-		call.callee?.type === AST_NODE.identifier &&
-		functionReturnTypes?.[call.callee.name]
-	) {
-		return functionReturnTypes[call.callee.name];
+	if (callType) {
+		return callType;
 	}
 	return DEFAULT_LOCAL_TYPE;
 };

@@ -1,4 +1,4 @@
-import { walk } from "../checker/index.js";
+import { collectFunctionDeclarations, walk } from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import { format } from "../formatter/index.js";
 import { tokenize } from "../lexer/index.js";
@@ -6,6 +6,7 @@ import { parse } from "../parser/index.js";
 import { rebaseLines } from "./async-ast-utils.js";
 import { rewriteAsyncCalls } from "./async-call-rewrite.js";
 import {
+	collectAsyncDeclarations,
 	collectAsyncFunctionNames,
 	collectAsyncParams,
 	collectImportedNames,
@@ -41,6 +42,10 @@ import {
 } from "./async-import-partition.js";
 import { pruneUnusedImports } from "./async-imports.js";
 import { mergeLibraryImports } from "./async-imports-merge.js";
+import {
+	applyAsyncReturnAliases,
+	insertReturnAliasTypes,
+} from "./async-return-aliases.js";
 import {
 	formatAsyncIntermediate,
 	formatMainIntermediate,
@@ -110,6 +115,7 @@ const desugarEntryAsyncFunctions = (
 			inlineAsyncNames,
 			asyncParams,
 			variableTypes,
+			functionReturnTypes?.[name] ?? null,
 		);
 
 		declarator.id.name = handleName;
@@ -189,6 +195,33 @@ const lowerAsyncFunctions = (
 		...functionReturnTypes,
 		...collectLocalReturnTypes(ast),
 	};
+	const entryFunctions = collectFunctionDeclarations(ast)
+		.map(({ declaration }) => {
+			return {
+				name: declaration?.id?.name,
+				init: declaration?.init ?? null,
+			};
+		})
+		.filter((entry) => {
+			return Boolean(entry.name);
+		});
+	const entryAsyncNames = new Set(
+		collectAsyncDeclarations(ast, "").map((declaration) => {
+			return declaration.name;
+		}),
+	);
+	const aliasedReturns = applyAsyncReturnAliases(
+		ast,
+		entryFunctions,
+		entryAsyncNames,
+		returnTypes,
+	);
+	insertReturnAliasTypes(
+		ast,
+		aliasedReturns.aliases,
+		sourceLineCount + ASYNC_TYPE_LINE_OFFSET,
+	);
+	const aliasedReturnTypes = aliasedReturns.returnTypes;
 	const objectTypes = collectObjectTypes([
 		ast,
 		...libraries.map((library) => {
@@ -205,7 +238,7 @@ const lowerAsyncFunctions = (
 		ast,
 		sourceLineCount,
 		source,
-		returnTypes,
+		aliasedReturnTypes,
 		asyncFunctionNames,
 		inlineAsyncNames,
 		asyncParams,
@@ -216,7 +249,7 @@ const lowerAsyncFunctions = (
 		libraries,
 		sourceLineCount + ASYNC_TYPE_LINE_OFFSET,
 		imported,
-		returnTypes,
+		aliasedReturnTypes,
 		asyncFunctionNames,
 		inlineAsyncNames,
 		asyncParams,

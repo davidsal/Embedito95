@@ -56,6 +56,39 @@ const READ_VALUE_TASK_SOURCE = [
 	"}",
 ].join("\n");
 
+// The child task slot is an optional `_AsyncTaskItem` handle. Once the parent
+// has read the child's value and marked it CONSUMED it must reset the field to
+// a null handle, otherwise the child stays alive until the parent dies.
+const CHILD_TASK_TYPE = "mod_async_task::_AsyncTaskItem";
+const CHILD_RELEASE_SUFFIX = ` = nullable<core_object::Object<${CHILD_TASK_TYPE}>>{ true, core_object::Object<${CHILD_TASK_TYPE}>::null() };`;
+
+const childReleaseLine = (fieldName) => {
+	return `task->${fieldName}${CHILD_RELEASE_SUFFIX}`;
+};
+
+const childConsumedLine = (fieldName) => {
+	return `task->${fieldName}.value->status = mod_async_task::_AsyncTaskStatus::CONSUMED;`;
+};
+
+// Asserts the final C++ resets the child handle AFTER marking it CONSUMED, so
+// the value read just before stays valid (the parent keeps its own copy).
+const checkChildReleasedAfterConsumed = (main, label, fieldName) => {
+	const releaseIndex = main.indexOf(childReleaseLine(fieldName));
+	const consumedIndex = main.indexOf(childConsumedLine(fieldName));
+	return [
+		expectEqual(
+			`${label}: final main releases the child task handle`,
+			releaseIndex !== -1,
+			true,
+		),
+		expectEqual(
+			`${label}: child handle is released after the value is consumed`,
+			consumedIndex !== -1 && releaseIndex > consumedIndex,
+			true,
+		),
+	];
+};
+
 const BASE_ASYNC_SOURCE = [
 	"const getPersona = () => {",
 	'    return { name: "David", age: 31 }',
@@ -122,6 +155,156 @@ const NOMINAL_SOURCE = [
 	"const asyncTest = async () => {",
 	"    const persona = getPersona()",
 	"    await readValue()",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const ASYNC_OBJECT_RETURN_SOURCE = [
+	READ_VALUE_TASK_SOURCE,
+	"const getPersona = async () => {",
+	"    await readValue()",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const probe = (value: string) => {",
+	"    return value",
+	"}",
+	"const asyncTest = async () => {",
+	"    const persona = await getPersona()",
+	"    const first = persona.name",
+	"    const second = persona.name",
+	"    probe(first)",
+	"    probe(second)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const ASYNC_RETURN_ALIAS_COLLISION_SOURCE = [
+	"type _getPersonaReturn = { label: string }",
+	"type getPersonaReturn = { label: string }",
+	READ_VALUE_TASK_SOURCE,
+	"const getPersona = async () => {",
+	"    await readValue()",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const probe = (value: string) => {",
+	"    return value",
+	"}",
+	"const asyncTest = async () => {",
+	"    const persona = await getPersona()",
+	"    probe(persona.name)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const ASYNC_NOMINAL_RETURN_SOURCE = [
+	"type Persona = { name: string, age: i8 }",
+	"const getPersona = async (): Persona => {",
+	'    return { name: "David", age: 31 }',
+	"}",
+	READ_VALUE_TASK_SOURCE,
+	"const probe = (value: string) => {",
+	"    return value",
+	"}",
+	"const asyncTest = async () => {",
+	"    const persona = await getPersona()",
+	"    probe(persona.name)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const ASYNC_SCALAR_RETURN_SOURCE = [
+	"const readCount = async (): u8 => {",
+	"    return 7",
+	"}",
+	"const asyncTest = async () => {",
+	"    const value = await readCount()",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const MIXED_RETURN_SOURCE = [
+	READ_VALUE_TASK_SOURCE,
+	"const getPersona = () => {",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const getPersonaRemote = async () => {",
+	"    await readValue()",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const probe = (value: string) => {",
+	"    return value",
+	"}",
+	"const syncTest = async () => {",
+	"    const persona = getPersona()",
+	"    probe(persona.name)",
+	"}",
+	"const asyncTest = async () => {",
+	"    const persona = await getPersonaRemote()",
+	"    probe(persona.name)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    syncTest()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// A bare `await f()` (no captured value) still owns a child slot; the handle is
+// released right after the child is marked CONSUMED.
+const ASYNC_BARE_AWAIT_SOURCE = [
+	"const readCount = async (): u8 => {",
+	"    return 7",
+	"}",
+	"const asyncTest = async () => {",
+	"    await readCount()",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// Regression: chained expression awaits. Each awaited child gets its own slot
+// and is released after its value is copied into the parent task.
+const ASYNC_CHAINED_AWAIT_SOURCE = [
+	"const readFirst = async (): u8 => {",
+	"    return 1",
+	"}",
+	"const readSecond = async (): u8 => {",
+	"    return 2",
+	"}",
+	"const asyncTest = async () => {",
+	"    const first = await readFirst()",
+	"    const second = await readSecond()",
 	"}",
 	"const setup = () => {}",
 	"const main = () => {",
@@ -223,12 +406,12 @@ const SLEEP_USED_PERSONA_SOURCE = [
 	"main()",
 ].join("\n");
 
-const findTaskTypeMembers = (source) => {
+const findTaskTypeMembers = (source, typeName = TASK_TYPE_NAME) => {
 	const { ast } = parseSource(source);
 	for (const statement of ast.body) {
 		if (
 			statement.type === AST_NODE.typeDeclaration &&
-			statement.name === TASK_TYPE_NAME
+			statement.name === typeName
 		) {
 			return statement.members;
 		}
@@ -344,7 +527,7 @@ const buildIntermediateMain = (
 	{ libraries = null, librarySources = [] } = {},
 ) => {
 	const { ast, comments } = parseSource(source);
-	const { variableTypes, errors } = check(ast, {
+	const { variableTypes, userFunctionReturnTypes, errors } = check(ast, {
 		...(libraries ?? {}),
 		isLibrary: false,
 		comments,
@@ -364,7 +547,10 @@ const buildIntermediateMain = (
 	return shared.buildAsyncIntermediate(
 		source,
 		librarySources,
-		buildLibraryFunctionReturnTypes(libraries?.libraryFunctions ?? {}),
+		{
+			...buildLibraryFunctionReturnTypes(libraries?.libraryFunctions ?? {}),
+			...Object.fromEntries(userFunctionReturnTypes ?? []),
+		},
 		variableTypes,
 		libraryTypeContext,
 	).main;
@@ -412,6 +598,83 @@ const checkNominalShapeIntermediate = () => {
 		fields.persona,
 		"Persona",
 	);
+};
+
+const checkAsyncObjectReturnIntermediate = () => {
+	const main = buildIntermediateMain(ASYNC_OBJECT_RETURN_SOURCE) ?? "";
+	const payload = membersToMap(
+		findTaskTypeMembers(main, "_GetPersonaAsyncTask"),
+	);
+	const parent = membersToMap(findTaskTypeMembers(main, TASK_TYPE_NAME));
+	return [
+		expectEqual(
+			"async object return: payload uses the named return type",
+			payload.value,
+			"_getPersonaReturn",
+		),
+		expectEqual(
+			"async object return: awaited local uses the named return type",
+			parent.persona,
+			"_getPersonaReturn",
+		),
+		expectEqual(
+			"async object return: parent keeps the await child task field",
+			Boolean(parent.childGetPersona),
+			true,
+		),
+	];
+};
+
+const checkAsyncNominalReturnIntermediate = () => {
+	const main = buildIntermediateMain(ASYNC_NOMINAL_RETURN_SOURCE) ?? "";
+	const payload = membersToMap(
+		findTaskTypeMembers(main, "_GetPersonaAsyncTask"),
+	);
+	return expectEqual(
+		"async nominal return: payload keeps the declared type",
+		payload.value,
+		"Persona",
+	);
+};
+
+const checkAsyncScalarReturnIntermediate = () => {
+	const main = buildIntermediateMain(ASYNC_SCALAR_RETURN_SOURCE) ?? "";
+	const payload = membersToMap(
+		findTaskTypeMembers(main, "_ReadCountAsyncTask"),
+	);
+	return expectEqual(
+		"async scalar return: payload keeps the scalar type",
+		payload.value,
+		"u8",
+	);
+};
+
+const checkMixedReturnAliasIntermediate = () => {
+	const main = buildIntermediateMain(MIXED_RETURN_SOURCE) ?? "";
+	const payload = membersToMap(
+		findTaskTypeMembers(main, "_GetPersonaRemoteAsyncTask"),
+	);
+	const syncParent = membersToMap(
+		findTaskTypeMembers(main, "_SyncTestAsyncTask"),
+	);
+	const asyncParent = membersToMap(findTaskTypeMembers(main, TASK_TYPE_NAME));
+	return [
+		expectEqual(
+			"mixed return: async payload uses the shared alias",
+			payload.value,
+			"_getPersonaReturn",
+		),
+		expectEqual(
+			"mixed return: sync-awaited field uses the shared alias",
+			syncParent.persona,
+			"_getPersonaReturn",
+		),
+		expectEqual(
+			"mixed return: async-awaited field uses the shared alias",
+			asyncParent.persona,
+			"_getPersonaReturn",
+		),
+	];
 };
 
 const readAsyncLibrarySources = (libraries) => {
@@ -594,6 +857,175 @@ const checkSleepBuildCase = async (
 	];
 };
 
+const checkAsyncReturnBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+	taskTypeName,
+	payloadMember,
+	expectedType,
+	childFieldName,
+) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const fields = membersToMap(findTaskTypeMembers(intermediate, taskTypeName));
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		...checkGeneratedMainStructure(projectDirectory, label, {
+			beforeTask: [taskTypeName],
+		}),
+		...checkChildReleasedAfterConsumed(main, label, childFieldName),
+		expectEqual(
+			`intermediate types the async payload for ${label}`,
+			fields[payloadMember],
+			expectedType,
+		),
+		expectEqual(
+			`final main declares the async payload for ${label}`,
+			main.includes(`core_object::Object<${expectedType}> ${payloadMember};`),
+			true,
+		),
+		expectEqual(
+			`final main defaults the async payload without allocating for ${label}`,
+			main.includes(`core_object::Object<${expectedType}>::null()`),
+			true,
+		),
+		expectEqual(
+			`final main has no empty object literal for ${label}`,
+			main.includes('{ "", 0 }'),
+			false,
+		),
+	];
+};
+
+const checkAsyncScalarReturnBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+	childFieldName,
+) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`final main keeps the scalar payload for ${label}`,
+			main.includes("u8 value;"),
+			true,
+		),
+		expectEqual(
+			`final main does not allocate a payload handle for ${label}`,
+			main.includes("core_object::Object<u8>"),
+			false,
+		),
+		...checkChildReleasedAfterConsumed(main, label, childFieldName),
+	];
+};
+
+const checkAsyncChainedAwaitBuildCase = async (projectDirectory) => {
+	const label = "chained awaited children";
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, ASYNC_CHAINED_AWAIT_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		...checkChildReleasedAfterConsumed(main, label, "childReadFirst"),
+		...checkChildReleasedAfterConsumed(main, label, "childReadSecond"),
+	];
+};
+
+const checkMixedReturnBuildCase = async (projectDirectory) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, MIXED_RETURN_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const syncParent = membersToMap(
+		findTaskTypeMembers(intermediate, "_SyncTestAsyncTask"),
+	);
+	const asyncParent = membersToMap(
+		findTaskTypeMembers(intermediate, TASK_TYPE_NAME),
+	);
+	return [
+		expectEqual(
+			"build compiles for a mixed sync/async return",
+			buildError,
+			null,
+		),
+		expectEqual(
+			"mixed return: sync-awaited field uses the shared alias",
+			syncParent.persona,
+			"_getPersonaReturn",
+		),
+		expectEqual(
+			"mixed return: async-awaited field uses the shared alias",
+			asyncParent.persona,
+			"_getPersonaReturn",
+		),
+		expectEqual(
+			"mixed return: sync helper returns the shared alias",
+			main.includes("core_object::Object<_getPersonaReturn> getPersona()"),
+			true,
+		),
+		expectEqual(
+			"mixed return: no duplicate alias for the same shape",
+			main.includes("_getPersonaRemoteReturn"),
+			false,
+		),
+		expectEqual(
+			"mixed return: alias is declared with the synthesized `_` prefix",
+			main.includes("struct _getPersonaReturn"),
+			true,
+		),
+		expectEqual(
+			"mixed return: no unprefixed alias is generated",
+			main.includes("Object<getPersonaReturn>"),
+			false,
+		),
+	];
+};
+
+const checkAsyncReturnAliasCollisionBuildCase = async (projectDirectory) => {
+	const label = "a user type colliding with the return alias";
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, ASYNC_RETURN_ALIAS_COLLISION_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const payload = membersToMap(
+		findTaskTypeMembers(intermediate, "_GetPersonaAsyncTask"),
+	);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			"collision: the inferred shape takes a free alias with the `_` prefix",
+			payload.value,
+			"_getPersonaReturn1",
+		),
+		expectEqual(
+			"collision: the user type keeps its own declaration",
+			main.includes("struct _getPersonaReturn {"),
+			true,
+		),
+		expectEqual(
+			"collision: the generated alias gets a numeric suffix",
+			main.includes("struct _getPersonaReturn1 {"),
+			true,
+		),
+		expectEqual(
+			"collision: no unprefixed alias is generated",
+			main.includes("Object<getPersonaReturn>"),
+			false,
+		),
+	];
+};
+
 const checkIncrementalRebuild = async (projectDirectory) => {
 	removeBuildDirectory(projectDirectory);
 	writeEntry(projectDirectory, BASE_ASYNC_SOURCE);
@@ -622,6 +1054,10 @@ export const runAsyncIntermediateChecks = async () => {
 			...checkIntermediateKeepsShapeAsSingleField(),
 			checkNestedShapeIntermediate(),
 			checkNominalShapeIntermediate(),
+			...checkAsyncObjectReturnIntermediate(),
+			checkAsyncNominalReturnIntermediate(),
+			checkAsyncScalarReturnIntermediate(),
+			...checkMixedReturnAliasIntermediate(),
 			...checkSleepIntermediate(libraries),
 		];
 		results.push(
@@ -685,6 +1121,49 @@ export const runAsyncIntermediateChecks = async () => {
 				},
 				"personas",
 			)),
+		);
+		results.push(
+			...(await checkAsyncReturnBuildCase(
+				projectDirectory,
+				"an async helper returning an inferred object",
+				ASYNC_OBJECT_RETURN_SOURCE,
+				"_GetPersonaAsyncTask",
+				"value",
+				"_getPersonaReturn",
+				"childGetPersona",
+			)),
+		);
+		results.push(
+			...(await checkAsyncReturnBuildCase(
+				projectDirectory,
+				"an async helper returning a nominal object",
+				ASYNC_NOMINAL_RETURN_SOURCE,
+				"_GetPersonaAsyncTask",
+				"value",
+				"Persona",
+				"childGetPersona",
+			)),
+		);
+		results.push(
+			...(await checkAsyncScalarReturnBuildCase(
+				projectDirectory,
+				"an async helper returning a scalar",
+				ASYNC_SCALAR_RETURN_SOURCE,
+				"childReadCount",
+			)),
+		);
+		results.push(
+			...(await checkAsyncScalarReturnBuildCase(
+				projectDirectory,
+				"a bare await without capturing the value",
+				ASYNC_BARE_AWAIT_SOURCE,
+				"childReadCount",
+			)),
+		);
+		results.push(...(await checkAsyncChainedAwaitBuildCase(projectDirectory)));
+		results.push(...(await checkMixedReturnBuildCase(projectDirectory)));
+		results.push(
+			...(await checkAsyncReturnAliasCollisionBuildCase(projectDirectory)),
 		);
 		results.push(
 			...(await checkSleepBuildCase(

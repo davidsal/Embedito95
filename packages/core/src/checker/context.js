@@ -69,6 +69,7 @@ export const buildCheckContext = ({
 	wordSize,
 	resolveCallType,
 	narrowingRegions,
+	allowNullObjectDefaults = false,
 }) => {
 	const rangeScopes = [new Map()];
 
@@ -156,6 +157,7 @@ export const buildCheckContext = ({
 					resolveVariableNameType,
 					wordSize,
 					localNames,
+					allowNullObjectDefaults,
 				),
 				...checkMethodOnlyObjectLiteral(
 					rhsNode,

@@ -99,13 +99,14 @@ export const check = (ast, libs = {}) => {
 	const objectTypes = flattenLibraryObjectTypes(libraryObjectTypes);
 	const objectTypeNames = new Set(Object.keys(objectTypes));
 
-	const { variableTypes, resolveCallType } = resolveProjectTypes(
-		ast,
-		wordType,
-		resolveLibraryCallType,
-		wordSize,
-		objectTypes,
-	);
+	const { variableTypes, userFunctionReturnTypes, resolveCallType } =
+		resolveProjectTypes(
+			ast,
+			wordType,
+			resolveLibraryCallType,
+			wordSize,
+			objectTypes,
+		);
 	const narrowingRegions = collectNullNarrowing(ast);
 
 	const defined = new Map();
@@ -237,6 +238,7 @@ export const check = (ast, libs = {}) => {
 		wordSize,
 		resolveCallType,
 		narrowingRegions,
+		allowNullObjectDefaults: !isEntry,
 	});
 	state.context = context;
 	state.targetTypeStack = [];
@@ -280,5 +282,5 @@ export const check = (ast, libs = {}) => {
 
 	errors.sort(compareErrorsByPosition);
 
-	return { ast, errors, exported, variableTypes };
+	return { ast, errors, exported, variableTypes, userFunctionReturnTypes };
 };

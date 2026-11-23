@@ -33,6 +33,14 @@ const registerChild = (state, childName) => {
 	state.childNames.push(childName);
 };
 
+// Once the child's value has been read and the child marked CONSUMED the parent
+// no longer needs the child task slot. Reset the optional child field to a null
+// handle so the child `_AsyncTaskItem` can be reclaimed instead of being kept
+// alive by the parent until the parent itself dies.
+const releaseChild = (fieldName) => {
+	return `${toChildReference(fieldName)} = null`;
+};
+
 // Renders the awaited call as a child: omitted trailing parameters with a
 // default are filled in first, then the child flag is appended. Rendering it
 // from the parts (instead of string-splicing) keeps a zero-arg call on a
@@ -174,6 +182,7 @@ const startChild = (state, current, argument, childName, markConsumed) => {
 		check.lines.push(
 			`${toChildStatusReference(fieldName)} = ${ASYNC_STATUS_CONSUMED}`,
 		);
+		check.lines.push(releaseChild(fieldName));
 	}
 
 	const after = createStepBlock(state);
@@ -303,5 +312,6 @@ export const lowerExpressionAwait = (state, statement, current) => {
 	end.lines.push(
 		`${toChildStatusReference(fieldName)} = ${ASYNC_STATUS_CONSUMED}`,
 	);
+	end.lines.push(releaseChild(fieldName));
 	return end;
 };

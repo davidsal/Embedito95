@@ -83,6 +83,7 @@ const writeIntermediates = (
 	usedLibraries,
 	buildDirectory,
 	variableTypes,
+	userFunctionReturnTypes,
 	libraryTypeContext,
 	platform,
 ) => {
@@ -92,10 +93,16 @@ const writeIntermediates = (
 	);
 	mkdirSync(intermediateDirectory, { recursive: true });
 
+	const functionReturnTypes = {
+		...buildLibraryFunctionReturnTypes(
+			projectLibraries?.libraryFunctions ?? {},
+		),
+		...Object.fromEntries(userFunctionReturnTypes ?? []),
+	};
 	const intermediate = shared.buildAsyncIntermediate(
 		source,
 		readLibrarySources(projectLibraries, usedLibraries),
-		buildLibraryFunctionReturnTypes(projectLibraries?.libraryFunctions ?? {}),
+		functionReturnTypes,
 		variableTypes,
 		libraryTypeContext,
 		{ exitWhenIdle: platform?.category === PLATFORM_CATEGORY.HOST },
@@ -226,6 +233,7 @@ export const run = async () => {
 		projectLibraries,
 		localModules,
 		variableTypes,
+		userFunctionReturnTypes,
 		libraryTypeContext,
 	} = checkProject(
 		source,
@@ -255,6 +263,7 @@ export const run = async () => {
 			usedLibraries,
 			buildDirectory,
 			variableTypes,
+			userFunctionReturnTypes,
 			libraryTypeContext,
 			platform,
 		);

@@ -3,8 +3,17 @@ import { makeDiagnostic } from "../errors.js";
 import { parseArrayType } from "./arrays.js";
 import { resolveExpressionType } from "./expressions.js";
 import { checkMethodOnlyObjectLiteral } from "./object-method-validation.js";
+import { isObjectShapeType } from "./object-shapes.js";
 import { isAssignableTo, isValueAssignable } from "./operators.js";
 import { isNullableType, isNullLiteralNode, TYPE_RANGES } from "./types.js";
+
+const isObjectFieldType = (type, objectTypes) => {
+	return (
+		type === OBJECT_TYPE ||
+		Boolean(objectTypes?.[type]) ||
+		isObjectShapeType(type)
+	);
+};
 
 const isEnumMemberOf = (node, expectedType) => {
 	return (
@@ -56,6 +65,7 @@ const validateArrayLiteralElements = (
 	localNames,
 	errors,
 	name,
+	allowNullObjectDefaults,
 ) => {
 	const nestedArray = parseArrayType(elementType);
 	const elementRange = TYPE_RANGES[elementType];
@@ -72,6 +82,7 @@ const validateArrayLiteralElements = (
 					localNames,
 					errors,
 					name,
+					allowNullObjectDefaults,
 				);
 			}
 			continue;
@@ -89,6 +100,7 @@ const validateArrayLiteralElements = (
 					resolveNameType,
 					wordSize,
 					localNames,
+					allowNullObjectDefaults,
 				),
 			);
 			continue;
@@ -125,6 +137,7 @@ export const validateObjectAssignment = (
 	resolveNameType,
 	wordSize,
 	localNames = null,
+	allowNullObjectDefaults = false,
 ) => {
 	const declaredFields = objectTypes?.[targetType]?.fields ?? {};
 	const declaredMethods = objectTypes?.[targetType]?.methods ?? {};
@@ -181,7 +194,10 @@ export const validateObjectAssignment = (
 
 		if (
 			isNullLiteralNode(property.value) &&
-			(declaredField.optional || isNullableType(expectedType))
+			(declaredField.optional ||
+				isNullableType(expectedType) ||
+				(allowNullObjectDefaults &&
+					isObjectFieldType(expectedType, objectTypes)))
 		) {
 			continue;
 		}
@@ -212,6 +228,7 @@ export const validateObjectAssignment = (
 				localNames,
 				errors,
 				property.key,
+				allowNullObjectDefaults,
 			);
 			continue;
 		}
@@ -228,6 +245,7 @@ export const validateObjectAssignment = (
 					resolveNameType,
 					wordSize,
 					localNames,
+					allowNullObjectDefaults,
 				),
 				...checkMethodOnlyObjectLiteral(
 					property.value,
