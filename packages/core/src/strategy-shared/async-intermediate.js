@@ -1,4 +1,8 @@
-import { collectFunctionDeclarations, walk } from "../checker/index.js";
+import {
+	collectFunctionDeclarations,
+	collectReferencedNames,
+	walk,
+} from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import { format } from "../formatter/index.js";
 import { tokenize } from "../lexer/index.js";
@@ -268,11 +272,13 @@ const lowerAsyncFunctions = (
 		),
 	);
 
+	const referencedNames = collectReferencedNames(ast);
 	const addStatements = buildAddStatements(
 		allHandles,
 		synthesizedComments,
 		sourceLineCount,
 		objectTypes,
+		referencedNames,
 	);
 
 	insertAddStatements(ast, allHandles, addStatements);

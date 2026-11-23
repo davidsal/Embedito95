@@ -10,7 +10,6 @@ import {
 	format,
 	LIBRARY_PROJECT_TYPE,
 	loadProjectEngine,
-	MAIN_FILE,
 	parse,
 	resolvePlatformTypes,
 	tokenize,
@@ -25,6 +24,7 @@ import { getSemanticTokens, SEMANTIC_TOKEN_LEGEND } from "./semantic-tokens.js";
 import {
 	findEnclosingLibraryConfig,
 	findProjectRoot,
+	isEntryDocument,
 	loadLibrariesFromContext,
 	withLocalModules,
 } from "./shared/libraries.js";
@@ -80,7 +80,8 @@ const getDocumentPath = (document) => {
 const loadDocumentLibraries = (documentDirectory, documentPath) => {
 	const config = readDocumentConfig(documentDirectory);
 	const isLibrary = config?.type === LIBRARY_PROJECT_TYPE;
-	const isEntry = !isLibrary && basename(documentPath) === MAIN_FILE;
+	const isEntry =
+		!isLibrary && isEntryDocument(documentDirectory, documentPath);
 	const baseLibraries = loadLibrariesFromContext(documentDirectory);
 	const libraryPackage = isLibrary
 		? (findEnclosingLibraryConfig(documentDirectory)?.package ?? null)

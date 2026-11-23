@@ -121,10 +121,10 @@ const buildIdleExitSource = (exitWhenIdle) => {
 const buildEventLoopBody = (handles, entryNames, exitWhenIdle) => {
 	const dispatch = buildDispatchSwitch(handles, entryNames);
 	return [
-		`${INDENT}let ${EVENT_LOOP_SUBSET_OFFSET_NAME} = 0`,
-		`${INDENT}let ${EVENT_LOOP_ITERATIONS_NAME} = 0`,
+		`${INDENT}let ${EVENT_LOOP_SUBSET_OFFSET_NAME}: i32 = 0`,
+		`${INDENT}let ${EVENT_LOOP_ITERATIONS_NAME}: i32 = 0`,
 		`${INDENT}while (true) {`,
-		`${INDENT.repeat(2)}let ${EVENT_LOOP_INDEX_NAME} = ${EVENT_LOOP_SUBSET_OFFSET_NAME}`,
+		`${INDENT.repeat(2)}let ${EVENT_LOOP_INDEX_NAME}: i32 = ${EVENT_LOOP_SUBSET_OFFSET_NAME}`,
 		...buildDispatchPass(
 			dispatch,
 			EVENT_LOOP_LIMIT_NAME,

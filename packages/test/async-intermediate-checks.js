@@ -15,7 +15,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import {
 	AST_NODE,
@@ -26,11 +26,18 @@ import {
 	check,
 	ENTRY_OPTION,
 	JSON_INDENTATION,
+	loadLocalModules,
+	loadProjectEngine,
 	loadProjectLibraries,
+	mergeModuleLibraries,
 	PROJECT_TYPE,
+	parse,
+	resolvePlatformTypes,
 	shared,
+	tokenize,
 	UTF8,
 } from "embedito95-core";
+import { isEntryDocument } from "../lsp/src/server/shared/libraries.js";
 import {
 	ASYNC_INTERMEDIATE_TEMP_DIRECTORY_PREFIX,
 	BUILD_COMMAND,
@@ -1275,6 +1282,164 @@ const checkIncrementalRebuild = async (projectDirectory) => {
 	];
 };
 
+const intermediateDirectory = (projectDirectory) => {
+	return join(
+		projectDirectory,
+		BUILD_DIRECTORY_NAME,
+		PROJECT_NAME,
+		"intermediate",
+	);
+};
+
+const readIntermediateSource = (projectDirectory, fileName) => {
+	const path = join(intermediateDirectory(projectDirectory), fileName);
+	return existsSync(path) ? readFileSync(path, UTF8) : "";
+};
+
+const describeDiagnostics = (diagnostics) => {
+	return diagnostics
+		.map((diagnostic) => {
+			const line = diagnostic.location?.start?.line ?? "?";
+			return `${diagnostic.code}@${line}`;
+		})
+		.join(", ");
+};
+
+// Re-checks the written intermediate exactly like `checkIntermediate` does:
+// `isEntry: false` for both files, the project libraries plus the async module
+// they import, and the real platform types. This is the same pipeline the
+// editor uses once the generated files are classified as generated output.
+const collectIntermediateDiagnostics = async (projectDirectory) => {
+	const platform = await loadProjectEngine(projectDirectory);
+	const wordSize = platform?.specs?.wordSize ?? 16;
+	const platformTypes = resolvePlatformTypes(platform);
+	const projectLibraries = loadProjectLibraries(projectDirectory);
+	const mainPath = join(
+		intermediateDirectory(projectDirectory),
+		ENTRY_FILE_NAME,
+	);
+	const asyncPath = join(
+		intermediateDirectory(projectDirectory),
+		shared.ASYNC_INTERMEDIATE_FILE_NAME,
+	);
+	const mainLibraries = mergeModuleLibraries(
+		projectLibraries,
+		loadLocalModules(mainPath).entryLibraries,
+	);
+	const diagnosticsOf = (path, libraries) => {
+		if (!existsSync(path)) {
+			return [];
+		}
+		const source = readFileSync(path, UTF8);
+		const { ast } = parse(tokenize(source).tokens);
+		const { errors } = check(ast, {
+			...libraries,
+			isLibrary: false,
+			isEntry: false,
+			source,
+			wordSize,
+			platformTypes,
+		});
+		return errors;
+	};
+	return {
+		main: diagnosticsOf(mainPath, mainLibraries),
+		async: diagnosticsOf(asyncPath, projectLibraries),
+		lspIsEntry: isEntryDocument(dirname(mainPath), mainPath),
+	};
+};
+
+const checkIntermediateIsDiagnosticFree = async (projectDirectory, label) => {
+	const result = await collectIntermediateDiagnostics(projectDirectory);
+	return [
+		expectEqual(
+			`${label}: intermediate main has no diagnostics (${describeDiagnostics(result.main)})`,
+			result.main.length,
+			0,
+		),
+		expectEqual(
+			`${label}: intermediate async module has no diagnostics (${describeDiagnostics(result.async)})`,
+			result.async.length,
+			0,
+		),
+		expectEqual(
+			`${label}: the editor does not treat the generated intermediate as an entry`,
+			result.lspIsEntry,
+			false,
+		),
+	];
+};
+
+const checkInlinedSleepOutput = (projectDirectory) => {
+	const main = readIntermediateSource(projectDirectory, ENTRY_FILE_NAME);
+	const asyncModule = readIntermediateSource(
+		projectDirectory,
+		shared.ASYNC_INTERMEDIATE_FILE_NAME,
+	);
+	return [
+		expectEqual(
+			"inlined await sleep: no orphan _sleepAsyncAdd wrapper is emitted",
+			asyncModule.includes("_sleepAsyncAdd"),
+			false,
+		),
+		expectEqual(
+			"inlined await sleep: the event-loop handler is still emitted",
+			asyncModule.includes("_sleepAsyncHandler"),
+			true,
+		),
+		expectEqual(
+			"inlined await sleep: no stale enum member is left behind",
+			main.includes("childSleepMilliseconds"),
+			true,
+		),
+	];
+};
+
+const checkRealAwaitKeepsWrapper = (projectDirectory) => {
+	const main = readIntermediateSource(projectDirectory, ENTRY_FILE_NAME);
+	return [
+		expectEqual(
+			"real await: the add wrapper is still generated",
+			main.includes("const _getPersonaAsyncAdd"),
+			true,
+		),
+		expectEqual(
+			"real await: the child task is created through the add wrapper",
+			main.includes("_getPersonaAsyncAdd(true)"),
+			true,
+		),
+	];
+};
+
+// The wrapper dead-code filter only prunes generated `_<name>AsyncAdd` helpers
+// that no lowered call site references. A real (non-generated) unused function
+// must still produce the warning.
+const checkUnusedUserFunctionStillReported = () => {
+	const source = [
+		"const unusedHelper = () => {}",
+		"const main = () => {}",
+		"main()",
+	].join("\n");
+	const { ast } = parse(tokenize(source).tokens);
+	const { errors } = check(ast, {
+		isLibrary: false,
+		isEntry: true,
+		source,
+		wordSize: 16,
+	});
+	const reported = errors.some((error) => {
+		return (
+			error.code === "error.unusedFunction" &&
+			error.params?.name === "unusedHelper"
+		);
+	});
+	return expectEqual(
+		"unusedFunction still warns about a real unused user function",
+		reported,
+		true,
+	);
+};
+
 export const runAsyncIntermediateChecks = async () => {
 	const temporaryDirectory = mkdtempSync(
 		join(tmpdir(), ASYNC_INTERMEDIATE_TEMP_DIRECTORY_PREFIX),
@@ -1429,6 +1594,31 @@ export const runAsyncIntermediateChecks = async () => {
 				{ beforeTask: ["_getPersonaReturn"] },
 			)),
 		);
+		results.push(
+			...(await checkIntermediateIsDiagnosticFree(
+				projectDirectory,
+				"an inferred-shape local read after awaited sleep",
+			)),
+		);
+		results.push(...checkInlinedSleepOutput(projectDirectory));
+		removeBuildDirectory(projectDirectory);
+		writeEntry(projectDirectory, ASYNC_OBJECT_RETURN_SOURCE);
+		const realAwaitBuildError = await runBuild(projectDirectory);
+		results.push(
+			expectEqual(
+				"build compiles for a real awaited async helper",
+				realAwaitBuildError,
+				null,
+			),
+		);
+		results.push(...checkRealAwaitKeepsWrapper(projectDirectory));
+		results.push(
+			...(await checkIntermediateIsDiagnosticFree(
+				projectDirectory,
+				"an async helper returning an inferred object",
+			)),
+		);
+		results.push(checkUnusedUserFunctionStillReported());
 		results.push(...(await checkIncrementalRebuild(projectDirectory)));
 		return results;
 	} finally {

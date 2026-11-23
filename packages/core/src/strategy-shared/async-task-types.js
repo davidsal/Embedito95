@@ -134,6 +134,14 @@ const defaultFieldValue = (type, objectTypes, visited) => {
 // Object fields start as a non-allocating `null` handle: the task payload may
 // not be produced until a later step (`await`, return), and allocating an empty
 // object up front would both waste heap and diverge from the real value.
+//
+// These members stay NON-optional on purpose: marking them `?` would lower the
+// task struct to `nullable<Object<T>>` instead of the bare `Object<T>` handle
+// (the default would wrap too), changing the generated C++ and the payload
+// assignments. The `null` default is valid for the generated intermediate
+// because it is checked with `isEntry: false` (see the checker's
+// `allowNullObjectDefaults`), which is also how the editor classifies files
+// under `build/`.
 const defaultWrapperFieldValue = (type, objectTypes, visited) => {
 	if (isObjectShapeType(type) || objectTypes?.[type]) {
 		return "null";
