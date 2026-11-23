@@ -2,13 +2,18 @@ import {
 	decodeObjectShape,
 	isNullLiteralNode,
 	isObjectShapeType,
+	NULL_TYPE,
 	parseArrayType,
 } from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import { optionalName } from "./c-types.js";
 import { renderExpression } from "./expression.js";
 import { hasDataFields } from "./object-info.js";
-import { renderOptionalZero, resolveOptionalEntry } from "./optional-value.js";
+import {
+	renderOptionalNull,
+	renderOptionalZero,
+	resolveOptionalEntry,
+} from "./optional-value.js";
 
 // Returns the field definitions of a data-object type, whether it is a declared
 // NAMED object (`context.objectTypes[name]`) or an ANONYMOUS shape (`object:{…}`).
@@ -134,6 +139,12 @@ export const renderTypedObjectLiteral = (node, typeName, context, lines) => {
 			) {
 				providedValues[property.key] =
 					`${context.toCType(fieldDefinition.type)}::null()`;
+			} else if (fieldDefinition?.type === NULL_TYPE) {
+				// A field typed exactly `null` stores its null value, not zero.
+				providedValues[property.key] = renderOptionalNull(
+					resolveOptionalEntry(NULL_TYPE, context),
+					context.float64Software,
+				);
 			}
 			continue;
 		}

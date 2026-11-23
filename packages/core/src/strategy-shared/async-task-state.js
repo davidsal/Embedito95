@@ -298,3 +298,63 @@ export const hoistTaskLocals = (
 
 	return fields;
 };
+
+const isTaskLocalMember = (node, names) => {
+	return (
+		node?.type === AST_NODE.memberExpression &&
+		!node.computed &&
+		node.object?.type === AST_NODE.identifier &&
+		node.object.name === TASK_PARAMETER_NAME &&
+		node.property?.type === AST_NODE.identifier &&
+		names.has(node.property.name)
+	);
+};
+
+const countTaskLocalUsage = (node, state, parent, key) => {
+	if (!node || typeof node !== "object") {
+		return;
+	}
+	if (Array.isArray(node)) {
+		for (let index = 0; index < node.length; index++) {
+			countTaskLocalUsage(node[index], state, node, index);
+		}
+		return;
+	}
+	if (isTaskLocalMember(node, state.names)) {
+		const name = node.property.name;
+		state.total.set(name, (state.total.get(name) ?? 0) + 1);
+		const isPlainWrite =
+			parent?.type === AST_NODE.assignmentExpression &&
+			key === "left" &&
+			parent.operator === "=";
+		if (isPlainWrite) {
+			state.writes.set(name, (state.writes.get(name) ?? 0) + 1);
+		}
+	}
+	for (const [property, value] of Object.entries(node)) {
+		if (property === "loc") {
+			continue;
+		}
+		countTaskLocalUsage(value, state, node, property);
+	}
+};
+
+// A hoisted local that only ever appears as the target of its own `=` writes is
+// dead storage: nothing reads the values it stores. Returns the write count per
+// such local so the lowering can drop both the assignment and the task field
+// while keeping the observable effects of its initializer (an `await`ed timer
+// still has to run). Computed after `hoistTaskLocals`, once every read and write
+// is a `task.<name>` member access.
+export const collectOnlyAssignedTaskLocals = (functionNode, names) => {
+	const state = { names, total: new Map(), writes: new Map() };
+	countTaskLocalUsage(functionNode.body, state, null, null);
+	const onlyAssigned = new Map();
+	for (const name of names) {
+		const total = state.total.get(name) ?? 0;
+		const writes = state.writes.get(name) ?? 0;
+		if (writes > 0 && total === writes) {
+			onlyAssigned.set(name, writes);
+		}
+	}
+	return onlyAssigned;
+};

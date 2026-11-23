@@ -1,6 +1,7 @@
 import {
 	decodeObjectShape,
 	isObjectShapeType,
+	NULL_TYPE,
 	parseArrayType,
 } from "../checker/index.js";
 import { INDENT } from "../constants.js";
@@ -113,6 +114,11 @@ const defaultFieldValue = (type, objectTypes, visited) => {
 	}
 	if (type === "string") {
 		return '""';
+	}
+	// A field typed exactly `null` (e.g. an inlined `await sleep` value that is
+	// only ever compared to `null`) must start as `null`, not as `0`.
+	if (type === NULL_TYPE) {
+		return "null";
 	}
 	// An array of shapes (`object:{…}[]`) also starts with the shape prefix, so
 	// the array check must come first or the default would be a single object.

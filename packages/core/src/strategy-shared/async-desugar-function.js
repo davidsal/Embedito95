@@ -7,7 +7,6 @@ import {
 	DEFAULT_LOCAL_TYPE,
 	TASK_STATE_VALUE_KEY,
 } from "./async-constants.js";
-import { countInlineAwaitSites } from "./async-lower-await.js";
 import { lowerSequence } from "./async-lower-statements.js";
 import {
 	buildStepFunctionSource,
@@ -15,6 +14,7 @@ import {
 	createStepBlock,
 } from "./async-step-machine.js";
 import {
+	collectOnlyAssignedTaskLocals,
 	collectTaskParams,
 	hoistTaskLocals,
 	rewriteReferences,
@@ -75,10 +75,19 @@ export const desugarAsyncFunction = (
 	resolvedReturnType = null,
 ) => {
 	const params = collectTaskParams(functionNode);
-	const fields = hoistTaskLocals(
+	const hoistedFields = hoistTaskLocals(
 		functionNode,
 		functionReturnTypes,
 		variableTypes,
+	);
+	const hoistedNames = new Set(
+		hoistedFields.map((field) => {
+			return field.name;
+		}),
+	);
+	const onlyAssignedLocals = collectOnlyAssignedTaskLocals(
+		functionNode,
+		hoistedNames,
 	);
 
 	if (params.length > 0) {
@@ -99,8 +108,8 @@ export const desugarAsyncFunction = (
 		asyncFunctionNames,
 		inlineAsyncNames,
 		asyncParams,
-		inlineSiteCount: countInlineAwaitSites(functionNode.body, inlineAsyncNames),
-		inlineIndex: 0,
+		unusedAssignmentCounts: onlyAssignedLocals,
+		droppedFieldNames: new Set(),
 		inlineFields: [],
 	};
 	const entry = createStepBlock(state);
@@ -109,6 +118,10 @@ export const desugarAsyncFunction = (
 	if (exit) {
 		exit.lines.push(COMPLETE_RETURN);
 	}
+
+	const fields = hoistedFields.filter((field) => {
+		return !state.droppedFieldNames.has(field.name);
+	});
 
 	if (state.hasReturnValue) {
 		addReturnValueField(

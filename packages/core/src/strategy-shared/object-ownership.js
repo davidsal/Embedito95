@@ -1,6 +1,7 @@
 import {
 	decodeObjectShape,
 	isObjectShapeType,
+	NULL_TYPE,
 	parseArrayType,
 } from "../checker/index.js";
 import {
@@ -24,6 +25,9 @@ const OBJECT_FIELD_VALUE_TYPES = new Set([
 		(typeName) => typeName !== DATA_TYPE.void,
 	),
 	OBJECT_TYPE,
+	// A `null`-only field lowers to `nullable<u8>` (a trivially-copyable value
+	// struct), so it is owned by the enclosing box like any other scalar.
+	NULL_TYPE,
 ]);
 
 // Named types that are trivially-copyable POD VALUE types can be owned directly

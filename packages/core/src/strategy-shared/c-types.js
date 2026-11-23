@@ -36,3 +36,8 @@ export const isFloatType = (type) => FLOAT_TYPES.has(type);
 export const optionalName = (ctype) => {
 	return `nullable<${ctype}>`;
 };
+
+// A value whose type is exactly `null` has no payload type of its own. It is
+// represented like the `null` literal (`nullable<u8>{ true, 0 }`) so the field
+// can be stored and compared with `== null` without inventing a new C type.
+export const NULL_ONLY_C_TYPE = optionalName(DATA_TYPE.u8);

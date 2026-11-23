@@ -508,6 +508,248 @@ const SLEEP_USED_PERSONA_SOURCE = [
 	"main()",
 ].join("\n");
 
+// `await sleep(ms)` is inlined in expression positions too. These sources put it
+// in every shape that consumes its value: an initializer whose value is never
+// read, a call argument, an `if` condition and a `return`. None of them may
+// spawn a real SLEEP child task, and none may materialize the value as an
+// `AsyncTask` cast (the awaited value is a plain `null`).
+const INLINE_EXPRESSION_DECLARATION_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const asyncTest = async () => {",
+	"    const t = await sleep(100)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const INLINE_EXPRESSION_ARGUMENT_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const probe = (value: u8 | null): boolean => {",
+	"    return value != null",
+	"}",
+	"const asyncTest = async () => {",
+	"    probe(await sleep(100))",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const INLINE_EXPRESSION_CONDITION_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const probe = (value: boolean): boolean => {",
+	"    return value",
+	"}",
+	"const asyncTest = async () => {",
+	"    if (await sleep(100)) {",
+	"        probe(true)",
+	"    } else {",
+	"        probe(false)",
+	"    }",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const INLINE_EXPRESSION_RETURN_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const asyncTest = async (): AsyncTask => {",
+	"    return await sleep(100)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// A `return` that is MORE than the inline timer must keep the rest of the
+// expression: the await is replaced by its null value and the surrounding call
+// is still evaluated (and its result stored as the task payload). The parent
+// then reads that payload through `<task>.value`; a discarded `value` field
+// would make the parent fail with `no member 'value'`.
+const RETURN_WITH_INLINE_AWAIT_CALL_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const consume = (value: u8 | null): boolean => {",
+	"    return value != null",
+	"}",
+	"const probe = (value: boolean): boolean => {",
+	"    return value",
+	"}",
+	"const asyncTest = async (): boolean => {",
+	"    return consume(await sleep(100))",
+	"}",
+	"const parent = async () => {",
+	"    const ok = await asyncTest()",
+	"    probe(ok)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    parent()",
+	"}",
+	"main()",
+].join("\n");
+
+// Same for a comparison: the operand and the comparison are preserved, only
+// the inline timer await becomes its null value.
+const RETURN_WITH_INLINE_AWAIT_COMPARISON_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const asyncTest = async (): boolean => {",
+	"    return (await sleep(100)) == null",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// An unread local whose initializer is MORE than the inline timer keeps the
+// assignment (and thus the call's side effects): only a pure timer initializer
+// can be dropped without losing behaviour.
+const UNUSED_LOCAL_WITH_INLINE_AWAIT_CALL_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const consume = (value: u8 | null): boolean => {",
+	"    return value != null",
+	"}",
+	"const asyncTest = async () => {",
+	"    const t = consume(await sleep(100))",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// The local `value` collides with the payload field name. The unread pure-timer
+// local is dropped, so `addReturnValueField` must look at the SURVIVING fields
+// and still declare the payload (`value: i32`), which `return 42` writes to.
+const RETURN_VALUE_LOCAL_COLLIDES_WITH_PAYLOAD_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const asyncTest = async (): i32 => {",
+	"    const value = await sleep(100)",
+	"    return 42",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// All the inline timers of a task share ONE pair of fields
+// (`childSleepMilliseconds` / `childSleepStart`) because the awaits run
+// sequentially. This source has three consecutive sleeps plus one in each
+// branch of an `if`/`else`, so a per-site scheme would need five suffixed pairs.
+const MULTI_SLEEP_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const probe = (value: boolean): boolean => {",
+	"    return value",
+	"}",
+	"const asyncTest = async () => {",
+	"    await sleep(10)",
+	"    await sleep(20)",
+	"    await sleep(30)",
+	"    if (probe(true)) {",
+	"        await sleep(40)",
+	"    } else {",
+	"        await sleep(50)",
+	"    }",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// Two inline timers in the SAME expression: the lowering must set the second
+// timer only after the step that waits for the first one has elapsed, reusing
+// the same pair of fields.
+const SAME_EXPRESSION_SLEEP_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const consumePair = (first: AsyncTask, second: AsyncTask): boolean => {",
+	"    return first.completed && second.completed",
+	"}",
+	"const asyncTest = async () => {",
+	"    consumePair(await sleep(1), await sleep(2))",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// The blink tester reproducer: a task combining the inlined timers of task 40
+// (shared `childSleep*` pair) with task 39 (the awaited value read back). The
+// read declaration stores its value in a field typed EXACTLY `null`, so the
+// wrapper literal default must be `null` (not `0`) and the final C++ must still
+// compare it with `== null` and evaluate the `if (await sleep(ms))` condition.
+const FADE_REPRODUCER_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const probe = (value: u8): u8 => {",
+	"    return value",
+	"}",
+	"const fade = async () => {",
+	"    await sleep(16)",
+	"    probe(1)",
+	"    await sleep(16)",
+	"    probe(2)",
+	"    const t = await sleep(16)",
+	"    if (t == null) {",
+	"        probe(3)",
+	"    }",
+	"    if (await sleep(16)) {",
+	"        probe(4)",
+	"    }",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    fade()",
+	"}",
+	"main()",
+].join("\n");
+const FADE_TASK_TYPE_NAME = "_FadeAsyncTask";
+
+// A zero (explicit or defaulted) duration is a plain yield: no timer fields and
+// no clock reads.
+const ZERO_DURATION_SLEEP_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const asyncTest = async () => {",
+	"    await sleep(0)",
+	"    await sleep()",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const SUFFIXED_SLEEP_FIELD_PATTERN = /childSleep(?:Milliseconds|Start)\d+/;
+
 const findTaskTypeMembers = (source, typeName = TASK_TYPE_NAME) => {
 	const { ast } = parseSource(source);
 	for (const statement of ast.body) {
@@ -956,6 +1198,331 @@ const checkSleepBuildCase = async (
 			[fields.name, fields.age].filter(Boolean).length,
 			0,
 		),
+	];
+};
+
+const INLINED_SLEEP_TASK_CREATION_PATTERN = /_addAsyncTask\([^)]*SLEEP/;
+
+const checkSnippetPresence = (label, source, snippet, expected) => {
+	return expectEqual(
+		`${label}: ${expected ? "keeps" : "omits"} '${snippet}'`,
+		source.includes(snippet),
+		expected,
+	);
+};
+
+const checkInlinedAwaitExpressionBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+	expectations = {},
+) => {
+	const {
+		absentFields = [],
+		intermediateIncludes = [],
+		intermediateExcludes = [],
+		mainIncludes = [],
+		mainExcludes = [],
+	} = expectations;
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const fields = membersToMap(findTaskTypeMembers(intermediate));
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`intermediate keeps the inlined sleep duration field for ${label}`,
+			fields[SLEEP_MILLISECONDS_FIELD],
+			"u32",
+		),
+		expectEqual(
+			`intermediate keeps the inlined sleep start field for ${label}`,
+			fields[SLEEP_START_FIELD],
+			"u32",
+		),
+		expectEqual(
+			`intermediate does not allocate a child SLEEP task slot for ${label}`,
+			intermediate.includes("childSleep?"),
+			false,
+		),
+		expectEqual(
+			`intermediate does not use the SLEEP add wrapper for ${label}`,
+			intermediate.includes("_sleepAsyncAdd"),
+			false,
+		),
+		...absentFields.map((fieldName) => {
+			return expectEqual(
+				`intermediate does not declare the unread field '${fieldName}' for ${label}`,
+				Boolean(fields[fieldName]),
+				false,
+			);
+		}),
+		...intermediateIncludes.map((snippet) => {
+			return checkSnippetPresence(
+				`intermediate (${label})`,
+				intermediate,
+				snippet,
+				true,
+			);
+		}),
+		...intermediateExcludes.map((snippet) => {
+			return checkSnippetPresence(
+				`intermediate (${label})`,
+				intermediate,
+				snippet,
+				false,
+			);
+		}),
+		...mainIncludes.map((snippet) => {
+			return checkSnippetPresence(`final main (${label})`, main, snippet, true);
+		}),
+		...mainExcludes.map((snippet) => {
+			return checkSnippetPresence(
+				`final main (${label})`,
+				main,
+				snippet,
+				false,
+			);
+		}),
+		expectEqual(
+			`final main does not create a SLEEP task for ${label}`,
+			INLINED_SLEEP_TASK_CREATION_PATTERN.test(main),
+			false,
+		),
+		expectEqual(
+			`final main does not instantiate _SleepAsyncTask for ${label}`,
+			main.includes("_SleepAsyncTask"),
+			false,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
+	];
+};
+
+// A task's inline timers share one pair of fields. Asserts the pair is declared
+// once (in the intermediate and in the final `.ino`) and that no numeric suffix
+// from the old per-site scheme survives anywhere.
+const checkSingleInlineTimerPairBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const results = [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`${label}: intermediate declares exactly one sleep duration field`,
+			countOccurrences(intermediate, `${SLEEP_MILLISECONDS_FIELD}: u32`),
+			1,
+		),
+		expectEqual(
+			`${label}: intermediate declares exactly one sleep start field`,
+			countOccurrences(intermediate, `${SLEEP_START_FIELD}: u32`),
+			1,
+		),
+		expectEqual(
+			`${label}: intermediate has no per-site suffixed sleep fields`,
+			SUFFIXED_SLEEP_FIELD_PATTERN.test(intermediate),
+			false,
+		),
+		expectEqual(
+			`${label}: final main declares exactly one sleep duration field`,
+			countOccurrences(main, `u32 ${SLEEP_MILLISECONDS_FIELD};`),
+			1,
+		),
+		expectEqual(
+			`${label}: final main declares exactly one sleep start field`,
+			countOccurrences(main, `u32 ${SLEEP_START_FIELD};`),
+			1,
+		),
+		expectEqual(
+			`${label}: final main has no per-site suffixed sleep fields`,
+			SUFFIXED_SLEEP_FIELD_PATTERN.test(main),
+			false,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
+	];
+	return results;
+};
+
+// The blink reproducer combines task 40 (several inline timers sharing one
+// pair) with task 39 (a read declaration + a falsy condition). The field is
+// typed exactly `null`, so the wrapper initializer must default to `null`, the
+// intermediate must re-check cleanly, and the final C++ must keep both the
+// `t == null` comparison and the condition evaluation.
+const checkNullOnlyFieldBuildCase = async (projectDirectory, label, source) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const fields = membersToMap(
+		findTaskTypeMembers(intermediate, FADE_TASK_TYPE_NAME),
+	);
+	const wrapperLiteral =
+		intermediate.match(
+			new RegExp(`const task: ${FADE_TASK_TYPE_NAME} = \\{([^}]*)\\}`),
+		)?.[1] ?? "";
+	const wrapperFields = wrapperLiteral.split(",").map((field) => {
+		return field.trim();
+	});
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`${label}: intermediate types the read field as null`,
+			fields.t,
+			"null",
+		),
+		expectEqual(
+			`${label}: wrapper literal defaults the null field to null`,
+			wrapperFields.includes("t: null"),
+			true,
+		),
+		expectEqual(
+			`${label}: wrapper literal does not default the null field to 0`,
+			wrapperFields.includes("t: 0"),
+			false,
+		),
+		expectEqual(`${label}: final main is generated`, main.length > 0, true),
+		expectEqual(
+			`${label}: final main keeps the 't == null' comparison`,
+			main.includes("t.isNull"),
+			true,
+		),
+		expectEqual(
+			`${label}: final main keeps the falsy 'if (await sleep)' condition`,
+			main.includes("nullable<u8>{ true, 0 }.isNull"),
+			true,
+		),
+		expectEqual(
+			`${label}: final main keeps both branches of the reproducer`,
+			main.includes("probe(3)") && main.includes("probe(4)"),
+			true,
+		),
+		expectEqual(
+			`${label}: final wrapper defaults the null field to null`,
+			main.includes("_FadeAsyncTask{ nullable<u8>{ true, 0 }"),
+			true,
+		),
+		expectEqual(
+			`${label}: intermediate declares exactly one sleep duration field`,
+			countOccurrences(intermediate, `${SLEEP_MILLISECONDS_FIELD}: u32`),
+			1,
+		),
+		expectEqual(
+			`${label}: intermediate declares exactly one sleep start field`,
+			countOccurrences(intermediate, `${SLEEP_START_FIELD}: u32`),
+			1,
+		),
+		expectEqual(
+			`${label}: intermediate has no per-site suffixed sleep fields`,
+			SUFFIXED_SLEEP_FIELD_PATTERN.test(intermediate),
+			false,
+		),
+		expectEqual(
+			`${label}: final main declares exactly one sleep duration field`,
+			countOccurrences(main, `u32 ${SLEEP_MILLISECONDS_FIELD};`),
+			1,
+		),
+		expectEqual(
+			`${label}: final main declares exactly one sleep start field`,
+			countOccurrences(main, `u32 ${SLEEP_START_FIELD};`),
+			1,
+		),
+		expectEqual(
+			`${label}: final main has no per-site suffixed sleep fields`,
+			SUFFIXED_SLEEP_FIELD_PATTERN.test(main),
+			false,
+		),
+		expectEqual(
+			`${label}: no _sleepAsyncAdd wrapper is emitted`,
+			intermediate.includes("_sleepAsyncAdd"),
+			false,
+		),
+		expectEqual(
+			`${label}: no real SLEEP task is emitted`,
+			main.includes("_SleepAsyncTask"),
+			false,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
+	];
+};
+
+// Verifies the two timers of one expression are sequential: the write of the
+// second duration happens after the elapsed check that guards the first one.
+const checkSameExpressionTimerSequence = (projectDirectory, label) => {
+	const intermediate = readIntermediateMain(projectDirectory);
+	const firstWrite = intermediate.indexOf(
+		`task.${SLEEP_MILLISECONDS_FIELD} = 1`,
+	);
+	const elapsedCheck = intermediate.indexOf(
+		`hasElapsed(task.${SLEEP_START_FIELD}, task.${SLEEP_MILLISECONDS_FIELD})`,
+	);
+	const secondWrite = intermediate.indexOf(
+		`task.${SLEEP_MILLISECONDS_FIELD} = 2`,
+	);
+	return [
+		expectEqual(
+			`${label}: first sleep duration is set`,
+			firstWrite !== -1,
+			true,
+		),
+		expectEqual(
+			`${label}: the sleep elapsed check is emitted`,
+			elapsedCheck !== -1,
+			true,
+		),
+		expectEqual(
+			`${label}: second sleep duration is set`,
+			secondWrite !== -1,
+			true,
+		),
+		expectEqual(
+			`${label}: the second sleep starts only after the first elapsed check`,
+			firstWrite < elapsedCheck && elapsedCheck < secondWrite,
+			true,
+		),
+	];
+};
+
+// A zero-duration inline timer must not declare fields nor read the clock.
+const checkZeroDurationInlineTimerBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`${label}: no sleep duration field is declared`,
+			intermediate.includes(SLEEP_MILLISECONDS_FIELD),
+			false,
+		),
+		expectEqual(
+			`${label}: no sleep start field is declared`,
+			intermediate.includes(SLEEP_START_FIELD),
+			false,
+		),
+		expectEqual(
+			`${label}: no millisecond clock read is emitted`,
+			intermediate.includes("getMillis"),
+			false,
+		),
+		expectEqual(
+			`${label}: no elapsed check is emitted`,
+			intermediate.includes("hasElapsed("),
+			false,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
 	];
 };
 
@@ -1595,12 +2162,132 @@ export const runAsyncIntermediateChecks = async () => {
 			)),
 		);
 		results.push(
+			...(await checkZeroDurationInlineTimerBuildCase(
+				projectDirectory,
+				"zero-duration awaited sleeps",
+				ZERO_DURATION_SLEEP_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep in an unread declaration",
+				INLINE_EXPRESSION_DECLARATION_SOURCE,
+				{
+					absentFields: ["t"],
+					intermediateIncludes: ["task.childSleepMilliseconds = 100"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep as a call argument",
+				INLINE_EXPRESSION_ARGUMENT_SOURCE,
+				{
+					intermediateIncludes: ["probe(null)"],
+					intermediateExcludes: ["as AsyncTask"],
+					mainIncludes: ["probe(nullable<u8>{ true, 0 })"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep in an if condition",
+				INLINE_EXPRESSION_CONDITION_SOURCE,
+				{
+					intermediateIncludes: ["if (null)", "probe(true)", "probe(false)"],
+					intermediateExcludes: ["as AsyncTask"],
+					mainExcludes: ["if (true)"],
+					mainIncludes: ["nullable<u8>{ true, 0 }.isNull"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep in a return",
+				INLINE_EXPRESSION_RETURN_SOURCE,
+				{
+					intermediateExcludes: ["as AsyncTask", "task.value ="],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep inside a returned call",
+				RETURN_WITH_INLINE_AWAIT_CALL_SOURCE,
+				{
+					intermediateIncludes: ["task.value = consume(null)"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep inside a returned comparison",
+				RETURN_WITH_INLINE_AWAIT_COMPARISON_SOURCE,
+				{
+					intermediateIncludes: ["(null) == null", "task.value ="],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an awaited sleep inside an unread call initializer",
+				UNUSED_LOCAL_WITH_INLINE_AWAIT_CALL_SOURCE,
+				{
+					intermediateIncludes: ["task.t = consume(null)"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"a dropped local colliding with the return payload",
+				RETURN_VALUE_LOCAL_COLLIDES_WITH_PAYLOAD_SOURCE,
+				{
+					intermediateIncludes: ["value: i32", "task.value = 42"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkSingleInlineTimerPairBuildCase(
+				projectDirectory,
+				"several awaited sleeps in one task",
+				MULTI_SLEEP_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkSingleInlineTimerPairBuildCase(
+				projectDirectory,
+				"two awaited sleeps in one expression",
+				SAME_EXPRESSION_SLEEP_SOURCE,
+			)),
+		);
+		results.push(
+			...checkSameExpressionTimerSequence(
+				projectDirectory,
+				"two awaited sleeps in one expression",
+			),
+		);
+		results.push(
 			...(await checkIntermediateIsDiagnosticFree(
 				projectDirectory,
 				"an inferred-shape local read after awaited sleep",
 			)),
 		);
 		results.push(...checkInlinedSleepOutput(projectDirectory));
+		results.push(
+			...(await checkNullOnlyFieldBuildCase(
+				projectDirectory,
+				"the blink read declaration and falsy condition",
+				FADE_REPRODUCER_SOURCE,
+			)),
+		);
 		removeBuildDirectory(projectDirectory);
 		writeEntry(projectDirectory, ASYNC_OBJECT_RETURN_SOURCE);
 		const realAwaitBuildError = await runBuild(projectDirectory);

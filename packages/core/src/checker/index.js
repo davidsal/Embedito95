@@ -82,6 +82,7 @@ export {
 	isNullLiteralNode,
 	isNumericType,
 	LOGICAL_OPERATORS,
+	NULL_TYPE,
 	rangeFitsWithin,
 	TYPE_RANGES,
 } from "./types.js";
