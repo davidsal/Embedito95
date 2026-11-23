@@ -12,7 +12,7 @@ nullable<f32> getHumidity(core_object::Object<Dht22Sensor> &self) {
 
 nullable<f32> getReading(core_object::Object<Dht22Sensor> &self, Type type) {
 	if (core_time::hasElapsedMicros(self->lastFetch, READ_INTERVAL_MICROS)) {
-		nullable<core_object::Object<readSensorReturn>> result = readSensor(self->pin);
+		nullable<core_object::Object<_readSensorReturn>> result = readSensor(self->pin);
 
 		if (result.isNull) {
 			return nullable<f32>{ true, 0.0f };
@@ -70,7 +70,7 @@ nullable<u8> readByte(core_gpio::Pin pin) {
 	return nullable<u8>{ false, value };
 }
 
-nullable<core_object::Object<readSensorReturn>> readSensor(core_gpio::Pin pin) {
+nullable<core_object::Object<_readSensorReturn>> readSensor(core_gpio::Pin pin) {
 	core_gpio::setMode(pin, core_gpio::OUTPUT);
 	core_gpio::setDigital(pin, core_gpio::LOW);
 	core_time::delayMicros(20000);
@@ -78,11 +78,11 @@ nullable<core_object::Object<readSensorReturn>> readSensor(core_gpio::Pin pin) {
 	core_time::delayMicros(50);
 
 	if (!(waitForLevelChange(pin, core_gpio::LOW))) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 
 	if (!(waitForLevelChange(pin, core_gpio::HIGH))) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 
 	const nullable<u8> humidityHigh = readByte(pin);
@@ -92,19 +92,19 @@ nullable<core_object::Object<readSensorReturn>> readSensor(core_gpio::Pin pin) {
 	const nullable<u8> checksum = readByte(pin);
 
 	if (humidityHigh.isNull) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 	if (humidityLow.isNull) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 	if (temperatureHigh.isNull) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 	if (temperatureLow.isNull) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 	if (checksum.isNull) {
-		return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+		return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 	}
 
 	const f32 humidity = ((f32)((((i32)(((u16)(humidityHigh.value))) * (i32)(BYTE_SCALE)) + (i32)(((u16)(humidityLow.value)))))) / TENTH_DIVISOR;
@@ -112,9 +112,9 @@ nullable<core_object::Object<readSensorReturn>> readSensor(core_gpio::Pin pin) {
 	const boolean success = (((((i32)(humidityHigh.value) + (i32)(humidityLow.value)) + (i32)(temperatureHigh.value)) + (i32)(temperatureLow.value)) % (i32)(BYTE_SCALE)) == (u16)(checksum.value);
 
 	if (success) {
-		return nullable<core_object::Object<readSensorReturn>>{ false, core_object::Object<readSensorReturn>(readSensorReturn{ humidity, temperature }) };
+		return nullable<core_object::Object<_readSensorReturn>>{ false, core_object::Object<_readSensorReturn>(_readSensorReturn{ humidity, temperature }) };
 	}
-	return nullable<core_object::Object<readSensorReturn>>{ true, core_object::Object<readSensorReturn>::null() };
+	return nullable<core_object::Object<_readSensorReturn>>{ true, core_object::Object<_readSensorReturn>::null() };
 }
 
 }

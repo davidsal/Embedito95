@@ -276,7 +276,102 @@ const MIXED_RETURN_SOURCE = [
 	"main()",
 ].join("\n");
 
-// A bare `await f()` (no captured value) still owns a child slot; the handle is
+// A sync helper's inferred return shape is synthesized as `_<helper>Return`.
+// The `_` prefix is what keeps it apart from user types: without it, a user type
+// named `getPersonaReturn` and the shape struct collide and the generated `.ino`
+// declares the same `struct` twice.
+const SYNC_RETURN_COLLISION_SOURCE = [
+	"type getPersonaReturn = { x: i32 }",
+	"const probeString = (value: string) => {",
+	"    return value",
+	"}",
+	"const probeInteger = (value: i32) => {",
+	"    return value",
+	"}",
+	"const getPersona = () => {",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probeString(persona.name)",
+	"    const q: getPersonaReturn = { x: 1 }",
+	"    probeInteger(q.x)",
+	"}",
+	"main()",
+].join("\n");
+
+const SYNC_RETURN_NAMES_SOURCE = [
+	"const probeString = (value: string) => {",
+	"    return value",
+	"}",
+	"const probeInteger = (value: i32) => {",
+	"    return value",
+	"}",
+	"const getPersona = () => {",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probeString(persona.name)",
+	"    const point = { x: 1, y: 2 }",
+	"    probeInteger(point.x)",
+	"}",
+	"main()",
+].join("\n");
+
+const SYNC_RETURN_PREFIX_COLLISION_SOURCE = [
+	"type _getPersonaReturn = { label: string }",
+	"const probeString = (value: string) => {",
+	"    return value",
+	"}",
+	"const getPersona = () => {",
+	'    return { name: "David", age: 31 }',
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probeString(persona.name)",
+	'    const q: _getPersonaReturn = { label: "x" }',
+	"    probeString(q.label)",
+	"}",
+	"main()",
+].join("\n");
+
+const SYNC_RETURN_SHAPE_VARIANTS_SOURCE = [
+	"type Personas = { items: object:{name:string;age:i8}[] }",
+	"const probeInteger = (value: i8) => {",
+	"    return value",
+	"}",
+	"const readShape = (enabled: boolean) => {",
+	"    if (enabled) {",
+	"        return { x: 1, y: 2 }",
+	"    }",
+	"    return null",
+	"}",
+	"const makeNested = () => {",
+	"    const origin = { x: 1, y: 2 }",
+	"    return { origin: origin, w: 10 }",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const shape = readShape(true)",
+	"    if (shape != null) {",
+	"        probeInteger(shape.x)",
+	"    }",
+	"    const personas: Personas = { items: [] }",
+	"    probeInteger(personas.items[0].age)",
+	"    const nested = makeNested()",
+	"    probeInteger(nested.origin.x)",
+	"}",
+	"main()",
+].join("\n");
+
 // released right after the child is marked CONSUMED.
 const ASYNC_BARE_AWAIT_SOURCE = [
 	"const readCount = async (): u8 => {",
@@ -991,6 +1086,149 @@ const checkMixedReturnBuildCase = async (projectDirectory) => {
 	];
 };
 
+const countOccurrences = (source, text) => {
+	return source.split(text).length - 1;
+};
+
+const checkSyncReturnCollisionBuildCase = async (projectDirectory) => {
+	const label = "a user type colliding with a sync return shape";
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, SYNC_RETURN_COLLISION_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			"sync collision: the user type is declared exactly once",
+			countOccurrences(main, "struct getPersonaReturn {"),
+			1,
+		),
+		expectEqual(
+			"sync collision: the inferred shape is synthesized with a `_` prefix",
+			main.includes("struct _getPersonaReturn {"),
+			true,
+		),
+		expectEqual(
+			"sync collision: the helper returns the synthesized alias",
+			main.includes("core_object::Object<_getPersonaReturn> getPersona()"),
+			true,
+		),
+		expectEqual(
+			"sync collision: no unprefixed alias is generated for the helper",
+			main.includes("Object<getPersonaReturn> getPersona()"),
+			false,
+		),
+		expectEqual(
+			"sync collision: the user type stays usable",
+			main.includes("core_object::Object<getPersonaReturn> q"),
+			true,
+		),
+	];
+};
+
+const checkSyncReturnNamesBuildCase = async (projectDirectory) => {
+	const label = "the default sync return names";
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, SYNC_RETURN_NAMES_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			"sync names: the helper return shape gets the `_` prefix",
+			main.includes("struct _getPersonaReturn {"),
+			true,
+		),
+		expectEqual(
+			"sync names: no unprefixed helper return struct is emitted",
+			main.includes("struct getPersonaReturn {"),
+			false,
+		),
+		expectEqual(
+			"sync names: main's own return shape gets the `_` prefix",
+			main.includes("struct _mainReturn {"),
+			true,
+		),
+		expectEqual(
+			"sync names: no unprefixed main return struct is emitted",
+			main.includes("struct mainReturn {"),
+			false,
+		),
+	];
+};
+
+const checkSyncReturnPrefixCollisionBuildCase = async (projectDirectory) => {
+	const label = "a user type already using the synthesized prefix";
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, SYNC_RETURN_PREFIX_COLLISION_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			"sync prefix collision: the user type keeps its declaration",
+			main.includes("struct _getPersonaReturn {"),
+			true,
+		),
+		expectEqual(
+			"sync prefix collision: the synthesized alias takes a numeric suffix",
+			main.includes("struct _getPersonaReturn1 {"),
+			true,
+		),
+		expectEqual(
+			"sync prefix collision: the helper returns the free alias",
+			main.includes("core_object::Object<_getPersonaReturn1> getPersona()"),
+			true,
+		),
+	];
+};
+
+const referencedHandlesHavePrefix = (main, structName) => {
+	const names = collectReferencedStructNames(findStructBody(main, structName));
+	return names.size > 0 && [...names].every((name) => name.startsWith("_"));
+};
+
+const checkSyncReturnShapeVariantsBuildCase = async (projectDirectory) => {
+	const label = "nested, array and nullable sync return shapes";
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, SYNC_RETURN_SHAPE_VARIANTS_SOURCE);
+	const buildError = await runBuild(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			"sync variants: the nested return shape is synthesized with a `_` prefix",
+			main.includes("struct _makeNestedReturn {"),
+			true,
+		),
+		expectEqual(
+			"sync variants: no unprefixed nested return struct is emitted",
+			main.includes("struct makeNestedReturn {"),
+			false,
+		),
+		expectEqual(
+			"sync variants: the nested inner shape is synthesized with a `_` prefix",
+			referencedHandlesHavePrefix(main, "_makeNestedReturn"),
+			true,
+		),
+		expectEqual(
+			"sync variants: the nullable return shape is synthesized with a `_` prefix",
+			main.includes("struct _readShapeReturn {"),
+			true,
+		),
+		expectEqual(
+			"sync variants: the array element shape is referenced with a prefixed name",
+			referencedHandlesHavePrefix(main, "Personas"),
+			true,
+		),
+		expectEqual(
+			"sync variants: the bare fallback name is not emitted",
+			main.includes("struct AnonymousObject {"),
+			false,
+		),
+	];
+};
+
 const checkAsyncReturnAliasCollisionBuildCase = async (projectDirectory) => {
 	const label = "a user type colliding with the return alias";
 	removeBuildDirectory(projectDirectory);
@@ -1066,7 +1304,7 @@ export const runAsyncIntermediateChecks = async () => {
 				"an unused inferred-shape local",
 				BASE_ASYNC_SOURCE,
 				PERSONA_SHAPE_TYPE,
-				{ beforeTask: ["getPersonaReturn"] },
+				{ beforeTask: ["_getPersonaReturn"] },
 			)),
 		);
 		results.push(
@@ -1075,7 +1313,7 @@ export const runAsyncIntermediateChecks = async () => {
 				"an inferred-shape local read after await",
 				USED_PERSONA_SOURCE,
 				PERSONA_SHAPE_TYPE,
-				{ beforeTask: ["getPersonaReturn"] },
+				{ beforeTask: ["_getPersonaReturn"] },
 			)),
 		);
 		results.push(
@@ -1085,8 +1323,8 @@ export const runAsyncIntermediateChecks = async () => {
 				NESTED_SHAPE_SOURCE,
 				NESTED_SHAPE_TYPE,
 				{
-					beforeTask: ["getPersonaReturn"],
-					nestedDependencies: ["getPersonaReturn"],
+					beforeTask: ["_getPersonaReturn"],
+					nestedDependencies: ["_getPersonaReturn"],
 				},
 			)),
 		);
@@ -1105,7 +1343,7 @@ export const runAsyncIntermediateChecks = async () => {
 				"a template interpolation over the shape",
 				INTERPOLATION_REGRESSION_SOURCE,
 				PERSONA_SHAPE_TYPE,
-				{ beforeTask: ["getPersonaReturn"] },
+				{ beforeTask: ["_getPersonaReturn"] },
 			)),
 		);
 		results.push(
@@ -1166,11 +1404,21 @@ export const runAsyncIntermediateChecks = async () => {
 			...(await checkAsyncReturnAliasCollisionBuildCase(projectDirectory)),
 		);
 		results.push(
+			...(await checkSyncReturnCollisionBuildCase(projectDirectory)),
+		);
+		results.push(...(await checkSyncReturnNamesBuildCase(projectDirectory)));
+		results.push(
+			...(await checkSyncReturnPrefixCollisionBuildCase(projectDirectory)),
+		);
+		results.push(
+			...(await checkSyncReturnShapeVariantsBuildCase(projectDirectory)),
+		);
+		results.push(
 			...(await checkSleepBuildCase(
 				projectDirectory,
 				"an inferred-shape local with awaited sleep",
 				SLEEP_SOURCE,
-				{ beforeTask: ["getPersonaReturn"] },
+				{ beforeTask: ["_getPersonaReturn"] },
 			)),
 		);
 		results.push(
@@ -1178,7 +1426,7 @@ export const runAsyncIntermediateChecks = async () => {
 				projectDirectory,
 				"an inferred-shape local read after awaited sleep",
 				SLEEP_USED_PERSONA_SOURCE,
-				{ beforeTask: ["getPersonaReturn"] },
+				{ beforeTask: ["_getPersonaReturn"] },
 			)),
 		);
 		results.push(...(await checkIncrementalRebuild(projectDirectory)));

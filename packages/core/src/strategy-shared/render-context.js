@@ -32,6 +32,7 @@ const resolveObjectStorageCType = (
 			type,
 			anonymousObjectTypes,
 			currentFunctionName,
+			userTypeNames,
 		);
 	}
 	const namespace = importNamespaces?.get(type);
@@ -133,6 +134,7 @@ export const makeRenderContext = ({
 					type,
 					anonymousObjectTypes,
 					currentFunctionName,
+					userTypeNames,
 				),
 			);
 		}

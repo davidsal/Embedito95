@@ -15,7 +15,7 @@ struct Counter {
 	i16 count;
 };
 
-struct makePointReturn {
+struct _makePointReturn {
 	i16 x;
 	i16 y;
 };
@@ -37,8 +37,8 @@ core_object::Object<Counter> makeCounter() {
 	return core_object::Object<Counter>(Counter{ 0 });
 }
 
-core_object::Object<makePointReturn> makePoint(i16 x, i16 y) {
-	return core_object::Object<makePointReturn>(makePointReturn{ x, y });
+core_object::Object<_makePointReturn> makePoint(i16 x, i16 y) {
+	return core_object::Object<_makePointReturn>(_makePointReturn{ x, y });
 }
 
 int main() {
@@ -49,7 +49,7 @@ int main() {
 	// MAIN
 	core_object::Object<SensorConfig> sensorConfig = core_object::Object<SensorConfig>(SensorConfig{ 3, "dht22", nullable<boolean>{ false, true } });
 	core_object::Object<SensorConfig> minimalConfig = core_object::Object<SensorConfig>(SensorConfig{ 4, "tmp36", nullable<boolean>{ true, false } });
-	core_object::Object<makePointReturn> point = makePoint(5, 10);
+	core_object::Object<_makePointReturn> point = makePoint(5, 10);
 	core_object::Object<Counter> counter = makeCounter();
 	increment(counter);
 	increment(counter);

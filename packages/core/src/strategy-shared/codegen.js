@@ -129,6 +129,7 @@ export const generateCode = ({
 			libraryFunctions,
 			userFunctionReturnTypes,
 			additionalUserObjectMethods,
+			userTypeNames,
 		);
 
 	const renderContext = makeRenderContext({

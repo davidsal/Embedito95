@@ -22,7 +22,7 @@ struct Dht22Sensor {
 	u32 lastFetch;
 };
 
-struct readSensorReturn {
+struct _readSensorReturn {
 	f32 humidity;
 	f32 temperature;
 };
@@ -38,7 +38,7 @@ nullable<f32> getReading(core_object::Object<Dht22Sensor> &self, Type type);
 core_object::Object<Dht22Sensor> getSensor(core_gpio::Pin pin);
 boolean waitForLevelChange(core_gpio::Pin pin, core_gpio::DigitalLevel level);
 nullable<u8> readByte(core_gpio::Pin pin);
-nullable<core_object::Object<readSensorReturn>> readSensor(core_gpio::Pin pin);
+nullable<core_object::Object<_readSensorReturn>> readSensor(core_gpio::Pin pin);
 
 }
 

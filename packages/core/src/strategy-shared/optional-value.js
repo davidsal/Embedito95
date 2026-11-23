@@ -69,6 +69,7 @@ export const resolveOptionalEntry = (type, context) => {
 					nonNullType,
 					context.anonymousObjectTypes,
 					context.getCurrentFunctionName?.(),
+					context.userTypeNames,
 				)
 		: context.toCType(nonNullType);
 	return {

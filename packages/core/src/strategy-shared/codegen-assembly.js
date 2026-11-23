@@ -36,7 +36,11 @@ const renderTypeInfoSection = (
 ) => {
 	return renderTypeInfoDeclarations({
 		ast,
-		orderedAnonymousKeys: orderAnonymousObjectTypeKeys(anonymousObjectTypes),
+		orderedAnonymousKeys: orderAnonymousObjectTypeKeys(
+			anonymousObjectTypes,
+			null,
+			renderContext.userTypeNames,
+		),
 		anonymousObjectTypes,
 		renderContext,
 		namespaceName,
@@ -55,6 +59,7 @@ const renderTypeInfoSection = (
 export const orderAnonymousObjectTypeKeys = (
 	anonymousObjectTypes,
 	rootShapeTypes = null,
+	userTypeNames = null,
 ) => {
 	const ordered = [];
 	const visited = new Set();
@@ -65,7 +70,12 @@ export const orderAnonymousObjectTypeKeys = (
 			return;
 		}
 		if (isObjectShapeType(fieldType)) {
-			resolveAnonymousObjectTypeName(fieldType, anonymousObjectTypes, null);
+			resolveAnonymousObjectTypeName(
+				fieldType,
+				anonymousObjectTypes,
+				null,
+				userTypeNames,
+			);
 			visit(fieldType);
 		}
 	};
@@ -76,7 +86,12 @@ export const orderAnonymousObjectTypeKeys = (
 		visited.add(shapeType);
 		// Roots reach here directly (never through `visitFieldType`), so make
 		// sure they are registered before the declaration is rendered.
-		resolveAnonymousObjectTypeName(shapeType, anonymousObjectTypes, null);
+		resolveAnonymousObjectTypeName(
+			shapeType,
+			anonymousObjectTypes,
+			null,
+			userTypeNames,
+		);
 		const fields = decodeObjectShape(shapeType) ?? {};
 		for (const field of Object.values(fields)) {
 			visitFieldType(field.type, visit);
@@ -137,12 +152,17 @@ export const renderTypeDeclarations = (
 		for (const shapeType of orderAnonymousObjectTypeKeys(
 			anonymousObjectTypes,
 			rootShapeTypes,
+			renderContext.userTypeNames,
 		)) {
 			emitShape(shapeType);
 		}
 		parts.push(renderTypeDeclaration(statement, renderContext));
 	}
-	for (const shapeType of orderAnonymousObjectTypeKeys(anonymousObjectTypes)) {
+	for (const shapeType of orderAnonymousObjectTypeKeys(
+		anonymousObjectTypes,
+		null,
+		renderContext.userTypeNames,
+	)) {
 		emitShape(shapeType);
 	}
 	return parts;

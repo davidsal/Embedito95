@@ -419,4 +419,4 @@ export const ENUM_UNDERLYING_C_TYPE = {
 	[DATA_TYPE.u128]: "unsigned __int128",
 };
 
-export const ANONYMOUS_OBJECT_FALLBACK_NAME = "AnonymousObject";
+export const ANONYMOUS_OBJECT_FALLBACK_NAME = "_AnonymousObject";
