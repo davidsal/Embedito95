@@ -10,7 +10,7 @@ import {
 	lowerAwaitStatement,
 	lowerExpressionAwait,
 	lowerInlineAwaitNode,
-	resolveInlineAwaitName,
+	resolveInlineAwait,
 } from "./async-lower-await.js";
 import {
 	containsAwait,
@@ -49,7 +49,7 @@ const isPureInlineAwait = (state, node) => {
 	const inner = unwrapParentheses(node);
 	return Boolean(
 		inner?.type === AST_NODE.awaitExpression &&
-			resolveInlineAwaitName(state, inner),
+			resolveInlineAwait(state, inner),
 	);
 };
 
@@ -62,10 +62,10 @@ const lowerAllInlineAwaits = (state, container, key, current) => {
 	if (awaits.length === 0) {
 		return null;
 	}
-	const inlineNames = awaits.map((awaitExpression) => {
-		return resolveInlineAwaitName(state, awaitExpression);
+	const inlineResolutions = awaits.map((awaitExpression) => {
+		return resolveInlineAwait(state, awaitExpression);
 	});
-	if (inlineNames.some((childName) => !childName)) {
+	if (inlineResolutions.some((resolution) => !resolution)) {
 		return null;
 	}
 	let block = current;
@@ -75,7 +75,7 @@ const lowerAllInlineAwaits = (state, container, key, current) => {
 			state,
 			block,
 			found.node,
-			inlineNames[index],
+			inlineResolutions[index],
 		);
 		if (found.parent) {
 			found.parent[found.key] = value;
@@ -164,7 +164,7 @@ const lowerAlternate = (state, alternate, current) => {
 const lowerReturnStatement = (state, statement, current) => {
 	const returnAwait = findAwaitExpression(statement.argument);
 	const inlineTimerAwait = Boolean(
-		returnAwait && resolveInlineAwaitName(state, returnAwait.node),
+		returnAwait && resolveInlineAwait(state, returnAwait.node),
 	);
 	const pureInlineAwait =
 		inlineTimerAwait && isPureInlineAwait(state, statement.argument);
@@ -209,15 +209,15 @@ const lowerInlineAwaitInExpression = (state, container, key, current) => {
 	if (!found) {
 		return null;
 	}
-	const childName = resolveInlineAwaitName(state, found.node);
-	if (!childName) {
+	const resolution = resolveInlineAwait(state, found.node);
+	if (!resolution) {
 		return null;
 	}
 	const { after, value } = lowerInlineAwaitNode(
 		state,
 		current,
 		found.node,
-		childName,
+		resolution,
 	);
 	if (found.parent) {
 		found.parent[found.key] = value;

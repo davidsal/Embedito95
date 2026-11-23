@@ -69,6 +69,10 @@ export const INLINE_ASYNC_TIMERS = new Map([
 	["sleepMicros", { now: "getMicros", elapsed: "hasElapsedMicros" }],
 ]);
 export const INLINE_ASYNC_FUNCTION_NAMES = new Set(INLINE_ASYNC_TIMERS.keys());
+// Only the timers that come from this core package are inlined. A user function
+// that happens to be named `sleep` has a different origin and must keep the
+// regular child-task lowering.
+export const INLINE_ASYNC_MODULE_SOURCE = "@embedito95/async";
 export const ASYNC_INTERMEDIATE_FILE_NAME = "async-task.e95";
 export const ASYNC_INTERMEDIATE_IMPORT_SOURCE = `./${ASYNC_INTERMEDIATE_FILE_NAME}`;
 export const EVENT_LOOP_SPACING_PATTERN = new RegExp(

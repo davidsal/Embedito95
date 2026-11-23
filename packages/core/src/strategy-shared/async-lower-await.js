@@ -103,10 +103,9 @@ const isZeroLiteral = (node) => {
 // A zero (or omitted, defaulting to zero) duration needs no timer: the await
 // becomes a plain yield, advancing to the next step and returning so the rest
 // runs on the next tick.
-const inlineDurationIsZero = (state, argument, childName) => {
-	const provided = argument.arguments?.[0];
-	if (provided) {
-		return isZeroLiteral(provided);
+const inlineDurationIsZero = (state, childName, duration) => {
+	if (duration) {
+		return isZeroLiteral(duration);
 	}
 	const params = state.asyncParams?.get(childName);
 	const defaultValue = params?.[0]?.defaultValue;
@@ -118,23 +117,22 @@ const inlineDurationIsZero = (state, argument, childName) => {
 // elapses. No child task, no queue slot. A zero duration is lowered to a plain
 // yield (no timer fields, no clock reads). All the inline awaits of a task share
 // the same pair of fields, which is correct because they run sequentially.
-const lowerInlineTimer = (state, current, argument, childName) => {
-	if (inlineDurationIsZero(state, argument, childName)) {
+const lowerInlineTimer = (state, current, timerName, duration) => {
+	if (inlineDurationIsZero(state, timerName, duration)) {
 		const after = createStepBlock(state);
 		setJumpTerminator(current, after.id);
 		return after;
 	}
 
-	const { now, elapsed } = INLINE_ASYNC_TIMERS.get(childName) ?? {
+	const { now, elapsed } = INLINE_ASYNC_TIMERS.get(timerName) ?? {
 		now: "getMillis",
 		elapsed: "hasElapsed",
 	};
 
-	const fields = inlineTimerFields(childName);
+	const fields = inlineTimerFields(timerName);
 	registerInlineTimerFields(state, fields);
 	const { milliseconds, start } = fields;
 
-	const duration = argument.arguments?.[0];
 	current.lines.push(
 		`task.${milliseconds} = ${duration ? renderExpression(state, duration) : "0"}`,
 	);
@@ -187,14 +185,33 @@ export const collectAwaitExpressions = (node, result = []) => {
 	return result;
 };
 
-// Resolves the callee of an inline timer await (`sleep`/`sleepMicros`) or null
-// when the await is not one of them.
-export const resolveInlineAwaitName = (state, awaitExpression) => {
-	const childName = resolveChildName(awaitExpression?.argument);
-	if (!childName || !state.inlineAsyncNames?.has(childName)) {
+// Resolves an await that can be inlined into the caller's task, returning the
+// canonical timer and the duration expression of the call site, or null. Two
+// shapes inline: a direct core timer (`await sleep(ms)`, with an import alias
+// resolving through the module's `inlineTimers` map) and a wrapper whose whole
+// body forwards its only parameter to one (`await wait(50)` where
+// `wait = async (ms) => { await sleep(ms) }`), resolved through `inlineWrappers`.
+// A wrapper call must pass exactly one argument; more than one cannot be
+// forwarded unchanged, so it keeps the child-task lowering.
+export const resolveInlineAwait = (state, awaitExpression) => {
+	const argument = awaitExpression?.argument;
+	const childName = resolveChildName(argument);
+	if (!childName) {
 		return null;
 	}
-	return childName;
+	const timer = state.inlineTimers?.get(childName);
+	if (timer) {
+		return { timer, duration: argument.arguments?.[0] ?? null };
+	}
+	const wrapperTimer = state.inlineWrappers?.get(childName);
+	if (!wrapperTimer) {
+		return null;
+	}
+	const callArguments = argument.arguments ?? [];
+	if (callArguments.length !== 1) {
+		return null;
+	}
+	return { timer: wrapperTimer, duration: callArguments[0] };
 };
 
 // Inlines one timer await in place, returning the block that runs once the
@@ -203,13 +220,13 @@ export const lowerInlineAwaitNode = (
 	state,
 	current,
 	awaitExpression,
-	childName,
+	resolution,
 ) => {
 	const after = lowerInlineTimer(
 		state,
 		current,
-		awaitExpression.argument,
-		childName,
+		resolution.timer,
+		resolution.duration,
 	);
 	return { after, value: makeInlineAwaitValue(awaitExpression.loc) };
 };
@@ -248,15 +265,20 @@ const startChild = (state, current, argument, childName, markConsumed) => {
 // `await f()` as its own statement: wait for the child, the value is discarded.
 export const lowerAwaitStatement = (state, statement, current) => {
 	const argument = statement.expression.argument;
-	const childName = resolveChildName(argument);
+	const resolution = resolveInlineAwait(state, statement.expression);
+	if (resolution) {
+		return lowerInlineTimer(
+			state,
+			current,
+			resolution.timer,
+			resolution.duration,
+		);
+	}
 
+	const childName = resolveChildName(argument);
 	if (!childName || !state.asyncFunctionNames?.has(childName)) {
 		current.lines.push(renderExpression(state, argument));
 		return current;
-	}
-
-	if (state.inlineAsyncNames?.has(childName)) {
-		return lowerInlineTimer(state, current, argument, childName);
 	}
 
 	return startChild(state, current, argument, childName, true).after;
@@ -344,22 +366,22 @@ export const lowerExpressionAwait = (state, statement, current) => {
 
 	const argument = found.node.argument;
 	const childName = resolveChildName(argument);
+	const resolution = resolveInlineAwait(state, found.node);
 
-	if (!childName || !state.asyncFunctionNames?.has(childName)) {
-		found.parent[found.key] = argument;
-		return lowerExpressionAwait(state, statement, current);
-	}
-
-	const inlineChildName = resolveInlineAwaitName(state, found.node);
-	if (inlineChildName) {
+	if (resolution) {
 		const { after, value } = lowerInlineAwaitNode(
 			state,
 			current,
 			found.node,
-			inlineChildName,
+			resolution,
 		);
 		found.parent[found.key] = value;
 		return lowerExpressionAwait(state, statement, after);
+	}
+
+	if (!childName || !state.asyncFunctionNames?.has(childName)) {
+		found.parent[found.key] = argument;
+		return lowerExpressionAwait(state, statement, current);
 	}
 
 	const { fieldName, after } = startChild(

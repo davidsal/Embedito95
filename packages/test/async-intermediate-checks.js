@@ -748,7 +748,179 @@ const ZERO_DURATION_SLEEP_SOURCE = [
 	"main()",
 ].join("\n");
 
+// A user-defined async function named `sleep` does NOT come from the core async
+// package: it must keep the regular child-task lowering (a `_sleepAsyncAdd`
+// wrapper plus a `childSleep` slot), never the inlined timer pair. Resolving by
+// origin, not by spelling, is what tells the two apart.
+const USER_SLEEP_SOURCE = [
+	"const readValue = async (): i16 => {",
+	"    return 1",
+	"}",
+	"const sleep = async (milliseconds: u32) => {",
+	"    await readValue()",
+	"}",
+	"const asyncTest = async () => {",
+	"    await sleep(10)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// An import alias of the core timer resolves to the same canonical `sleep`, so
+// it must inline with the SAME `childSleepMilliseconds`/`childSleepStart` pair
+// and never spawn a real `_SleepAsyncTask` child.
+const ALIASED_SLEEP_SOURCE = [
+	"import { sleep as espera } from '@embedito95/async'",
+	"const asyncTest = async () => {",
+	"    await espera(100)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// A wrapper whose whole body forwards its only parameter to a core timer is
+// inlined at the call site exactly like a direct timer await: no child task for
+// `wait`, the caller's task gets the timer fields with the call-site duration.
+const WRAPPER_SLEEP_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const wait = async (milliseconds: u32) => {",
+	"    await sleep(milliseconds)",
+	"}",
+	"const asyncTest = async () => {",
+	"    await wait(50)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// The inlined wrapper call also works in expression position.
+const WRAPPER_SLEEP_EXPRESSION_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const wait = async (milliseconds: u32) => {",
+	"    await sleep(milliseconds)",
+	"}",
+	"const asyncTest = async () => {",
+	"    const t = await wait(50)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// A forwarded `sleepMicros` wrapper inlines with the MICROSECOND timer helpers
+// and fields, never the millisecond ones.
+const WRAPPER_SLEEP_MICROS_SOURCE = [
+	"import { sleepMicros } from '@embedito95/async'",
+	"const waitMicros = async (microseconds: u32) => {",
+	"    await sleepMicros(microseconds)",
+	"}",
+	"const asyncTest = async () => {",
+	"    await waitMicros(500)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// Negatives: any wrapper that is not exactly `await <core timer>(param)` keeps
+// the child-task lowering.
+const WRAPPER_TWO_STATEMENTS_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const readValue = (): u8 => {",
+	"    return 1",
+	"}",
+	"const wait = async (milliseconds: u32) => {",
+	"    await sleep(milliseconds)",
+	"    readValue()",
+	"}",
+	"const asyncTest = async () => {",
+	"    await wait(50)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const WRAPPER_TRANSFORMED_PARAMETER_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const wait = async (milliseconds: u32) => {",
+	"    await sleep(milliseconds * 2)",
+	"}",
+	"const asyncTest = async () => {",
+	"    await wait(50)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+const WRAPPER_DEFAULT_PARAMETER_SOURCE = [
+	"import { sleep } from '@embedito95/async'",
+	"const wait = async (milliseconds: u32 = 10) => {",
+	"    await sleep(milliseconds)",
+	"}",
+	"const asyncTest = async () => {",
+	"    await wait(50)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
+// The forwarded callee is a USER async `sleep`, not the core timer: it must not
+// be treated as a wrapper of the library timer.
+const WRAPPER_USER_SLEEP_SOURCE = [
+	"const readValue = async (): i16 => {",
+	"    return 1",
+	"}",
+	"const sleep = async (milliseconds: u32) => {",
+	"    await readValue()",
+	"}",
+	"const wait = async (milliseconds: u32) => {",
+	"    await sleep(milliseconds)",
+	"}",
+	"const asyncTest = async () => {",
+	"    await wait(50)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    asyncTest()",
+	"}",
+	"main()",
+].join("\n");
+
 const SUFFIXED_SLEEP_FIELD_PATTERN = /childSleep(?:Milliseconds|Start)\d+/;
+const SLEEP_MICROS_MILLISECONDS_FIELD = "childSleepMicrosMilliseconds";
+const SLEEP_MICROS_START_FIELD = "childSleepMicrosStart";
+const WAIT_CALL_PATTERN = /_addAsyncTask\([^)]*WAIT/;
 
 const findTaskTypeMembers = (source, typeName = TASK_TYPE_NAME) => {
 	const { ast } = parseSource(source);
@@ -1057,6 +1229,44 @@ const checkSleepIntermediate = (libraries) => {
 	];
 };
 
+// Unit level: a forwarding wrapper inlines into the caller without creating a
+// WAIT child slot.
+const checkWrapperSleepIntermediate = (libraries) => {
+	const main =
+		buildIntermediateMain(WRAPPER_SLEEP_SOURCE, {
+			libraries,
+			librarySources: readAsyncLibrarySources(libraries),
+		}) ?? "";
+	const fields = membersToMap(findTaskTypeMembers(main));
+	return [
+		expectEqual(
+			"wrapper inline: the caller keeps the inlined sleep duration field",
+			fields[SLEEP_MILLISECONDS_FIELD],
+			"u32",
+		),
+		expectEqual(
+			"wrapper inline: the caller keeps the inlined sleep start field",
+			fields[SLEEP_START_FIELD],
+			"u32",
+		),
+		expectEqual(
+			"wrapper inline: the caller does not allocate a WAIT child slot",
+			Boolean(fields.childWait),
+			false,
+		),
+		expectEqual(
+			"wrapper inline: the call site uses the call argument as duration",
+			main.includes("task.childSleepMilliseconds = 50"),
+			true,
+		),
+		expectEqual(
+			"wrapper inline: no WAIT add wrapper is referenced",
+			main.includes("_waitAsyncAdd("),
+			false,
+		),
+	];
+};
+
 const writeProjectConfiguration = (projectDirectory, core = []) => {
 	mkdirSync(projectDirectory, { recursive: true });
 	const configuration = {
@@ -1348,6 +1558,171 @@ const checkSingleInlineTimerPairBuildCase = async (
 		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
 	];
 	return results;
+};
+
+const checkInlinedWrapperBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+	expectations = {},
+) => {
+	const {
+		timerFields = [SLEEP_MILLISECONDS_FIELD, SLEEP_START_FIELD],
+		absentFields = [],
+		intermediateIncludes = [],
+	} = expectations;
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const fields = membersToMap(findTaskTypeMembers(intermediate));
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		...timerFields.map((fieldName) => {
+			return expectEqual(
+				`intermediate declares the inlined timer field '${fieldName}' for ${label}`,
+				fields[fieldName],
+				"u32",
+			);
+		}),
+		...absentFields.map((fieldName) => {
+			return expectEqual(
+				`intermediate does not declare the field '${fieldName}' for ${label}`,
+				Boolean(fields[fieldName]),
+				false,
+			);
+		}),
+		expectEqual(
+			`intermediate does not allocate a child WAIT slot for ${label}`,
+			Boolean(fields.childWait),
+			false,
+		),
+		checkSnippetPresence(
+			`intermediate (${label})`,
+			intermediate,
+			"_waitAsyncAdd(",
+			false,
+		),
+		...intermediateIncludes.map((snippet) => {
+			return checkSnippetPresence(
+				`intermediate (${label})`,
+				intermediate,
+				snippet,
+				true,
+			);
+		}),
+		expectEqual(
+			`final main does not create a WAIT child task for ${label}`,
+			WAIT_CALL_PATTERN.test(main),
+			false,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
+	];
+};
+
+// A wrapper that does not match the forwarding shape keeps its child task: the
+// caller gets a `childWait` slot and the `_waitAsyncAdd` wrapper, and never the
+// inlined timer pair.
+const checkWrapperChildTaskBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const fields = membersToMap(findTaskTypeMembers(intermediate));
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`${label}: the wrapper becomes a child task slot`,
+			Boolean(fields.childWait),
+			true,
+		),
+		expectEqual(
+			`${label}: the wrapper call is not inlined as a millisecond timer`,
+			Boolean(fields[SLEEP_MILLISECONDS_FIELD]),
+			false,
+		),
+		expectEqual(
+			`${label}: the wrapper call is not inlined as a microsecond timer`,
+			Boolean(fields[SLEEP_MICROS_MILLISECONDS_FIELD]),
+			false,
+		),
+		checkSnippetPresence(
+			`intermediate (${label})`,
+			intermediate,
+			"_waitAsyncAdd(",
+			true,
+		),
+		checkSnippetPresence(
+			`intermediate (${label})`,
+			intermediate,
+			"task.childWait",
+			true,
+		),
+		expectEqual(
+			`${label}: the final main keeps the real WAIT child task`,
+			main.includes("_WaitAsyncTask"),
+			true,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
+	];
+};
+
+// A user-defined async `sleep` must keep the child-task lowering: the parent
+// task gets a `childSleep` slot, a real `_SleepAsyncTask` child and the
+// `_sleepAsyncAdd` wrapper, and it must NEVER reuse the inlined timer fields.
+const checkUserSleepNotInlinedBuildCase = async (
+	projectDirectory,
+	label,
+	source,
+) => {
+	removeBuildDirectory(projectDirectory);
+	writeEntry(projectDirectory, source);
+	const buildError = await runBuild(projectDirectory);
+	const intermediate = readIntermediateMain(projectDirectory);
+	const main = readBuiltMain(projectDirectory);
+	const fields = membersToMap(findTaskTypeMembers(intermediate));
+	return [
+		expectEqual(`build compiles for ${label}`, buildError, null),
+		expectEqual(
+			`${label}: the user sleep becomes a child task slot`,
+			Boolean(fields.childSleep),
+			true,
+		),
+		expectEqual(
+			`${label}: the user sleep does not declare the inline duration field`,
+			Boolean(fields[SLEEP_MILLISECONDS_FIELD]),
+			false,
+		),
+		expectEqual(
+			`${label}: the user sleep does not declare the inline start field`,
+			Boolean(fields[SLEEP_START_FIELD]),
+			false,
+		),
+		checkSnippetPresence(
+			`intermediate (${label})`,
+			intermediate,
+			"_sleepAsyncAdd(",
+			true,
+		),
+		checkSnippetPresence(
+			`intermediate (${label})`,
+			intermediate,
+			"task.childSleepMilliseconds",
+			false,
+		),
+		expectEqual(
+			`${label}: the final main keeps the real SLEEP child task`,
+			main.includes("_SleepAsyncTask"),
+			true,
+		),
+		...(await checkIntermediateIsDiagnosticFree(projectDirectory, label)),
+	];
 };
 
 // The blink reproducer combines task 40 (several inline timers sharing one
@@ -2029,6 +2404,7 @@ export const runAsyncIntermediateChecks = async () => {
 			checkAsyncScalarReturnIntermediate(),
 			...checkMixedReturnAliasIntermediate(),
 			...checkSleepIntermediate(libraries),
+			...checkWrapperSleepIntermediate(libraries),
 		];
 		results.push(
 			...(await checkBuildCase(
@@ -2166,6 +2542,94 @@ export const runAsyncIntermediateChecks = async () => {
 				projectDirectory,
 				"zero-duration awaited sleeps",
 				ZERO_DURATION_SLEEP_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkUserSleepNotInlinedBuildCase(
+				projectDirectory,
+				"a user-defined async sleep",
+				USER_SLEEP_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkInlinedWrapperBuildCase(
+				projectDirectory,
+				"a forwarding millisecond wrapper",
+				WRAPPER_SLEEP_SOURCE,
+				{
+					intermediateIncludes: [
+						"task.childSleepMilliseconds = 50",
+						"task.childSleepStart = getMillis()",
+					],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedWrapperBuildCase(
+				projectDirectory,
+				"a forwarding wrapper in an unread declaration",
+				WRAPPER_SLEEP_EXPRESSION_SOURCE,
+				{
+					absentFields: ["t"],
+					intermediateIncludes: ["task.childSleepMilliseconds = 50"],
+				},
+			)),
+		);
+		results.push(
+			...(await checkInlinedWrapperBuildCase(
+				projectDirectory,
+				"a forwarding microsecond wrapper",
+				WRAPPER_SLEEP_MICROS_SOURCE,
+				{
+					timerFields: [
+						SLEEP_MICROS_MILLISECONDS_FIELD,
+						SLEEP_MICROS_START_FIELD,
+					],
+					intermediateIncludes: [
+						"task.childSleepMicrosMilliseconds = 500",
+						"task.childSleepMicrosStart = getMicros()",
+						"hasElapsedMicros(",
+					],
+				},
+			)),
+		);
+		results.push(
+			...(await checkWrapperChildTaskBuildCase(
+				projectDirectory,
+				"a wrapper with two statements",
+				WRAPPER_TWO_STATEMENTS_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkWrapperChildTaskBuildCase(
+				projectDirectory,
+				"a wrapper transforming its parameter",
+				WRAPPER_TRANSFORMED_PARAMETER_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkWrapperChildTaskBuildCase(
+				projectDirectory,
+				"a wrapper with a defaulted parameter",
+				WRAPPER_DEFAULT_PARAMETER_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkWrapperChildTaskBuildCase(
+				projectDirectory,
+				"a wrapper forwarding a user sleep",
+				WRAPPER_USER_SLEEP_SOURCE,
+			)),
+		);
+		results.push(
+			...(await checkInlinedAwaitExpressionBuildCase(
+				projectDirectory,
+				"an aliased core sleep",
+				ALIASED_SLEEP_SOURCE,
+				{
+					intermediateIncludes: ["task.childSleepMilliseconds = 100"],
+					intermediateExcludes: ["_EsperaAsyncAdd"],
+				},
 			)),
 		);
 		results.push(

@@ -15,6 +15,8 @@ import {
 	collectAsyncParams,
 	collectImportedNames,
 	collectImportedSet,
+	collectInlineTimers,
+	collectInlineWrappers,
 	collectLibraryAsync,
 	collectLocalReturnTypes,
 	collectObjectTypes,
@@ -24,7 +26,6 @@ import {
 	ASYNC_ADD_SUFFIX,
 	ASYNC_INTERMEDIATE_IMPORT_SOURCE,
 	ASYNC_TYPE_LINE_OFFSET,
-	INLINE_ASYNC_FUNCTION_NAMES,
 	SYNTHESIZED_LINE_OFFSET,
 	SYNTHESIZED_STRIDE,
 	toAsyncTypeName,
@@ -81,7 +82,8 @@ const desugarEntryAsyncFunctions = (
 	source,
 	functionReturnTypes,
 	asyncFunctionNames,
-	inlineAsyncNames,
+	inlineTimers,
+	inlineWrappers,
 	asyncParams,
 	variableTypes,
 ) => {
@@ -116,7 +118,8 @@ const desugarEntryAsyncFunctions = (
 			source,
 			functionReturnTypes,
 			asyncFunctionNames,
-			inlineAsyncNames,
+			inlineTimers,
+			inlineWrappers,
 			asyncParams,
 			variableTypes,
 			functionReturnTypes?.[name] ?? null,
@@ -232,11 +235,8 @@ const lowerAsyncFunctions = (
 			return library.ast;
 		}),
 	]);
-	const inlineAsyncNames = new Set(
-		[...INLINE_ASYNC_FUNCTION_NAMES].filter((name) => {
-			return asyncFunctionNames.has(name);
-		}),
-	);
+	const inlineTimers = collectInlineTimers(ast, entryAsyncNames);
+	const inlineWrappers = collectInlineWrappers(ast, inlineTimers);
 	const asyncParams = collectAsyncParams(ast, libraries, imported);
 	const handles = desugarEntryAsyncFunctions(
 		ast,
@@ -244,7 +244,8 @@ const lowerAsyncFunctions = (
 		source,
 		aliasedReturnTypes,
 		asyncFunctionNames,
-		inlineAsyncNames,
+		inlineTimers,
+		inlineWrappers,
 		asyncParams,
 		variableTypes,
 	);
@@ -255,7 +256,6 @@ const lowerAsyncFunctions = (
 		imported,
 		aliasedReturnTypes,
 		asyncFunctionNames,
-		inlineAsyncNames,
 		asyncParams,
 	);
 
