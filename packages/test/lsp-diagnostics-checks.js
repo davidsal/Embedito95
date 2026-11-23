@@ -13,6 +13,7 @@ import {
 	walk,
 } from "embedito95-core";
 import { computeDiagnostics } from "../lsp/src/diagnostics.js";
+import { ASYNC_TASK_DECLARATION } from "./async-task-type-parser-checks.js";
 import { SNAPSHOT_STATUS } from "./constants.js";
 import { expectEqual } from "./reporting.js";
 
@@ -53,6 +54,37 @@ const INFERRED_UNKNOWN_MEMBER_SOURCE = [
 	"    const persona = getPersona()",
 	"    probando(persona.nom)",
 	"}",
+].join("\n");
+const ASYNC_TASK_MEMBER_ACCESS_SOURCE = [
+	ASYNC_TASK_DECLARATION,
+	'const getPersona = async () => { return { name: "David", age: 31 } }',
+	"const consume = (value: string) => {}",
+	"const test = async () => {",
+	"    const persona = getPersona()",
+	"    consume(persona.name)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    test()",
+	"}",
+	"main()",
+].join("\n");
+const ASYNC_TASK_ARGUMENT_SOURCE = [
+	ASYNC_TASK_DECLARATION,
+	'const getPersona = async () => { return { name: "David", age: 31 } }',
+	"type Persona = { name: string, age: i32 }",
+	"const consume = (value: Persona) => { return value.name }",
+	"const test = async () => {",
+	"    const persona = getPersona()",
+	"    consume(persona)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    test()",
+	"}",
+	"main()",
 ].join("\n");
 const UNCONVERTIBLE_INTERPOLATION_SOURCE = [
 	"type Persona = { name: string, age: i32 }",
@@ -170,6 +202,18 @@ const EXPECTED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
 const EXPECTED_INFERRED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unknownMember,
 	params: { name: "nom", type: "object:{name:string;age:i8}" },
+});
+const EXPECTED_ASYNC_TASK_MEMBER_ACCESS_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.asyncTaskMemberAccess,
+	params: { name: "name", type: "AsyncTask<object:{name:string;age:i8}>" },
+});
+const EXPECTED_ASYNC_TASK_ARGUMENT_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.asyncTaskArgument,
+	params: {
+		name: "value",
+		expected: "Persona",
+		actual: "AsyncTask<object:{name:string;age:i8}>",
+	},
 });
 const EXPECTED_UNCONVERTIBLE_INTERPOLATION_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unconvertibleTemplateExpression,
@@ -653,6 +697,50 @@ const checkInferredUnknownMemberLspDiagnostic = () => {
 	);
 };
 
+const checkAsyncTaskMemberAccessLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(ASYNC_TASK_MEMBER_ACCESS_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an un-awaited AsyncTask member access at the property location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}-${errorDiagnostic.range.end.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.asyncTaskMemberAccess,
+			EXPECTED_ASYNC_TASK_MEMBER_ACCESS_MESSAGE,
+			"9:21-25",
+		].join("|"),
+	);
+};
+
+const checkAsyncTaskArgumentLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(ASYNC_TASK_ARGUMENT_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an un-awaited AsyncTask argument at the source argument",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}-${errorDiagnostic.range.end.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.asyncTaskArgument,
+			EXPECTED_ASYNC_TASK_ARGUMENT_MESSAGE,
+			"10:13-20",
+		].join("|"),
+	);
+};
+
 const checkDanglingMemberParserErrorKeepsNextStatement = () => {
 	const templateResult = parseSource(DANGLING_MEMBER_TEMPLATE_SOURCE);
 	const templateError = templateResult.errors[0];
@@ -996,6 +1084,8 @@ export const runLspDiagnosticsChecks = async () => {
 		checkLocalTypeErrorHasPriorityOverMissingSetup(),
 		checkUnknownMemberLspDiagnostic(),
 		checkInferredUnknownMemberLspDiagnostic(),
+		checkAsyncTaskMemberAccessLspDiagnostic(),
+		checkAsyncTaskArgumentLspDiagnostic(),
 		checkUnconvertibleInterpolationLspDiagnostic(),
 		checkCompoundLiteralInterpolationLspDiagnostic(),
 		checkConvertibleInterpolationLspDiagnostics(),

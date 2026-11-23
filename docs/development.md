@@ -21,12 +21,20 @@ pnpm run lint          # Biome
 pnpm run test          # Language, codegen and snapshot suites
 pnpm run test:runtime  # Host runtime tests and ARM syntax checks
 pnpm run test:run      # Executable codegen scenarios
+pnpm run test:leak     # Codegen leak scenarios (hermetic)
 pnpm run test:snapshot # Regenerate snapshots
 ```
 
 The workspace uses the `hoisted` node linker (`pnpm-workspace.yaml`). The CLI
 package needs it to bundle `embedito95-core` and `embedito95-registry` inside
 its published tarball, so keep that setting when changing the install setup.
+
+`test:run` and `test:leak` are hermetic: each suite provisions its test project
+in a temporary directory from the tracked registry sources
+(`packages/registry/src/core` and `packages/registry/src/libraries`), so they do
+not read `packages/test/testers/` (gitignored) and need no manual `init`. They
+still need a host C++ compiler, selected through `E95_CXX` or `clang++` by
+default.
 
 ## VS Code extension
 

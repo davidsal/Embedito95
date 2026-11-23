@@ -17,6 +17,7 @@
     "test:compile:checks": "pnpm run --filter @embedito95/test test:compile:checks",
     "test:runtime": "pnpm run --filter @embedito95/test test:runtime",
     "test:run": "pnpm run --filter @embedito95/test test:run",
+    "test:leak": "pnpm run --filter @embedito95/test test:leak",
     "docs:sync": "node packages/cli/scripts/sync-docs.js",
     "prepare": "node packages/cli/scripts/sync-docs.js && git config core.hooksPath .githooks || true",
     "embedito95-cli": "node packages/cli/src/cli.js",

@@ -9,6 +9,7 @@ import {
 import { makeDiagnostic } from "../errors.js";
 import { checkAllowedArgumentValue } from "./allowed-values.js";
 import { checkArrayArgument, describeExpression } from "./arguments.js";
+import { parseAsyncTaskType } from "./async-task-type.js";
 import {
 	checkIdentifierArgument,
 	checkMemberArgument,
@@ -16,9 +17,42 @@ import {
 import { inferLiteralType, resolveLiteralDataType } from "./type-resolution.js";
 import { CHARACTER_TYPES, INTEGER_TYPES, TYPE_RANGES } from "./types.js";
 
+// An `AsyncTask<T>` argument only becomes its payload after `await`. Passing the
+// wrapper to a parameter that expects the payload (nominal or inferred shape)
+// would otherwise be rejected late by the lowered intermediate, where the task
+// handle is an integer. Reporting it here keeps the diagnostic on the source
+// argument and points at the missing `await`. Parameters that declare
+// `AsyncTask`/`AsyncTask<T>` are the correct way to hand a task around, so they
+// are skipped.
+const checkAsyncTaskArgument = (state, argument, param) => {
+	const argumentType = state.context.resolveCheckExpressionType(argument);
+	if (parseAsyncTaskType(argumentType) === null) {
+		return false;
+	}
+	if (parseAsyncTaskType(param.type) !== null) {
+		return false;
+	}
+	state.errors.push(
+		makeDiagnostic({
+			code: ERROR_CODE.asyncTaskArgument,
+			params: {
+				name: param.name,
+				expected: param.type,
+				actual: argumentType,
+			},
+			location: argument.loc,
+		}),
+	);
+	return true;
+};
+
 export const checkArgumentAgainstParam = (state, argument, param) => {
 	checkAllowedArgumentValue(state.errors, argument, param);
 	if (!param?.type) return;
+
+	if (checkAsyncTaskArgument(state, argument, param)) {
+		return;
+	}
 
 	if (
 		checkArrayArgument(

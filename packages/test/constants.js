@@ -221,6 +221,9 @@ export const MONITOR_STATE_UNIT_CHECKS_GROUP = "monitor-state";
 export const TOOLING_UNIT_CHECKS_GROUP = "tooling";
 export const CYCLES_FLAG_UNIT_CHECKS_GROUP = "cycles-flag";
 export const CONFIG_INCLUDE_UNIT_CHECKS_GROUP = "config-include";
+export const CODEGEN_HERMETIC_UNIT_CHECKS_GROUP = "codegen-hermetic";
+export const CODEGEN_HERMETIC_TEMP_DIRECTORY_PREFIX =
+	"embedito95-codegen-hermetic-";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";
 export const CLOSURE_FACTORY_UNIT_CHECKS_GROUP = "closure-factory";
 export const REGISTRY_DOC_COMMENT_UNIT_CHECKS_GROUP = "registry-doc-comments";

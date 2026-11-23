@@ -17,7 +17,6 @@ import { execFileSync } from "node:child_process";
 import {
 	cpSync,
 	existsSync,
-	mkdirSync,
 	readdirSync,
 	readFileSync,
 	writeFileSync,
@@ -29,17 +28,12 @@ import {
 	CONFIG_FILE,
 	CORE_LIBRARIES_DIRECTORY_NAME,
 	ENTRY_OPTION,
-	LIBRARIES_DIRECTORY_NAME,
 	MODULES_DIRECTORY_NAME,
 	shared,
 	UTF8,
 } from "embedito95-core";
-import {
-	BUILD_COMMAND,
-	GITIGNORE_CONTENT,
-	GITIGNORE_FILE,
-	NODE_EXECUTABLE,
-} from "../constants.js";
+import { BUILD_COMMAND, NODE_EXECUTABLE } from "../constants.js";
+import { createProject } from "../project-setup.js";
 import {
 	CLI_PATH,
 	COMPILER,
@@ -53,8 +47,7 @@ import {
 	runScenarioSuite,
 	SANITIZER_ARGUMENTS,
 	TESTER_PLATFORM_NAME,
-	TESTERS_DIRECTORY,
-	withTemporaryDirectory,
+	withTemporaryDirectoryAsync,
 } from "../runner-harness.js";
 
 const MODULE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
@@ -178,21 +171,11 @@ const assertAbsentTokens = (translationUnitPath, scenario) => {
 	}
 };
 
-const createProjectDirectory = (projectDirectory) => {
-	mkdirSync(projectDirectory, { recursive: true });
-	for (const child of [
-		CORE_LIBRARIES_DIRECTORY_NAME,
-		LIBRARIES_DIRECTORY_NAME,
-	]) {
-		cpSync(join(TESTERS_DIRECTORY, child), join(projectDirectory, child), {
-			recursive: true,
-		});
-	}
-	cpSync(
-		join(TESTERS_DIRECTORY, CONFIG_FILE),
-		join(projectDirectory, CONFIG_FILE),
-	);
-	writeFileSync(join(projectDirectory, GITIGNORE_FILE), GITIGNORE_CONTENT);
+// Copies the suite's provisioned template project (from tracked registry
+// sources) into each scenario directory, so the suite never reads the
+// gitignored `packages/test/testers/` tree.
+const createProjectDirectory = (templateDirectory, projectDirectory) => {
+	cpSync(templateDirectory, projectDirectory, { recursive: true });
 };
 
 // A scenario may override config.json fields (e.g. `enableCycleCollector:
@@ -217,9 +200,14 @@ const applyScenarioConfiguration = (projectDirectory, scenario) => {
 	);
 };
 
-const prepareProject = (temporaryDirectory, scenario, directoryName) => {
+const prepareProject = (
+	templateDirectory,
+	temporaryDirectory,
+	scenario,
+	directoryName,
+) => {
 	const projectDirectory = join(temporaryDirectory, directoryName);
-	createProjectDirectory(projectDirectory);
+	createProjectDirectory(templateDirectory, projectDirectory);
 	applyScenarioConfiguration(projectDirectory, scenario);
 	writeFileSync(
 		join(projectDirectory, ENTRY_FILE_NAME),
@@ -229,8 +217,9 @@ const prepareProject = (temporaryDirectory, scenario, directoryName) => {
 	return projectDirectory;
 };
 
-const buildFixture = (temporaryDirectory, scenario) => {
+const buildFixture = ({ temporaryDirectory, templateDirectory }, scenario) => {
 	const projectDirectory = prepareProject(
+		templateDirectory,
 		temporaryDirectory,
 		scenario,
 		PROJECT_DIRECTORY_NAME,
@@ -337,8 +326,12 @@ const runBuildExpectingRejection = (projectDirectory) => {
 // A rejected scenario pins the diagnostics that must stop the build. If the
 // checker misses one, the codegen would emit the invalid member call instead, so
 // this asserts the failure happens before any C++ is generated.
-const runRejectedScenario = (temporaryDirectory, scenario) => {
+const runRejectedScenario = (
+	{ temporaryDirectory, templateDirectory },
+	scenario,
+) => {
 	const projectDirectory = prepareProject(
+		templateDirectory,
 		temporaryDirectory,
 		scenario,
 		REJECTED_PROJECT_DIRECTORY_NAME,
@@ -485,12 +478,12 @@ const buildCompileArguments = (fixture, driverPath, binary) => {
 	];
 };
 
-const runScenario = (temporaryDirectory, scenario) => {
+const runScenario = (context, scenario) => {
 	const events = parseEvents(scenario);
-	const fixture = buildFixture(temporaryDirectory, scenario);
+	const fixture = buildFixture(context, scenario);
 	assertAbsentTokens(fixture.translationUnitPath, scenario);
-	const driverPath = join(temporaryDirectory, `${scenario}.driver.cpp`);
-	const binary = join(temporaryDirectory, `${scenario}.bin`);
+	const driverPath = join(context.temporaryDirectory, `${scenario}.driver.cpp`);
+	const binary = join(context.temporaryDirectory, `${scenario}.bin`);
 	writeFileSync(driverPath, buildDriverSource(events), UTF8);
 
 	const compileArguments = buildCompileArguments(fixture, driverPath, binary);
@@ -498,25 +491,35 @@ const runScenario = (temporaryDirectory, scenario) => {
 	runCompiledBinary(binary, { stdio: "inherit" });
 };
 
-const runAnyScenario = (temporaryDirectory, scenario) => {
+const runAnyScenario = (context, scenario) => {
 	if (isRejectedScenario(scenario)) {
-		runRejectedScenario(temporaryDirectory, scenario);
+		runRejectedScenario(context, scenario);
 		return;
 	}
-	runScenario(temporaryDirectory, scenario);
+	runScenario(context, scenario);
 };
 
-const main = () => {
-	const failures = withTemporaryDirectory(
+const main = async () => {
+	const failures = await withTemporaryDirectoryAsync(
 		TEMP_DIRECTORY_PREFIX,
-		(directory) => {
+		async (temporaryDirectory) => {
+			const templateDirectory = await createProject(
+				temporaryDirectory,
+				TESTER_PLATFORM_NAME,
+			);
 			return runScenarioSuite({
 				scenarios: listScenarios(MODULE_DIRECTORY),
-				runScenario: runAnyScenario.bind(null, directory),
+				runScenario: runAnyScenario.bind(null, {
+					temporaryDirectory,
+					templateDirectory,
+				}),
 			});
 		},
 	);
 	process.exit(failures.length > 0 ? 1 : 0);
 };
 
-main();
+main().catch((error) => {
+	console.error(error);
+	process.exit(1);
+});

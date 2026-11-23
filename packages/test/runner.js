@@ -15,6 +15,7 @@ import {
 import { runCastContextChecks } from "./cast-context-checks.js";
 import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
+import { runCodegenHermeticChecks } from "./codegen-hermetic-checks.js";
 import { runConfigIncludeChecks } from "./config-include-checks.js";
 import { runConsoleChecks } from "./console-checks.js";
 import {
@@ -24,6 +25,7 @@ import {
 	CAST_CONTEXT_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
+	CODEGEN_HERMETIC_UNIT_CHECKS_GROUP,
 	CONFIG_INCLUDE_UNIT_CHECKS_GROUP,
 	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
@@ -255,6 +257,10 @@ export const run = async () => {
 	const configIncludeResults = await runConfigIncludeChecks();
 	reportUnitChecks(CONFIG_INCLUDE_UNIT_CHECKS_GROUP, configIncludeResults);
 	collectMismatches(configIncludeResults, mismatches);
+
+	const codegenHermeticResults = await runCodegenHermeticChecks();
+	reportUnitChecks(CODEGEN_HERMETIC_UNIT_CHECKS_GROUP, codegenHermeticResults);
+	collectMismatches(codegenHermeticResults, mismatches);
 
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);

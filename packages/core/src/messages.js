@@ -58,6 +58,10 @@ const DIAG_MESSAGES = {
 	[ERROR_CODE.invalidMemberAccess]:
 		"Cannot access member '{name}' on type '{type}': '{type}' has no members.",
 	[ERROR_CODE.unknownMember]: "Type '{type}' has no member '{name}'.",
+	[ERROR_CODE.asyncTaskMemberAccess]:
+		"Type '{type}' has no member '{name}': await the async call that produces the value before using its result, e.g. 'const value = await getResult()'.",
+	[ERROR_CODE.asyncTaskArgument]:
+		"Argument '{name}' expects type '{expected}' but receives the AsyncTask wrapper '{actual}'; await the async call that produces the value instead of awaiting the variable, e.g. 'consume(await getValue())'.",
 	[ERROR_CODE.unconvertibleTemplateExpression]:
 		"Cannot interpolate a value of type '{type}' into a template literal: it is not convertible to 'string'.",
 	[ERROR_CODE.invalidReceiverCast]:
