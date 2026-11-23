@@ -1,7 +1,9 @@
 import { AST_NODE, DATA_TYPE, FLOAT_TYPES } from "../constants.js";
 
 export const RESERVED_NAMES = ["loop"];
-export const REQUIRED_FUNCTIONS = ["setup", "main"];
+export const SETUP_FUNCTION = "setup";
+export const ENTRY_FUNCTION = "main";
+export const REQUIRED_FUNCTIONS = [SETUP_FUNCTION, ENTRY_FUNCTION];
 export const FLOAT32_SIGNIFICANT_DIGITS = 7;
 
 export const TYPE_RANGES = {

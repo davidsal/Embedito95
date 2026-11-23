@@ -2,7 +2,7 @@ import { AST_NODE, ERROR_CODE, SEVERITY } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { stripTypeArguments } from "./async-task-type.js";
 import { getDeclaration } from "./declaration-accessors.js";
-import { getRootName } from "./types.js";
+import { ENTRY_FUNCTION, getRootName } from "./types.js";
 import { SCOPE_NODE_TYPES, walk } from "./walk.js";
 
 const collectTypeNames = (name, target) => {
@@ -60,8 +60,21 @@ const collectReferencedTypes = (node, target) => {
 	}
 };
 
-const createDeclarationRecord = ({ name, statement, declaration }) => {
-	return { name, statement, declaration, used: false };
+const createDeclarationRecord = ({
+	name,
+	statement,
+	declaration,
+	parameter = null,
+}) => {
+	return { name, statement, declaration, parameter, used: false };
+};
+
+const IGNORED_PARAMETER_PREFIX = "_";
+
+// Parameters starting with an underscore are intentionally ignored: the author
+// keeps the slot for the callback/event signature but does not use it.
+const isIgnoredParameter = (name) => {
+	return name.startsWith(IGNORED_PARAMETER_PREFIX);
 };
 
 const createBlockScope = () => {
@@ -69,7 +82,9 @@ const createBlockScope = () => {
 };
 
 // Function parameters belong to the function body scope so a reference inside
-// the function resolves to the parameter instead of an outer homonym.
+// the function resolves to the parameter instead of an outer homonym. They also
+// become unused-declaration candidates: the record is evaluated against the
+// references that resolve lexically to it, so a same-named global does not count.
 const createParameterScope = (functionExpression) => {
 	const declarations = new Map();
 	for (const parameter of functionExpression.params ?? []) {
@@ -80,6 +95,7 @@ const createParameterScope = (functionExpression) => {
 					name: parameter.name,
 					statement: functionExpression,
 					declaration: null,
+					parameter,
 				}),
 			);
 		}
@@ -128,7 +144,9 @@ const collectScopeDeclarations = (state) => {
 		skipKeys: ["id", "nameIdent"],
 		enter: (node) => {
 			if (node.type === AST_NODE.functionExpression) {
-				pendingFunctionBodies.set(node.body, createParameterScope(node));
+				const parameterScope = createParameterScope(node);
+				pendingFunctionBodies.set(node.body, parameterScope);
+				state.localDeclarations.push(...parameterScope.declarations.values());
 			}
 			if (SCOPE_NODE_TYPES.has(node.type)) {
 				const scope = pendingFunctionBodies.get(node) ?? createBlockScope();
@@ -205,6 +223,24 @@ export const collectUsageInfo = (state) => {
 	});
 };
 
+const pushUnusedParameter = (state, record) => {
+	// Callbacks are not exempt either: an unused callback parameter is reported
+	// unless it uses the `_` prefix, so the rule stays uniform with locals.
+	const { name, parameter, statement, used } = record;
+	if (used || isIgnoredParameter(name)) {
+		return;
+	}
+	state.errors.push(
+		makeDiagnostic({
+			code: ERROR_CODE.unusedParameter,
+			params: { name },
+			location: parameter.loc ?? statement.loc,
+			severity: SEVERITY.warning,
+			tag: 1,
+		}),
+	);
+};
+
 export const checkUnusedDeclarations = (state) => {
 	if (state.isLibrary) {
 		return;
@@ -214,7 +250,12 @@ export const checkUnusedDeclarations = (state) => {
 		...state.localDeclarations,
 	];
 
-	for (const { name, statement, declaration, used } of unusedCandidates) {
+	for (const record of unusedCandidates) {
+		const { name, statement, declaration, used, parameter } = record;
+		if (parameter) {
+			pushUnusedParameter(state, record);
+			continue;
+		}
 		if (
 			used ||
 			statement.export ||
@@ -223,6 +264,13 @@ export const checkUnusedDeclarations = (state) => {
 			continue;
 		}
 		const isFunc = declaration?.init?.type === AST_NODE.functionExpression;
+		// The entry point replaces the generic "Unused function 'main'" warning
+		// with the specific `entryPointNotCalled` error, reported by
+		// `checkRequiredFunctionsAndSetup`, so the author gets one actionable
+		// diagnostic instead of two. Only the entry declaration is suppressed.
+		if (isFunc && state.isEntry && name === ENTRY_FUNCTION) {
+			continue;
+		}
 		state.errors.push(
 			makeDiagnostic({
 				code: isFunc ? ERROR_CODE.unusedFunction : ERROR_CODE.unusedConstant,

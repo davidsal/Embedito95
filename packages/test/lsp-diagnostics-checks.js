@@ -109,6 +109,14 @@ const TWO_UNUSED_CONSTANTS_SOURCE = [
 	"const first = 1;",
 	"const second = 2;",
 ].join("\n");
+const UNUSED_PARAMETER_SOURCE = [
+	"const setup = () => {}",
+	"const f = (unused: i32) => { return 1 }",
+	"const main = () => {",
+	"    setup()",
+	"    f(1)",
+	"}",
+].join("\n");
 const SHADOWED_UNUSED_LOCAL_SOURCE = [
 	"type Persona = { name: string, age: i32 }",
 	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
@@ -145,6 +153,12 @@ const MISSING_SETUP_CALL_ONLY_SOURCE = [
 	"const main = () => {",
 	"}",
 ].join("\n");
+const ENTRY_POINT_NOT_CALLED_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"}",
+].join("\n");
 const EXPECTED_TYPE_MISMATCH_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.assignmentTypeMismatch,
 	params: { rhsType: "string", name: "x", type: "u8" },
@@ -177,6 +191,10 @@ const EXPECTED_MISSING_SETUP_MESSAGE = formatDiagnosticMessage({
 const EXPECTED_MISSING_SETUP_CALL_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.missingSetupCall,
 	params: {},
+});
+const EXPECTED_ENTRY_POINT_NOT_CALLED_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.entryPointNotCalled,
+	params: { name: "main" },
 });
 const EXPECTED_EOF_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unexpectedEof,
@@ -862,6 +880,28 @@ const checkMissingSetupCallShownWithoutLocalErrors = () => {
 	);
 };
 
+const checkEntryPointNotCalledLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(ENTRY_POINT_NOT_CALLED_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP reports the uncalled entry point error at the main declaration",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.entryPointNotCalled,
+			EXPECTED_ENTRY_POINT_NOT_CALLED_MESSAGE,
+			"2:7",
+		].join("|"),
+	);
+};
+
 const checkExactlyOneVisibleErrorPerFile = () => {
 	const sources = [
 		TYPE_MISMATCH_SOURCE,
@@ -924,6 +964,24 @@ const checkShadowedUnusedLocalLspDiagnostic = () => {
 	);
 };
 
+const checkUnusedParameterLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(UNUSED_PARAMETER_SOURCE);
+	const unusedParameters = diagnostics.filter((diagnostic) => {
+		return diagnostic.code === ERROR_CODE.unusedParameter;
+	});
+	const [diagnostic] = unusedParameters;
+	return expectEqual(
+		"LSP shows the unused parameter warning at the parameter range",
+		[
+			unusedParameters.length,
+			diagnostic?.severity,
+			diagnostic?.range.start.line,
+			diagnostic?.range.start.character,
+		].join("|"),
+		[1, LSP_SEVERITY.warning, 1, 11].join("|"),
+	);
+};
+
 export const runLspDiagnosticsChecks = async () => {
 	return [
 		checkMissingImportBraceReportsSingleError(),
@@ -949,9 +1007,11 @@ export const runLspDiagnosticsChecks = async () => {
 		checkEarliestLocalErrorByColumnIsVisible(),
 		checkLocalErrorHasPriorityOverMissingSetupCall(),
 		checkMissingSetupCallShownWithoutLocalErrors(),
+		checkEntryPointNotCalledLspDiagnostic(),
 		checkExactlyOneVisibleErrorPerFile(),
 		checkWarningsAreAllEmitted(),
 		checkShadowedUnusedLocalLspDiagnostic(),
+		checkUnusedParameterLspDiagnostic(),
 	];
 };
 

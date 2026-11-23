@@ -28,6 +28,7 @@ import {
 	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	CYCLES_FLAG_UNIT_CHECKS_GROUP,
+	ENTRY_POINT_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
 	FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
@@ -60,6 +61,7 @@ import {
 	TEMPLATE_LITERAL_UNIT_CHECKS_GROUP,
 	TEST_SOURCES_DIRECTORY,
 	TOOLING_UNIT_CHECKS_GROUP,
+	UNUSED_PARAMETERS_UNIT_CHECKS_GROUP,
 	UNUSED_SCOPE_UNIT_CHECKS_GROUP,
 	UPDATE_SNAPSHOTS_FLAG,
 	VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
@@ -69,6 +71,7 @@ import {
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
 import { runCyclesFlagChecks } from "./cycles-flag-checks.js";
+import { runEntryPointChecks } from "./entry-point-checks.js";
 import { runFunctionTypeParserChecks } from "./function-type-parser-checks.js";
 import { runRegistryIntTypeParityChecks } from "./int-type-parity-checks.js";
 import { listLanguageSnapshots } from "./language-snapshots.js";
@@ -107,6 +110,7 @@ import { runTemplateInterpolationChecks } from "./template-interpolation-checks.
 import { runTemplateLiteralChecks } from "./template-literal-checks.js";
 import { runToolingChecks } from "./tooling-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
+import { runUnusedParameterChecks } from "./unused-parameters-checks.js";
 import { runUnusedScopeChecks } from "./unused-scope-checks.js";
 import { runVscodeIndentationChecks } from "./vscode-indentation-checks.js";
 import { runVscodeQuickSuggestionsChecks } from "./vscode-quick-suggestions-checks.js";
@@ -274,6 +278,14 @@ export const run = async () => {
 	const unusedScopeResults = runUnusedScopeChecks();
 	reportUnitChecks(UNUSED_SCOPE_UNIT_CHECKS_GROUP, unusedScopeResults);
 	collectMismatches(unusedScopeResults, mismatches);
+
+	const unusedParameterResults = runUnusedParameterChecks();
+	reportUnitChecks(UNUSED_PARAMETERS_UNIT_CHECKS_GROUP, unusedParameterResults);
+	collectMismatches(unusedParameterResults, mismatches);
+
+	const entryPointResults = runEntryPointChecks();
+	reportUnitChecks(ENTRY_POINT_UNIT_CHECKS_GROUP, entryPointResults);
+	collectMismatches(entryPointResults, mismatches);
 
 	const functionTypeParserResults = runFunctionTypeParserChecks();
 	reportUnitChecks(

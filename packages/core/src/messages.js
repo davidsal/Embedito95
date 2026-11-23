@@ -12,10 +12,13 @@ const DIAG_MESSAGES = {
 		"Missing required function '{name}'. Add: const {name} = () => {}",
 	[ERROR_CODE.unusedFunction]: "Unused function '{name}'",
 	[ERROR_CODE.unusedConstant]: "Unused constant '{name}'",
+	[ERROR_CODE.unusedParameter]: "Unused parameter '{name}'",
 	[ERROR_CODE.unusedType]: "Unused type '{name}'",
 	[ERROR_CODE.unusedEnum]: "Unused enum '{name}'",
 	[ERROR_CODE.missingSetupCall]:
 		"First statement in 'main' should be a call to 'setup()'",
+	[ERROR_CODE.entryPointNotCalled]:
+		"Entry point '{name}' is declared but never called. Add '{name}()' at the end of the module.",
 	[ERROR_CODE.usedBeforeDeclaration]: "'{name}' is used before its declaration",
 	[ERROR_CODE.emptyImport]: "Import specifiers cannot be empty",
 	[ERROR_CODE.emptyImportSource]: "Import source cannot be empty",
