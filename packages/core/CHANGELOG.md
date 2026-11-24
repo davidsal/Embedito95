@@ -1,5 +1,15 @@
 # embedito95-core
 
+## 0.4.0
+
+### Minor Changes
+
+- 987388f: Fix formatter comment placement, LSP completions and checker diagnostics (unknown members, unused locals and parameters, entry-point calls, template literals), and stabilize async codegen for anonymous shapes and awaited object results. Synthesized return types now use the `_` prefix to avoid colliding with user types.
+
+### Patch Changes
+
+- 2522828: Cast integer arguments to the selected signature when calling overloaded library functions, so generated C++ no longer fails with ambiguous overloads.
+
 ## 0.3.0
 
 ### Minor Changes

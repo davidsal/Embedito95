@@ -1,6 +1,6 @@
 {
 	"name": "embedito95-core",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Embedito95 compiler and code generation core",
 	"type": "module",
 	"license": "AGPL-3.0-only WITH LicenseRef-Embedito95-Runtime-Exception-1.0",
