@@ -4,7 +4,8 @@ import { sleep } from '@embedito95/async'
 // A long-lived coroutine stays alive while short coroutines are spawned and
 // completed across several 5-pass compactions. Compaction must shift the live
 // task down without corrupting its state (it keeps emitting after each
-// compaction) and must drop the consumed slots without skipping tasks.
+// compaction) and must drop the surplus consumed slots (it keeps a couple as
+// reusable holes) without skipping tasks.
 const keeper = async () => {
     setDigital(Pin.7, HIGH)
     await sleep(40)

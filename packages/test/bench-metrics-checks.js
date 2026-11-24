@@ -56,11 +56,27 @@ const SCHEDULER_SOURCE = `void _asyncEventLoop(core_object::Object<_AsyncHandler
 		if (iterationsSinceCompact >= (i32)(5)) {
 			iterationsSinceCompact = 0;
 			index = 0;
+			u16 writeIndex = 0;
 			while (index < (i32)(TASK_QUEUE.length())) {
 				core_object::Object<_AsyncTaskItem> current = TASK_QUEUE[index];
+				TASK_QUEUE[writeIndex] = current;
+				writeIndex += 1;
 				index = index + (i32)(1);
 			}
-			TASK_QUEUE.truncate(index);
+			TASK_QUEUE.truncate(writeIndex);
+		}
+		if (TASK_QUEUE.length() <= (u16)(2)) {
+			u16 idleIndex = 0;
+			u8 idleConsumedCount = 0;
+			while (idleIndex < TASK_QUEUE.length()) {
+				if ((TASK_QUEUE[idleIndex].status == _AsyncTaskStatus::CONSUMED)) {
+					idleConsumedCount += 1;
+				}
+				idleIndex += 1;
+			}
+			if (idleConsumedCount == TASK_QUEUE.length()) {
+				return;
+			}
 		}
 	}
 }`;
@@ -86,6 +102,19 @@ const BENCH_OUTPUT = [
 	"bench latency_histogram 1 1",
 	"bench latency_histogram 2 1",
 ].join("\n");
+
+const IDLE_SCAN_ONLY_SOURCE = `void _asyncEventLoop(core_object::Object<_AsyncHandlers> handlers) {
+	while (true) {
+		if (TASK_QUEUE.length() <= (u16)(2)) {
+			u16 idleIndex = 0;
+			while (idleIndex < TASK_QUEUE.length()) {
+				if ((TASK_QUEUE[idleIndex].status == _AsyncTaskStatus::CONSUMED)) {
+				}
+				idleIndex += 1;
+			}
+		}
+	}
+}`;
 
 const MODULE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 
@@ -151,6 +180,7 @@ const checkWorkloadIntermediate = () => {
 
 const checkInstrumentation = () => {
 	const instrumented = instrumentSchedulerSource(SCHEDULER_SOURCE);
+	const idleScanOnly = instrumentSchedulerSource(IDLE_SCAN_ONLY_SOURCE);
 	const wrapperIndex = instrumented.indexOf("while (true) {");
 	const passIndex = instrumented.indexOf(PASS_HOOK_CALL);
 	return [
@@ -183,6 +213,12 @@ const checkInstrumentation = () => {
 			"bench injects one compaction visit counter",
 			countOccurrences(instrumented, "e95_bench_compact_visit();"),
 			1,
+		),
+		expectEqual(
+			"bench does not count the idle-exit queue scan as a compaction",
+			countOccurrences(idleScanOnly, "e95_bench_compaction();") +
+				countOccurrences(idleScanOnly, "e95_bench_compact_visit();"),
+			0,
 		),
 		expectEqual(
 			"bench leaves a module without the event loop alone",

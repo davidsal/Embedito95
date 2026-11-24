@@ -96,6 +96,7 @@ export {
 	CYCLES_CONFIG_FILE_NAME,
 	compileProjectLibrary,
 	ENABLE_CYCLE_COLLECTOR_OPTION,
+	EVENT_LOOP_RETAINED_HOLE_LIMIT,
 	formatFloat32Value,
 	formatFloat64Value,
 	loadTemplates,

@@ -33,7 +33,15 @@ export const EVENT_LOOP_CATCHUP_LIMIT_NAME = "catchUpLimit";
 export const EVENT_LOOP_CATCHUP_STEP = 1;
 export const EVENT_LOOP_ITERATIONS_NAME = "iterationsSinceCompact";
 export const EVENT_LOOP_COMPACT_INTERVAL = 5;
+// Compaction keeps up to this many CONSUMED slots as reusable holes instead of
+// dropping every consumed slot. Two holes cover the two child-awaiting
+// coroutines the scheduler has to feed every pass (one hole each) without
+// pinning more payload slots than the Nano's 2 KB of RAM can spare.
+export const EVENT_LOOP_RETAINED_HOLE_LIMIT = 2;
 export const COMPACT_WRITE_INDEX_NAME = "writeIndex";
+export const COMPACT_HOLES_COUNT_NAME = "retainedHoles";
+export const EVENT_LOOP_IDLE_INDEX_NAME = "idleIndex";
+export const EVENT_LOOP_IDLE_CONSUMED_COUNT_NAME = "idleConsumedCount";
 export const COMPACT_ITEM_PARAMETER_NAME = "current";
 export const CHILD_FIELD_PREFIX = "child";
 export const STEP_REFERENCE = `${TASK_ITEM_PARAMETER_NAME}.step`;

@@ -1534,13 +1534,24 @@ const checkPosixRunInterruption = async ({ clangAvailable }) => {
 	}
 };
 
-const runCompiledExecutable = async (executablePath) => {
+const runCompiledExecutable = async (
+	executablePath,
+	timeout = POSIX_PROGRAM_TIMEOUT_MILLISECONDS,
+) => {
 	try {
-		const result = await runProcess(executablePath, [], { encoding: UTF8 });
-		return { succeeded: true, output: `${result.stdout}${result.stderr}` };
+		const result = await runProcess(executablePath, [], {
+			encoding: UTF8,
+			timeout,
+		});
+		return {
+			succeeded: true,
+			timedOut: false,
+			output: `${result.stdout}${result.stderr}`,
+		};
 	} catch (error) {
 		return {
 			succeeded: false,
+			timedOut: error.killed === true,
 			output: `${error.stdout ?? ""}${error.stderr ?? ""}`,
 		};
 	}
@@ -2151,6 +2162,47 @@ main()
 `;
 const POSIX_TIME_EXPECTED_OUTPUT = "true\nfalse";
 const POSIX_ASYNC_EXPECTED_OUTPUT = "start\nend\nbefore\nafter";
+const POSIX_IDLE_EXIT_PROJECT_NAME = "posix-idle-exit-project";
+const POSIX_IDLE_EXIT_PROGRAM_SOURCE = `import { console } from '@embedito95/console'
+import { sleep } from '@embedito95/async'
+
+const setup = () => {}
+
+const worker = async () => {
+    console.log("before")
+    await sleep(20)
+    console.log("after")
+}
+
+const main = () => {
+    setup()
+    console.log("start")
+    worker()
+}
+
+main()
+`;
+const POSIX_IDLE_EXIT_EXPECTED_OUTPUT = "start\nbefore\nafter";
+const POSIX_LIVE_TASK_PROJECT_NAME = "posix-live-task-project";
+const POSIX_LIVE_TASK_PROGRAM_SOURCE = `import { console } from '@embedito95/console'
+import { sleep } from '@embedito95/async'
+
+const setup = () => {}
+
+const keeper = async () => {
+    console.log("alive")
+    await sleep(10000)
+    console.log("awake")
+}
+
+const main = () => {
+    setup()
+    keeper()
+}
+
+main()
+`;
+const POSIX_LIVE_TASK_TIMEOUT_MILLISECONDS = 600;
 const POSIX_PROGRAM_TIMEOUT_MILLISECONDS = 5000;
 const POSIX_TIME_MINIMUM_DURATION_MILLISECONDS = 30;
 const POSIX_ASYNC_MINIMUM_DURATION_MILLISECONDS = 40;
@@ -2235,6 +2287,75 @@ const runPosixProgramCheck = async ({
 			expectEqual(
 				`${projectName} terminates within the timeout`,
 				elapsedMilliseconds < POSIX_PROGRAM_TIMEOUT_MILLISECONDS,
+				true,
+			),
+		];
+	} finally {
+		rmSync(projectDirectory, { recursive: true, force: true });
+	}
+};
+
+// 43b: a live task must keep the host event loop running, so a bounded run has
+// to time out instead of returning. The timeout also keeps a regression here
+// from hanging the suite.
+const runPosixLiveTaskCheck = async ({ clangAvailable }) => {
+	if (!clangAvailable) {
+		return [
+			expectEqual(
+				`${POSIX_LIVE_TASK_PROJECT_NAME} skipped because clang++ is unavailable`,
+				clangAvailable,
+				false,
+			),
+		];
+	}
+
+	const projectDirectory = await createPosixProjectWithMain({
+		projectName: POSIX_LIVE_TASK_PROJECT_NAME,
+		mainSource: POSIX_LIVE_TASK_PROGRAM_SOURCE,
+	});
+	const buildRootDirectory = join(
+		projectDirectory,
+		BUILD_DIRECTORY_NAME,
+		POSIX_LIVE_TASK_PROJECT_NAME,
+	);
+	const executablePath = join(
+		buildRootDirectory,
+		ARTIFACTS_DIRECTORY_NAME,
+		POSIX_LIVE_TASK_PROJECT_NAME,
+	);
+
+	try {
+		const buildResult = await runPosixProjectCommand({
+			projectDirectory,
+			command: BUILD_COMMAND,
+			timeout: POSIX_PROGRAM_TIMEOUT_MILLISECONDS,
+		});
+		const compileResult = await runPosixProjectCommand({
+			projectDirectory,
+			command: COMPILE_COMMAND,
+			timeout: POSIX_PROGRAM_TIMEOUT_MILLISECONDS,
+		});
+		const executionResult = existsSync(executablePath)
+			? await runCompiledExecutable(
+					executablePath,
+					POSIX_LIVE_TASK_TIMEOUT_MILLISECONDS,
+				)
+			: { succeeded: false, timedOut: false, output: "" };
+
+		return [
+			expectEqual(
+				`${POSIX_LIVE_TASK_PROJECT_NAME} build succeeds`,
+				buildResult.succeeded,
+				true,
+			),
+			expectEqual(
+				`${POSIX_LIVE_TASK_PROJECT_NAME} compile succeeds`,
+				compileResult.succeeded,
+				true,
+			),
+			expectEqual(
+				`${POSIX_LIVE_TASK_PROJECT_NAME} keeps running while a task is alive`,
+				executionResult.timedOut,
 				true,
 			),
 		];
@@ -2352,5 +2473,13 @@ export const runPosixStrategyChecks = async () => {
 			minimumDurationMilliseconds: POSIX_ASYNC_MINIMUM_DURATION_MILLISECONDS,
 			clangAvailable,
 		})),
+		...(await runPosixProgramCheck({
+			projectName: POSIX_IDLE_EXIT_PROJECT_NAME,
+			mainSource: POSIX_IDLE_EXIT_PROGRAM_SOURCE,
+			expectedOutput: POSIX_IDLE_EXIT_EXPECTED_OUTPUT,
+			minimumDurationMilliseconds: 10,
+			clangAvailable,
+		})),
+		...(await runPosixLiveTaskCheck({ clangAvailable })),
 	];
 };

@@ -5,6 +5,7 @@ export {
 	ASYNC_INTERMEDIATE_IMPORT_SOURCE,
 	ASYNC_TASK_ITEM_TYPE_NAME,
 	EVENT_LOOP_NAME,
+	EVENT_LOOP_RETAINED_HOLE_LIMIT,
 } from "./async-constants.js";
 export { buildAsyncIntermediate } from "./async-intermediate.js";
 export { resolveWordCType } from "./c-types.js";

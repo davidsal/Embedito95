@@ -7,6 +7,10 @@ const EVENT_LOOP_MARKER = "_asyncEventLoop";
 const WHILE_KEYWORD = "while (";
 const SWITCH_KEYWORD = "switch (";
 const QUEUE_ACCESS_MARKER = "TASK_QUEUE[";
+// A compaction is a queue loop that rewrites the queue (tracks a `writeIndex`).
+// The idle-exit scan also indexes `TASK_QUEUE`, so requiring the write index
+// keeps the idle scan from being counted as a compaction.
+const COMPACTION_WRITE_MARKER = "writeIndex";
 const SLEEP_CHECK_MARKER = "core_time::hasElapsed(";
 const BENCH_SLEEP_CHECK_NAME = "e95_bench_has_elapsed";
 
@@ -109,7 +113,10 @@ const collectLoopInsertions = (source, insertions, baseOffset) => {
 			collectLoopInsertions(loopBody, insertions, baseOffset + bodyOffset);
 		} else if (loopBody.includes(SWITCH_KEYWORD)) {
 			collectDispatchInsertions(loopBody, bodyOffset, insertions, baseOffset);
-		} else if (loopBody.includes(QUEUE_ACCESS_MARKER)) {
+		} else if (
+			loopBody.includes(QUEUE_ACCESS_MARKER) &&
+			loopBody.includes(COMPACTION_WRITE_MARKER)
+		) {
 			insertAt(
 				insertions,
 				baseOffset + whileIndex,

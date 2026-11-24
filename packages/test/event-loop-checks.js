@@ -12,7 +12,16 @@
 //   updates them deliberately instead of hitting false reds. Keep them only as
 //   a description of today's optimization; assert new behaviour through the
 //   observable scenarios in `codegen-run`.
-import { check, parse, shared, tokenize } from "embedito95-core";
+//
+// - 43b STRATEGY: compaction keeps a bounded number of CONSUMED slots as
+//   reusable holes instead of dropping every one of them.
+import {
+	check,
+	EVENT_LOOP_RETAINED_HOLE_LIMIT,
+	parse,
+	shared,
+	tokenize,
+} from "embedito95-core";
 import { expectEqual } from "./reporting.js";
 
 const ASYNC_SOURCE = [
@@ -37,7 +46,7 @@ const CHILD_FIELD_NAME = "childReadValue";
 const SLEEP_MILLISECONDS_FIELD = "childSleepMilliseconds";
 const SLEEP_START_FIELD = "childSleepStart";
 
-const buildIntermediateAsyncSource = (source) => {
+const buildIntermediateAsyncSource = (source, options = {}) => {
 	const { tokens } = tokenize(source);
 	const { ast, comments } = parse(tokens, source);
 	// The snippet imports the async library without provisioning its sources:
@@ -59,12 +68,17 @@ const buildIntermediateAsyncSource = (source) => {
 		{},
 		variableTypes,
 		null,
+		options,
 	);
 	return `${main ?? ""}\n${async ?? ""}`;
 };
 
 const buildAsyncSource = () => {
 	return buildIntermediateAsyncSource(ASYNC_SOURCE);
+};
+
+const buildIdleAsyncSource = () => {
+	return buildIntermediateAsyncSource(ASYNC_SOURCE, { exitWhenIdle: true });
 };
 
 const findTaskTypeBody = (source, typeName) => {
@@ -146,6 +160,129 @@ const checkPreStrategyCompaction = (source) => {
 			"pre-43 strategy: compaction trims the queue to the retained items",
 			source.includes("TASK_QUEUE.truncate(writeIndex)"),
 			true,
+		),
+	];
+};
+
+// 43b STRATEGY: compaction keeps a bounded number of CONSUMED slots as
+// reusable holes (instead of all of them or none), so the linear scan in
+// `_addAsyncTask` can reuse a slot without growing the queue.
+const checkRetainedHoles = (source) => {
+	return [
+		expectEqual(
+			"43b strategy: compaction counts the consumed holes it keeps",
+			source.includes("let retainedHoles: u8 = 0"),
+			true,
+		),
+		expectEqual(
+			"43b strategy: compaction keeps consumed slots under a small limit",
+			source.includes(
+				`current.status == _AsyncTaskStatus.CONSUMED && retainedHoles < ${EVENT_LOOP_RETAINED_HOLE_LIMIT}`,
+			),
+			true,
+		),
+		expectEqual(
+			"43b strategy: compaction increments the retained-hole counter",
+			source.includes("retainedHoles += 1"),
+			true,
+		),
+		expectEqual(
+			"43b strategy: retained holes are compacted with the live tasks",
+			source.includes("TASK_QUEUE[writeIndex] = current"),
+			true,
+		),
+	];
+};
+
+// 43b STRATEGY: a retained CONSUMED hole is the only situation where a
+// consumed payload would survive, so compaction drops it right where it keeps
+// the slot. The handlers keep the cheaper inline path (no per-site payload
+// release): reused slots are overwritten in `_addAsyncTask` and dropped slots
+// are freed by `truncate`.
+const checkConsumedPayloadRelease = (source) => {
+	const compactPayloadRelease = "current.task = null";
+	const retainedHoleIncrement = "retainedHoles += 1";
+	return [
+		expectEqual(
+			"43b strategy: compaction drops the payload of a retained hole",
+			source.includes(compactPayloadRelease),
+			true,
+		),
+		expectEqual(
+			"43b strategy: the retained-hole payload is dropped before counting it",
+			source.indexOf(compactPayloadRelease) !== -1 &&
+				source.indexOf(compactPayloadRelease) <
+					source.indexOf(retainedHoleIncrement),
+			true,
+		),
+		expectEqual(
+			"43b strategy: a consumed top-level task does not drop its payload inline",
+			source.includes("item.task = null"),
+			false,
+		),
+		expectEqual(
+			"43b strategy: releasing a child does not drop the child payload inline",
+			source.includes(`task.${CHILD_FIELD_NAME}.task = null`),
+			false,
+		),
+	];
+};
+
+// 43b STRATEGY: the idle exit fires on statuses, not on an empty queue. With
+// hole retention the queue keeps up to two CONSUMED slots, so `length() == 0`
+// would never be true again and the host loop would spin forever.
+const checkIdleExitStatuses = (idleSource) => {
+	return [
+		expectEqual(
+			"43b strategy: idle exit is guarded by the retained hole limit",
+			idleSource.includes(
+				`if (TASK_QUEUE.length() <= ${EVENT_LOOP_RETAINED_HOLE_LIMIT}) {`,
+			),
+			true,
+		),
+		expectEqual(
+			"43b strategy: idle exit scans the queue with a compact index",
+			idleSource.includes("let idleIndex: u16 = 0"),
+			true,
+		),
+		expectEqual(
+			"43b strategy: idle exit bounds its scan to the retained hole limit",
+			idleSource.includes("while (idleIndex < TASK_QUEUE.length()) {"),
+			true,
+		),
+		expectEqual(
+			"43b strategy: idle exit counts the consumed entries it visits",
+			idleSource.includes(
+				"if (TASK_QUEUE[idleIndex].status == _AsyncTaskStatus.CONSUMED) {",
+			) && idleSource.includes("idleConsumedCount += 1"),
+			true,
+		),
+		expectEqual(
+			"43b strategy: idle exit returns only when every entry is consumed",
+			idleSource.includes("if (idleConsumedCount == TASK_QUEUE.length()) {"),
+			true,
+		),
+		expectEqual(
+			"43b strategy: idle exit no longer relies on an empty queue",
+			idleSource.includes("if (TASK_QUEUE.length() == 0) {"),
+			false,
+		),
+	];
+};
+
+// 43b STRATEGY: a source that does not exit on idle must not pay for the idle
+// scan (and must not emit it at all).
+const checkIdleExitIsOptIn = (source) => {
+	return [
+		expectEqual(
+			"43b strategy: the default source does not scan for idle",
+			source.includes("idleIndex"),
+			false,
+		),
+		expectEqual(
+			"43b strategy: the default source does not count consumed entries for idle",
+			source.includes("idleConsumedCount"),
+			false,
 		),
 	];
 };
@@ -279,6 +416,7 @@ const checkPreStrategyReuseScan = (source) => {
 
 export const runEventLoopChecks = () => {
 	const source = buildAsyncSource();
+	const idleSource = buildIdleAsyncSource();
 	return [
 		expectEqual("async intermediate is generated", source.length > 0, true),
 		expectEqual(
@@ -299,5 +437,10 @@ export const runEventLoopChecks = () => {
 		...checkPreStrategyDispatch(source),
 		...checkPreStrategyCompaction(source),
 		...checkPreStrategyReuseScan(source),
+		// 43b STRATEGY
+		...checkRetainedHoles(source),
+		...checkConsumedPayloadRelease(source),
+		...checkIdleExitStatuses(idleSource),
+		...checkIdleExitIsOptIn(source),
 	];
 };
