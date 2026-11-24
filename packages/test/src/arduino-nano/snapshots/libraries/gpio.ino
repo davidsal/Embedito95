@@ -43,10 +43,10 @@ void testSetPinAnalog() {
 }
 
 void testReadPinAnalog() {
-	core_gpio::setAnalog(PWM_PIN, core_gpio::getAnalog(ADC_PIN));
-	core_gpio::setAnalog(PWM_PIN, core_gpio::getAnalog(ADC_PIN));
-	core_gpio::setAnalog(PWM_PIN, core_gpio::getAnalog(ADC_PIN));
-	core_gpio::setAnalog(PWM_PIN, core_gpio::getAnalog(ADC_PIN));
+	core_gpio::setAnalog(PWM_PIN, (u8)(core_gpio::getAnalog(ADC_PIN)));
+	core_gpio::setAnalog(PWM_PIN, (u8)(core_gpio::getAnalog(ADC_PIN)));
+	core_gpio::setAnalog(PWM_PIN, (u8)(core_gpio::getAnalog(ADC_PIN)));
+	core_gpio::setAnalog(PWM_PIN, (u8)(core_gpio::getAnalog(ADC_PIN)));
 }
 
 void testConfigureAnalog() {

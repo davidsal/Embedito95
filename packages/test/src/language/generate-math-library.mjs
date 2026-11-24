@@ -27,6 +27,27 @@ export const smallest = minimum(3, 8)
 export const bitResult = setBitValue(10, 3)`,
 		},
 		{
+			label: "integer arguments select the width that holds them",
+			probes: [
+				"wideClamped",
+				"narrowClamped",
+				"wideMagnitude",
+				"wideMinimum",
+				"wideBoundClamped",
+				"wideBoundRemapped",
+			],
+			body: `import { clamp, absolute, minimum, interpolateRange } from '@embedito95/math'
+const wideValue: u32 = 3000000000
+const low: i32 = -5
+const high: i32 = 10
+export const wideClamped = clamp(wideValue, 0, 10)
+export const narrowClamped = clamp(5, 0, 10)
+export const wideMagnitude = absolute(wideValue)
+export const wideMinimum = minimum(wideValue, 2000000000)
+export const wideBoundClamped = clamp(wideValue, low, high)
+export const wideBoundRemapped = interpolateRange(wideValue, low, high, 0, 1000)`,
+		},
+		{
 			label: "float helpers infer f32",
 			probes: ["remapped", "root", "rounded", "radians"],
 			body: `import { interpolateRangeFloat, squareRoot, roundNearest, toRadians } from '@embedito95/math'
@@ -58,6 +79,30 @@ export const raised = exponential(1.0)`,
 export const squared = square(4.0)
 export const remainder = remainderFloat(5.5, 2.0)
 export const whole = truncate(3.9)`,
+		},
+		{
+			label: "f64 arguments select the f64 overload",
+			probes: ["preciseSquare", "preciseClamp", "preciseRoot"],
+			body: `import { square, clampFloat, squareRoot } from '@embedito95/math'
+const precise: f64 = 3.14159265358979
+export const preciseSquare = square(precise)
+export const preciseClamp = clampFloat(precise, 0.0, 3.0)
+export const preciseRoot = squareRoot(precise)`,
+		},
+		{
+			label: "a mixed-width call narrows with a non-blocking warning",
+			probes: ["narrowed"],
+			body: `import { interpolateRangeFloat } from '@embedito95/math'
+const precise: f64 = 3.14159265358979
+export const narrowed: f32 = interpolateRangeFloat(precise, 0.0, 1.0, 0.0, 100.0)`,
+		},
+		{
+			label: "an f64 variable with integer literals keeps the f64 overload",
+			probes: ["wholeClamp", "wholeRemapped"],
+			body: `import { clampFloat, interpolateRangeFloat } from '@embedito95/math'
+const precise: f64 = 3.14159265358979
+export const wholeClamp = clampFloat(precise, 0, 3)
+export const wholeRemapped = interpolateRangeFloat(precise, 0, 1, 0, 100)`,
 		},
 		{
 			label: "byte helpers infer u8 and bitMask infers u32",
@@ -114,7 +159,7 @@ export const badType = interpolateRange("ten", 0, 10, 0, 100)`,
 export const badArity = arcTangent2(1.0)`,
 		},
 		{
-			label: "integer argument warns on an f32 parameter",
+			label: "a wide integer argument selects the f64 overload",
 			probes: ["integerAngle"],
 			body: `import { arcSine } from '@embedito95/math'
 const wholeNumber: i32 = 1

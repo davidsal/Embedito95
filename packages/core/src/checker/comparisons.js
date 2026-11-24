@@ -56,7 +56,10 @@ const resolveMemberExpressionType = (context, node) => {
 const resolveCallExpressionType = (context, node) => {
 	if (node.callee?.type === AST_NODE.identifier) {
 		const resolvedName = context.resolveImportedName(node.callee.name);
-		const callType = context.resolveCallType?.(resolvedName);
+		const argumentTypes = (node.arguments ?? []).map((argument) => {
+			return resolveCheckExpressionType(context, argument);
+		});
+		const callType = context.resolveCallType?.(resolvedName, argumentTypes);
 		if (callType) {
 			return callType;
 		}

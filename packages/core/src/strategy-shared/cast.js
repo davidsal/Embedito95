@@ -5,6 +5,7 @@ import {
 	TYPE_RANGES,
 } from "../checker/index.js";
 import { INTEGER_TYPES } from "../checker/types.js";
+import { DATA_TYPE } from "../constants.js";
 import { dataTypeToCType, isFloatType } from "./c-types.js";
 
 export const isFloatToIntegerCast = (valueType, targetType) => {
@@ -31,7 +32,9 @@ const needsNumericCast = (valueType, targetType) => {
 		return true;
 	}
 	if (targetIsFloat) {
-		return false;
+		// Widen `f32 -> f64` implicitly; narrow `f64 -> f32` with an explicit
+		// cast so the precision loss is visible in the generated C++.
+		return valueType === DATA_TYPE.f64 && targetType === DATA_TYPE.f32;
 	}
 	return (
 		isNumericType(targetType) &&

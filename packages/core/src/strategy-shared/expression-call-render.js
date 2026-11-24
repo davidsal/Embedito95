@@ -1,17 +1,16 @@
 import {
-	getNonNullableType,
 	resolveMethodCallReturnType,
 	resolveReceiverType,
 } from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
-import { isFloatType } from "./c-types.js";
-import { isFloatToIntegerCast } from "./cast.js";
-import { renderExpression } from "./expression.js";
 import {
-	expressionDataType,
-	makeThisFieldResolver,
-	makeThisMethodResolver,
-} from "./type-resolve.js";
+	renderCallArguments,
+	renderMethodArguments,
+	resolveCallSignature,
+	resolveSignatureParamDefaults,
+	resolveSignatureParamTypes,
+} from "./call-arguments.js";
+import { renderExpression } from "./expression.js";
 
 const FREE_METHOD_RECEIVER_TEMP_PREFIX = "_e95_receiver";
 
@@ -21,75 +20,6 @@ const makeFreeMethodReceiverTempName = (node) => {
 	const line = node.loc?.start?.line ?? 0;
 	const column = node.loc?.start?.column ?? 0;
 	return `${FREE_METHOD_RECEIVER_TEMP_PREFIX}_${line}_${column}`;
-};
-
-// An argument initializes the parameter, so float literals must use the
-// parameter type as their float context.
-const resolveArgumentFloatContext = (paramType) => {
-	const nonNullType = getNonNullableType(paramType);
-	return isFloatType(nonNullType) ? nonNullType : null;
-};
-
-const renderArgument = (argument, index, paramTypes, context, lines) => {
-	const paramType = paramTypes?.[index];
-	const shouldWrap =
-		argument?.type === AST_NODE.objectLiteral &&
-		paramType &&
-		context.isObjectHandle?.(paramType);
-	const savedFloatContext = context.floatContext;
-	context.floatContext = resolveArgumentFloatContext(paramType);
-	const rendered = renderExpression(argument, context, lines);
-	const argumentType = expressionDataType(
-		argument,
-		context.resolveNameType,
-		context.ast,
-		context.floatContext,
-		context.resolveCallType,
-		context.wordSize,
-		makeThisFieldResolver(context),
-		context.narrowingRegions,
-		makeThisMethodResolver(context),
-		context.objectTypes,
-	);
-	context.floatContext = savedFloatContext;
-	if (!rendered) {
-		return rendered;
-	}
-	if (shouldWrap) {
-		return `${context.toCType(paramType)}(${context.objectStorageCType(paramType)}${rendered})`;
-	}
-	const targetType = getNonNullableType(paramType);
-	if (isFloatToIntegerCast(argumentType, targetType)) {
-		return `(${context.toCType(targetType)})(${rendered})`;
-	}
-	return rendered;
-};
-
-// Renders the call arguments, filling omitted trailing parameters that have a
-// default value.
-const renderCallArguments = (
-	node,
-	paramTypes,
-	paramDefaults,
-	context,
-	lines,
-) => {
-	const args = node.arguments.map((argument, index) => {
-		return renderArgument(argument, index, paramTypes, context, lines);
-	});
-	if (paramDefaults) {
-		for (
-			let index = node.arguments.length;
-			index < paramDefaults.length;
-			index++
-		) {
-			const defaultValue = paramDefaults[index];
-			args.push(
-				defaultValue ? renderExpression(defaultValue, context, lines) : "0",
-			);
-		}
-	}
-	return args.join(", ");
 };
 
 const resolveContextReceiverType = (node, context) => {
@@ -104,14 +34,6 @@ const resolveContextReceiverType = (node, context) => {
 			isObjectHandle: context.isObjectHandle,
 		},
 	);
-};
-
-const renderMethodArguments = (node, context, lines) => {
-	return node.arguments
-		.map((argument, index) => {
-			return renderArgument(argument, index, null, context, lines);
-		})
-		.join(", ");
 };
 
 const renderFreeObjectMethodCall = (
@@ -223,6 +145,7 @@ export const renderCallExpression = (node, context, lines) => {
 				node,
 				paramTypes,
 				paramDefaults,
+				false,
 				context,
 				lines,
 			);
@@ -293,11 +216,28 @@ export const renderCallExpression = (node, context, lines) => {
 		}
 	}
 
+	const signature = calleeName
+		? resolveCallSignature(node, calleeName, context)
+		: null;
+	const resolvedParamTypes = resolveSignatureParamTypes(signature);
+	const resolvedParamDefaults = resolveSignatureParamDefaults(signature);
+	const originalName = calleeName
+		? (context.resolveImportedName?.(calleeName) ?? calleeName)
+		: null;
+	const definition = originalName
+		? context.libFunctionDefinitions?.[originalName]
+		: null;
+	// Only an overloaded callee can put an i32 and an i64 parameter under the
+	// same name, so only then does a wide integer need its width spelled out.
+	const wideIntegerCast = (definition?.signatures?.length ?? 0) > 1;
+
 	return `${renderExpression(node.callee, context, lines)}(${renderCallArguments(
 		node,
-		paramTypes,
-		paramDefaults,
+		resolvedParamTypes ?? paramTypes,
+		resolvedParamDefaults ?? paramDefaults,
+		Boolean(signature),
 		context,
 		lines,
+		wideIntegerCast,
 	)})`;
 };

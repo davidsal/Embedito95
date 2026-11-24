@@ -13,7 +13,10 @@ export const TYPE_RANGES = {
 	i16: { min: -32768, max: 32767 },
 	u32: { min: 0, max: 4294967295 },
 	i32: { min: -2147483648, max: 2147483647 },
-	u64: { min: 0, max: Number.MAX_SAFE_INTEGER },
+	// A real u64 reaches 2^64 - 1, past the largest exact JS integer, so the
+	// table models it as unbounded. That is what keeps a u64 from fitting i64
+	// (or any signed type) and preserves the non-blocking narrowing warning.
+	u64: { min: 0, max: Number.POSITIVE_INFINITY },
 	i64: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
 	i128: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
 	u128: { min: 0, max: Number.MAX_SAFE_INTEGER },

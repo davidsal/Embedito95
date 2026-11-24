@@ -1,5 +1,24 @@
 # embedito95-cli
 
+## 1.1.0
+
+### Minor Changes
+
+- 8bf49e6: Add the `macos-arm64` host target with a POSIX strategy: native `f64`/`i128`, `console` over stdout, host `time`/`async`, `compile` with `clang++` and `run` with clean signal handling. Untyped `let` now widens to the platform word size (`i16`/`i32`/`i64`).
+- d2c0110: Add the refcount cycle collector and its `enableCycleCollector` switch in `config.json`, and forward the resolved `E95_CYCLES` value to every compiled translation unit so project, core, library, module and async code always agrees.
+- 02c764c: Declare every `math` helper per numeric width. Floating-point helpers get an `f32` and an `f64` overload: an `f64` argument keeps double precision instead of narrowing silently, the result follows the selected overload (so `const r = square(value)` infers `f64`), integer arguments pick `f32` when they fit in 2^24 and `f64` otherwise, and narrowing emits a visible cast plus a non-blocking warning. The generated `e95_config.h` now carries `E95_FLOAT64_SOFTWARE`, so shared C++ picks the native or software `f64` implementation from the platform mode. `interpolateRange`, `clamp`, `absolute`, `minimum` and `maximum` also get an `i32`, a `u32` and an `i64` overload: the integer overload now follows the same promotion as the binary operators, so all-unsigned arguments stay on the cheap `u32` path, `u8` + signed resolves to `i16`, `u16` + signed to `i32` and `u32` + signed (for example `clamp(u32, i32, i32)`) to `i64`, keeping the unsigned magnitude instead of wrapping it negative. `u32` overloads do their ratio in 64-bit intermediates. `u64` stays without an overload, falls back to `i64` with an explicit cast plus a non-blocking warning, and the bit helpers keep their fixed `u32`/`u8` signatures. Core library sources can now write one declaration per width family (`f32 | f64`, `i32 | i64 | u32`), which the compiler expands to the same concrete overloads before type checking; user code still rejects width unions.
+
+### Patch Changes
+
+- 3c8106c: Publish under `AGPL-3.0-only WITH LicenseRef-Embedito95-Runtime-Exception-1.0` and ship `LICENSE` plus `LICENSE-EXCEPTION.md` in every package tarball, so scanners and SBOMs see the runtime exception instead of plain AGPL.
+- Updated dependencies [8bf49e6]
+- Updated dependencies [3c8106c]
+- Updated dependencies [12c0f6f]
+- Updated dependencies [d2c0110]
+- Updated dependencies [02c764c]
+  - embedito95-core@0.3.0
+  - embedito95-registry@0.3.0
+
 ## 1.0.3
 
 ### Patch Changes

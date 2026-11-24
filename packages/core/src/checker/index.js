@@ -34,6 +34,8 @@ export {
 	makeResolveImportedName,
 } from "./imports.js";
 export {
+	buildLibraryFunctionDefinitions,
+	buildLibraryFunctionReturnTypeResolver,
 	buildLibraryFunctionReturnTypes,
 	flattenLibraryObjectTypes,
 } from "./library-types.js";
@@ -55,6 +57,13 @@ export {
 	normalizeOperandTypes,
 	resolveBinaryOperationType,
 } from "./operators.js";
+export {
+	getFunctionSignatures,
+	resolveDefinitionReturnType,
+	resolveFloatTypeForIntegerType,
+	resolveOverloadSignature,
+	sameParameterTypeList,
+} from "./overloads.js";
 export {
 	collectBoundNames,
 	collectReferencedNames,

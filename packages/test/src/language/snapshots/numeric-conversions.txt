@@ -1,0 +1,44 @@
+// Numeric conversion rule for arguments/constants/let and overload
+// resolution by parameter types. Warnings are non-blocking; no conversion
+// produced by this rule is reported as an error.
+// an f64 argument keeps the f64 overload and emits no warning
+diagnostics:
+- none
+types:
+- scaled => f64
+
+// an integer literal resolves the f32 overload
+diagnostics:
+- none
+types:
+- scaled => f32
+
+// f64 into an f32 context warns without becoming an error
+diagnostics:
+- warning error.assignmentTypeMismatch @ 3:28: Cannot assign 'f64' value to 'scaled' of type 'f32'.
+types:
+- scaled => f32
+
+// u32 * i16 does not fit f32 and selects the f64 overload
+diagnostics:
+- none
+types:
+- scaled => f64
+
+// u64 into an i32 parameter warns but keeps the declared type
+diagnostics:
+- warning error.argumentTypeMismatch @ 3:32: Argument 'value' expects type 'i32' but 'wide' is 'u64'
+types:
+- narrowed => i32
+
+// i32 into an f32 parameter warns because the range exceeds 2^24
+diagnostics:
+- warning error.argumentTypeMismatch @ 3:36: Argument 'value' expects type 'f32' but 'whole' is 'i32'
+types:
+- converted => f32
+
+// i8 into an f32 parameter fits exactly and does not warn
+diagnostics:
+- none
+types:
+- converted => f32

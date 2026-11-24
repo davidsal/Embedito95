@@ -7,7 +7,7 @@ import {
 	PLATFORM_CATEGORY,
 } from "./enums.js";
 
-const HOST_CORE_LIBRARIES = ["type", "console", "time", "async"];
+const HOST_CORE_LIBRARIES = ["type", "console", "time", "async", "math"];
 
 export const platform = {
 	name: "macos-arm64",

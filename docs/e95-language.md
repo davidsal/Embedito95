@@ -93,3 +93,5 @@ Read the file for what you are writing. Each one is self-contained.
 | Expressions and arithmetic promotions | [Expressions](language/expressions.md) |
 | `if`, `switch`, loops, callbacks | [Control flow](language/control-flow.md) |
 | `async` and `await` | [Async](language/async.md) |
+| Binary operator result types | [Binary operators](language/binary-operators.md) |
+| Generated API reference (`math`) | [Math API reference](libraries/core/math-api.md) |

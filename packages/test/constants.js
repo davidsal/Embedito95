@@ -228,6 +228,7 @@ export const CONFIG_INCLUDE_UNIT_CHECKS_GROUP = "config-include";
 export const CODEGEN_HERMETIC_UNIT_CHECKS_GROUP = "codegen-hermetic";
 export const CODEGEN_HERMETIC_TEMP_DIRECTORY_PREFIX =
 	"embedito95-codegen-hermetic-";
+export const DOC_GENERATOR_UNIT_CHECKS_GROUP = "doc-generator";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";
 export const CLOSURE_FACTORY_UNIT_CHECKS_GROUP = "closure-factory";
 export const REGISTRY_DOC_COMMENT_UNIT_CHECKS_GROUP = "registry-doc-comments";
@@ -254,6 +255,7 @@ export const VSCODE_INDENTATION_UNIT_CHECKS_GROUP = "vscode-indentation";
 export const VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP =
 	"vscode-quick-suggestions";
 export const SHARED_CONSTANTS_UNIT_CHECKS_GROUP = "shared-constants";
+export const NUMERIC_CONVERSION_UNIT_CHECKS_GROUP = "numeric-conversion";
 export const WORD_SIZE_UNIT_CHECKS_GROUP = "word-size";
 export const CAST_CONTEXT_UNIT_CHECKS_GROUP = "cast-context";
 export const TEMPLATE_LITERAL_UNIT_CHECKS_GROUP = "template-literal";

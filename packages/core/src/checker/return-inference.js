@@ -70,8 +70,18 @@ const resolveReturnArgumentType = (
 			return DATA_TYPE.string;
 		case AST_NODE.identifier:
 			return resolveNameType?.(node.name, node.loc) ?? null;
-		case AST_NODE.callExpression:
-			return resolveCallType?.(node.callee?.name) ?? null;
+		case AST_NODE.callExpression: {
+			const argumentTypes = (node.arguments ?? []).map((argument) => {
+				return resolveReturnArgumentType(
+					argument,
+					resolveNameType,
+					resolveCallType,
+					wordSize,
+					objectTypes,
+				);
+			});
+			return resolveCallType?.(node.callee?.name, argumentTypes) ?? null;
+		}
 		case AST_NODE.memberExpression: {
 			if (node.object?.type === AST_NODE.thisExpression) {
 				return null;

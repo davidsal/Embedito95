@@ -15,6 +15,7 @@ import {
 	BUILD_DIRECTORY_NAME,
 	CONFIG_FILE,
 	CORE_LIBRARIES_DIRECTORY_NAME,
+	CYCLES_CONFIG_FILE_NAME,
 	HEADER_EXTENSION,
 	installLibrary,
 	JSON_INDENTATION,
@@ -84,6 +85,8 @@ const CONSOLE_LIBRARY_NAME = "console";
 const CONSOLE_PACKAGE_NAME = "@embedito95/console";
 const TIME_LIBRARY_NAME = "time";
 const TIME_PACKAGE_NAME = "@embedito95/time";
+const MATH_LIBRARY_NAME = "math";
+const MATH_PACKAGE_NAME = "@embedito95/math";
 const ASYNC_LIBRARY_NAME = "async";
 const ASYNC_PACKAGE_NAME = "@embedito95/async";
 const TIME_LIBRARY_DIRECTORY = join(
@@ -93,6 +96,10 @@ const TIME_LIBRARY_DIRECTORY = join(
 const ASYNC_LIBRARY_DIRECTORY = join(
 	REGISTRY_LIBRARIES_DIRECTORY,
 	ASYNC_LIBRARY_NAME,
+);
+const MATH_LIBRARY_DIRECTORY = join(
+	REGISTRY_LIBRARIES_DIRECTORY,
+	MATH_LIBRARY_NAME,
 );
 const ASYNC_CONFIGURATION_PATH = join(ASYNC_LIBRARY_DIRECTORY, "config.json");
 const POSIX_ASYNC_CAPABILITY = ASYNC_MODE.SCHEDULER;
@@ -460,6 +467,10 @@ const checkPosixLibraryDefinitions = async () => {
 		libraryDirectory: ASYNC_LIBRARY_DIRECTORY,
 		target: POSIX_STRATEGY_NAME,
 	});
+	const mathDefinition = await loadLibraryDefinition({
+		libraryDirectory: MATH_LIBRARY_DIRECTORY,
+		target: POSIX_STRATEGY_NAME,
+	});
 
 	return [
 		expectEqual(
@@ -501,6 +512,16 @@ const checkPosixLibraryDefinitions = async () => {
 			"posix async runtime depends on the time runtime",
 			asyncDefinition?.dependencies?.join(","),
 			TIME_LIBRARY_NAME,
+		),
+		expectEqual(
+			"posix exposes the host math runtime definition",
+			mathDefinition?.name,
+			POSIX_STRATEGY_NAME,
+		),
+		expectEqual(
+			"posix math runtime depends on the type runtime",
+			mathDefinition?.dependencies?.join(","),
+			TYPE_LIBRARY_NAME,
 		),
 		expectEqual(
 			"posix has no software f64 library definition",
@@ -1707,6 +1728,7 @@ const installPosixCoreLibraries = async (projectDirectory, platform) => {
 		CONSOLE_LIBRARY_NAME,
 		TIME_LIBRARY_NAME,
 		ASYNC_LIBRARY_NAME,
+		MATH_LIBRARY_NAME,
 	]) {
 		await installLibrary({
 			sourceDirectory: REGISTRY_LIBRARIES_DIRECTORY,
@@ -1732,6 +1754,7 @@ const writePosixProjectConfiguration = (
 			CONSOLE_PACKAGE_NAME,
 			TIME_PACKAGE_NAME,
 			ASYNC_PACKAGE_NAME,
+			MATH_PACKAGE_NAME,
 		],
 		libraries: [],
 	};
@@ -2441,6 +2464,342 @@ const checkClangPathConfiguration = () => {
 	}
 };
 
+const POSIX_MATH_PROJECT_NAME = "posix-math-project";
+const POSIX_MATH_PROGRAM_SOURCE = `import { console } from '@embedito95/console'
+import {
+    square, squareRoot, clamp, minimum, maximum, absolute, interpolateRange,
+    interpolateRangeFloat, minimumFloat, power
+} from '@embedito95/math'
+
+const setup = () => {}
+
+const main = () => {
+    setup()
+    const single: f32 = 1.234567
+    const wide: f64 = 1.234567890123
+    const squaredSingle: f32 = square(single)
+    const squaredWide: f64 = square(wide)
+    const inferred = square(wide)
+    console.log(squaredSingle)
+    console.log(squaredWide)
+    console.log(squareRoot(wide))
+    console.log(inferred)
+    // A single f64 argument must keep the f64 overload and full precision.
+    const remappedWide: f64 = interpolateRangeFloat(wide, 0.0, 1.0, 0.0, 100.0)
+    console.log(remappedWide)
+    // Mixed f32/f64 variables select f64 and cast the f32 argument explicitly.
+    const singleHalf: f32 = 0.5
+    const wideHalf: f64 = 0.5
+    const mixedMinimum: f64 = minimumFloat(singleHalf, wideHalf)
+    const mixedSymmetricMinimum: f64 = minimumFloat(wideHalf, singleHalf)
+    const mixedPower: f64 = power(singleHalf, 3.14159265358979)
+    const mixedRemapped: f64 = interpolateRangeFloat(singleHalf, 0.0, 1.0, 0.0, wideHalf)
+    // A long-tailed f64 destination must keep f64 width through a mixed call.
+    const wideTail: f64 = 0.123456789012
+    const mixedTail: f64 = interpolateRangeFloat(singleHalf, 0.0, 1.0, 0.0, wideTail)
+    console.log(mixedMinimum)
+    console.log(mixedSymmetricMinimum)
+    console.log(mixedPower)
+    console.log(mixedRemapped)
+    console.log(mixedTail)
+    // A u32 above the i32 range must keep its magnitude through the i64 overload.
+    const bigUnsigned: u32 = 3000000000
+    const bigClamped: i64 = clamp(bigUnsigned, 0, 10)
+    const bigWideClamp: i64 = clamp(bigUnsigned, 0, 4000000000)
+    const bigMinimum: i64 = minimum(bigUnsigned, 2000000000)
+    const bigMaximum: i64 = maximum(bigUnsigned, 2000000000)
+    const bigMagnitude: i64 = absolute(bigUnsigned)
+    const bigRemapped: i64 = interpolateRange(bigUnsigned, 0, 4000000000, 0, 1000)
+    // All-unsigned operands select the u32 overload; integer literals are i32.
+    const unsignedZero: u32 = 0
+    const unsignedUpper: u32 = 4000000000
+    const allUnsignedClamped: u32 = clamp(bigUnsigned, unsignedZero, unsignedUpper)
+    const allUnsignedMinimum: u32 = minimum(bigUnsigned, unsignedUpper)
+    // Mixed unsigned widths keep u32 regardless of argument order.
+    const smallUnsigned: u8 = 5
+    const mixedUnsignedLowFirst: u32 = clamp(smallUnsigned, bigUnsigned, bigUnsigned)
+    const mixedUnsignedLowLast: u32 = clamp(bigUnsigned, bigUnsigned, smallUnsigned)
+    // Two i32 bounds must not drag the wide value back into the i32 overload.
+    const low: i32 = -5
+    const high: i32 = 10
+    const mixedClamped: i64 = clamp(bigUnsigned, low, high)
+    const literalClamped: i64 = clamp(3000000000, -5, 10)
+    // Literals keep the cheap word-sized path.
+    const smallClamped: i32 = clamp(5, 0, 10)
+    console.log(mixedClamped)
+    console.log(literalClamped)
+    console.log(bigClamped)
+    console.log(bigWideClamp)
+    console.log(bigMinimum)
+    console.log(bigMaximum)
+    console.log(bigMagnitude)
+    console.log(bigRemapped)
+    console.log(allUnsignedClamped)
+    console.log(allUnsignedMinimum)
+    console.log(mixedUnsignedLowFirst)
+    console.log(mixedUnsignedLowLast)
+    console.log(smallClamped)
+}
+
+main()
+`;
+const POSIX_MATH_F32_SQUARE_OUTPUT = "1.524156";
+const POSIX_MATH_F64_SQUARE_PREFIX = "1.5241578753";
+const POSIX_MATH_F64_SQUARE_ROOT_PREFIX = "1.1111111061";
+const POSIX_MATH_F64_REMAP_PREFIX = "123.456789";
+const POSIX_MATH_F64_REMAP_DECLARATION = "f64 remappedWide";
+const POSIX_MATH_F64_REMAP_NARROWED_F32 = "(f32)(wide)";
+const POSIX_MATH_MIXED_MINIMUM_PREFIX = "0.5";
+const POSIX_MATH_MIXED_POWER_PREFIX = "0.1133147";
+const POSIX_MATH_MIXED_REMAP_PREFIX = "0.25";
+const POSIX_MATH_MIXED_TAIL_PREFIX = "0.0617283945";
+const POSIX_MATH_MIXED_MINIMUM_CAST = "(f64)(singleHalf)";
+const POSIX_MATH_MIXED_POWER_CAST = "(f64)(singleHalf)";
+const POSIX_MATH_MIXED_TAIL_CAST = "(f64)(singleHalf)";
+const POSIX_MATH_MIXED_TAIL_ARGUMENT = "wideTail";
+const POSIX_MATH_MIXED_MINIMUM_DECLARATION = "f64 mixedMinimum";
+const POSIX_MATH_MIXED_POWER_DECLARATION = "f64 mixedPower";
+const POSIX_MATH_MIXED_REMAP_DECLARATION = "f64 mixedRemapped";
+const POSIX_MATH_MIXED_TAIL_DECLARATION = "f64 mixedTail";
+const POSIX_MATH_INCLUDE_LINE = '#include "core/math/core_math.h"';
+const POSIX_MATH_INFERRED_F64_DECLARATION = "f64 inferred";
+const POSIX_MATH_INFERRED_F32_DECLARATION = "float inferred";
+const POSIX_MATH_LARGE_UNSIGNED_RESULTS = [
+	"10",
+	"10",
+	"10",
+	"3000000000",
+	"2000000000",
+	"3000000000",
+	"3000000000",
+	"750",
+	"3000000000",
+	"3000000000",
+	"3000000000",
+	"5",
+	"5",
+];
+const POSIX_MATH_FLOAT_OUTPUT_COUNT = 10;
+const POSIX_MATH_INT64_CLAMP_DECLARATION = "i64 bigWideClamp";
+const POSIX_MATH_INT64_MIXED_DECLARATION = "i64 mixedClamped";
+const POSIX_MATH_INT32_CLAMP_DECLARATION = "i32 smallClamped";
+const E95_FLOAT64_SOFTWARE_NATIVE_DEFINE = "#define E95_FLOAT64_SOFTWARE 0";
+const E95_FLOAT64_SOFTWARE_SOFTWARE_DEFINE = "#define E95_FLOAT64_SOFTWARE 1";
+const OUTPUT_LINE_SEPARATOR = "\n";
+
+const checkPosixMathPrecision = async ({ clangAvailable }) => {
+	if (!clangAvailable) {
+		return [
+			expectEqual(
+				"posix math precision skipped because clang++ is unavailable",
+				clangAvailable,
+				false,
+			),
+		];
+	}
+
+	const projectDirectory = await createPosixProjectWithMain({
+		projectName: POSIX_MATH_PROJECT_NAME,
+		mainSource: POSIX_MATH_PROGRAM_SOURCE,
+	});
+	const buildRootDirectory = join(
+		projectDirectory,
+		BUILD_DIRECTORY_NAME,
+		POSIX_MATH_PROJECT_NAME,
+	);
+	const executablePath = join(
+		buildRootDirectory,
+		ARTIFACTS_DIRECTORY_NAME,
+		POSIX_MATH_PROJECT_NAME,
+	);
+	const generatedSourcePath = join(
+		buildRootDirectory,
+		`${POSIX_MATH_PROJECT_NAME}${SOURCE_EXTENSION}`,
+	);
+	const configurationHeaderPath = join(
+		buildRootDirectory,
+		CYCLES_CONFIG_FILE_NAME,
+	);
+
+	try {
+		const buildResult = await runPosixProjectCommand({
+			projectDirectory,
+			command: BUILD_COMMAND,
+			timeout: POSIX_PROGRAM_TIMEOUT_MILLISECONDS,
+		});
+		const compileResult = await runPosixProjectCommand({
+			projectDirectory,
+			command: COMPILE_COMMAND,
+			timeout: POSIX_PROGRAM_TIMEOUT_MILLISECONDS,
+		});
+		const executionResult = existsSync(executablePath)
+			? await runCompiledExecutable(executablePath)
+			: { succeeded: false, output: "" };
+		const generatedSource = readFileIfPresent(generatedSourcePath);
+		const configurationHeader = readFileIfPresent(configurationHeaderPath);
+		const outputLines = executionResult.output
+			.trim()
+			.split(OUTPUT_LINE_SEPARATOR);
+		const [
+			f32Square,
+			f64Square,
+			f64SquareRoot,
+			inferredSquare,
+			remappedWide,
+			mixedMinimum,
+			mixedSymmetricMinimum,
+			mixedPower,
+			mixedRemapped,
+			mixedTail,
+		] = outputLines;
+		const largeUnsignedResults = outputLines.slice(
+			POSIX_MATH_FLOAT_OUTPUT_COUNT,
+		);
+
+		return [
+			expectEqual("posix math project builds", buildResult.succeeded, true),
+			expectEqual("posix math project compiles", compileResult.succeeded, true),
+			expectEqual(
+				"posix math executable runs",
+				executionResult.succeeded,
+				true,
+			),
+			expectEqual(
+				"posix math f32 square keeps single precision",
+				f32Square,
+				POSIX_MATH_F32_SQUARE_OUTPUT,
+			),
+			expectEqual(
+				"posix math f64 square differs from the f32 result",
+				f64Square !== f32Square,
+				true,
+			),
+			expectEqual(
+				"posix math f64 square keeps double precision",
+				f64Square?.startsWith(POSIX_MATH_F64_SQUARE_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math f64 square root keeps double precision",
+				f64SquareRoot?.startsWith(POSIX_MATH_F64_SQUARE_ROOT_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math infers f64 for an f64 square result",
+				inferredSquare,
+				f64Square,
+			),
+			expectEqual(
+				"posix math keeps f64 precision through interpolateRangeFloat",
+				remappedWide?.startsWith(POSIX_MATH_F64_REMAP_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math selects the f64 interpolateRangeFloat overload",
+				generatedSource.includes(POSIX_MATH_F64_REMAP_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math never narrows the f64 interpolateRangeFloat argument",
+				generatedSource.includes(POSIX_MATH_F64_REMAP_NARROWED_F32),
+				false,
+			),
+			expectEqual(
+				"posix math mixed floats execute with f64 precision",
+				mixedMinimum?.startsWith(POSIX_MATH_MIXED_MINIMUM_PREFIX) &&
+					mixedSymmetricMinimum?.startsWith(POSIX_MATH_MIXED_MINIMUM_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math mixed floats keep f64 power precision",
+				mixedPower?.startsWith(POSIX_MATH_MIXED_POWER_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math mixed floats keep f64 interpolation precision",
+				mixedRemapped?.startsWith(POSIX_MATH_MIXED_REMAP_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math mixed floats keep f64 precision on a long-tailed destination",
+				mixedTail?.startsWith(POSIX_MATH_MIXED_TAIL_PREFIX),
+				true,
+			),
+			expectEqual(
+				"posix math casts the f32 argument of a mixed long-tailed interpolation",
+				generatedSource.includes(POSIX_MATH_MIXED_TAIL_CAST) &&
+					generatedSource.includes(POSIX_MATH_MIXED_TAIL_ARGUMENT) &&
+					generatedSource.includes(POSIX_MATH_MIXED_TAIL_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math casts the f32 argument of a mixed minimumFloat call",
+				generatedSource.includes(POSIX_MATH_MIXED_MINIMUM_CAST) &&
+					generatedSource.includes(POSIX_MATH_MIXED_MINIMUM_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math casts the f32 argument of a mixed power call",
+				generatedSource.includes(POSIX_MATH_MIXED_POWER_CAST) &&
+					generatedSource.includes(POSIX_MATH_MIXED_POWER_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math selects the f64 overload for mixed interpolation",
+				generatedSource.includes(POSIX_MATH_MIXED_REMAP_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math generated source includes the math runtime",
+				generatedSource.includes(POSIX_MATH_INCLUDE_LINE),
+				true,
+			),
+			expectEqual(
+				"posix math widens the inferred result to f64",
+				generatedSource.includes(POSIX_MATH_INFERRED_F64_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math does not narrow the inferred result to f32",
+				generatedSource.includes(POSIX_MATH_INFERRED_F32_DECLARATION),
+				false,
+			),
+			expectEqual(
+				"posix math large u32 values keep their magnitude",
+				largeUnsignedResults.join("|"),
+				POSIX_MATH_LARGE_UNSIGNED_RESULTS.join("|"),
+			),
+			expectEqual(
+				"posix math selects the i64 overload for a large u32",
+				generatedSource.includes(POSIX_MATH_INT64_CLAMP_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math keeps the i64 overload with two i32 bounds",
+				generatedSource.includes(POSIX_MATH_INT64_MIXED_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math keeps the i32 overload for small literals",
+				generatedSource.includes(POSIX_MATH_INT32_CLAMP_DECLARATION),
+				true,
+			),
+			expectEqual(
+				"posix math config disables the software f64 branch",
+				configurationHeader.includes(E95_FLOAT64_SOFTWARE_NATIVE_DEFINE),
+				true,
+			),
+			expectEqual(
+				"posix math config does not enable the software f64 branch",
+				configurationHeader.includes(E95_FLOAT64_SOFTWARE_SOFTWARE_DEFINE),
+				false,
+			),
+		];
+	} finally {
+		rmSync(projectDirectory, { recursive: true, force: true });
+	}
+};
+
 export const runPosixStrategyChecks = async () => {
 	const clangAvailable = await isClangAvailable();
 	return [
@@ -2481,5 +2840,6 @@ export const runPosixStrategyChecks = async () => {
 			clangAvailable,
 		})),
 		...(await runPosixLiveTaskCheck({ clangAvailable })),
+		...(await checkPosixMathPrecision({ clangAvailable })),
 	];
 };

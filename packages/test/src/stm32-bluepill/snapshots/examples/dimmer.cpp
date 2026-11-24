@@ -7,7 +7,7 @@
 void dimmer() {
 	while (true) {
 		const i32 brightness = (i32)(core_gpio::getAnalog(core_gpio::Pin::PIN_A0)) * (i32)(16);
-		core_gpio::setAnalog(core_gpio::Pin::PIN_B1, brightness);
+		core_gpio::setAnalog(core_gpio::Pin::PIN_B1, (u16)(brightness));
 		core_time::delay(50);
 	}
 }

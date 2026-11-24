@@ -221,7 +221,7 @@ void _readPersonaAsyncHandler(core_object::Object<mod_async_task::_AsyncTaskItem
 			item->step = 2;
 			break;
 		case 2:
-			core_time::delay(task->persona->age);
+			core_time::delay((u32)(task->persona->age));
 			if (item->status == mod_async_task::_AsyncTaskStatus::RUNNING_CHILD) {
 				item->status = mod_async_task::_AsyncTaskStatus::COMPLETED;
 			} else {
@@ -282,7 +282,7 @@ void _consumePersonaAsyncHandler(core_object::Object<mod_async_task::_AsyncTaskI
 			task->childReadAsyncPersona = nullable<core_object::Object<mod_async_task::_AsyncTaskItem>>{ true, core_object::Object<mod_async_task::_AsyncTaskItem>::null() };
 			task->first = task->persona->name;
 			task->second = task->persona->name;
-			core_time::delay(task->persona->age);
+			core_time::delay((u32)(task->persona->age));
 			if (task->first == task->second) {
 				core_gpio::setAnalog(core_gpio::Pin::PIN_B9, 1);
 			}

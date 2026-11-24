@@ -1,5 +1,6 @@
 import { evaluateConstant } from "../const-eval.js";
 import { FLOAT_TYPES } from "../constants.js";
+import { shouldWarnNumericConversion } from "./numeric-conversions.js";
 import {
 	getNonNullableType,
 	INTEGER_TYPES,
@@ -40,6 +41,11 @@ export const resolveAssignmentTruncation = (
 			return Number.isInteger(constantValue) ? null : rhsType;
 		}
 		return rhsType;
+	}
+	if (rhsIsFloat && targetIsFloat) {
+		return shouldWarnNumericConversion(nonNullRhs, nonNullTarget)
+			? rhsType
+			: null;
 	}
 	if (rhsIsInteger && targetIsInteger) {
 		const constantValue = evaluateConstant(ast, rhsNode, floatContext);

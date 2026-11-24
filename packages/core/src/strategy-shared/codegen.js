@@ -64,6 +64,7 @@ export const generateCode = ({
 		resolveImportedName,
 		importNamespaces,
 		libraryNamespaceObjects,
+		libFunctionDefinitions,
 		resolveLibraryCallType,
 		libParamTypes,
 		libParamDefaults,
@@ -73,6 +74,7 @@ export const generateCode = ({
 		libraryObjectTypes,
 		libraryFunctions,
 		libraryTypes,
+		wordSize,
 	);
 	const {
 		libEnumMemberToType,
@@ -144,6 +146,7 @@ export const generateCode = ({
 		libEnumMemberToType,
 		libParamTypes,
 		libParamDefaults,
+		libFunctionDefinitions,
 		resolveCallType,
 		objectTypes,
 		narrowingRegions,

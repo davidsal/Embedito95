@@ -119,7 +119,9 @@ export const resolveProjectTypes = (
 	objectTypes,
 ) => {
 	const makeResolver = (callTypes) => {
-		return (name) => callTypes.get(name) ?? resolveLibraryCallType(name);
+		return (name, argumentTypes = []) => {
+			return callTypes.get(name) ?? resolveLibraryCallType(name, argumentTypes);
+		};
 	};
 
 	let variableTypes = collectVariableTypes(

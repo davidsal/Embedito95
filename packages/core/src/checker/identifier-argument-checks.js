@@ -1,6 +1,7 @@
 import { AST_NODE, ERROR_CODE, FLOAT_TYPES, SEVERITY } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { getDeclaration } from "./declaration-accessors.js";
+import { shouldWarnNumericConversion } from "./numeric-conversions.js";
 import { resolveObjectFieldType } from "./object-shapes.js";
 import { resolveEnumType } from "./type-resolution.js";
 import {
@@ -92,17 +93,28 @@ const checkIdentifierFloatArgument = (state, argument, param) => {
 	}
 
 	if (FLOAT_TYPES.has(argumentType)) {
+		if (shouldWarnNumericConversion(argumentType, param.type)) {
+			pushArgumentTypeMismatch(
+				state,
+				argument,
+				param,
+				argumentType,
+				SEVERITY.warning,
+			);
+		}
 		return;
 	}
 
 	if (INTEGER_TYPES.has(argumentType)) {
-		pushArgumentTypeMismatch(
-			state,
-			argument,
-			param,
-			argumentType,
-			SEVERITY.warning,
-		);
+		if (shouldWarnNumericConversion(argumentType, param.type)) {
+			pushArgumentTypeMismatch(
+				state,
+				argument,
+				param,
+				argumentType,
+				SEVERITY.warning,
+			);
+		}
 		return;
 	}
 
@@ -137,14 +149,7 @@ const checkIdentifierNumericArgument = (state, argument, param) => {
 			}),
 		);
 	} else {
-		const argumentRange = TYPE_RANGES[argumentType];
-		const paramRange = TYPE_RANGES[param.type];
-
-		if (
-			argumentRange &&
-			paramRange &&
-			(argumentRange.min < paramRange.min || argumentRange.max > paramRange.max)
-		) {
+		if (shouldWarnNumericConversion(argumentType, param.type)) {
 			state.errors.push(
 				makeDiagnostic({
 					code: ERROR_CODE.argumentTypeMismatch,
@@ -270,16 +275,22 @@ const checkMemberNumericArgument = (state, argument, param, fieldType) => {
 		return;
 	}
 
-	const fieldRange = TYPE_RANGES[fieldType];
-	const paramRange = TYPE_RANGES[param.type];
-
-	if (
-		fieldRange &&
-		paramRange &&
-		(fieldRange.min < paramRange.min || fieldRange.max > paramRange.max)
-	) {
+	if (shouldWarnNumericConversion(fieldType, param.type)) {
 		pushMemberMismatch(state, argument, param, fieldType, SEVERITY.warning);
 	}
+};
+
+const checkMemberFloatArgument = (state, argument, param, fieldType) => {
+	if (fieldType === param.type) {
+		return;
+	}
+	if (INTEGER_TYPES.has(fieldType) || FLOAT_TYPES.has(fieldType)) {
+		if (shouldWarnNumericConversion(fieldType, param.type)) {
+			pushMemberMismatch(state, argument, param, fieldType, SEVERITY.warning);
+		}
+		return;
+	}
+	pushMemberMismatch(state, argument, param, fieldType);
 };
 
 const checkMemberFieldArgument = (state, argument, param, fieldType) => {
@@ -287,6 +298,11 @@ const checkMemberFieldArgument = (state, argument, param, fieldType) => {
 		if (fieldType !== param.type) {
 			pushMemberMismatch(state, argument, param, fieldType);
 		}
+		return;
+	}
+
+	if (FLOAT_TYPES.has(param.type)) {
+		checkMemberFloatArgument(state, argument, param, fieldType);
 		return;
 	}
 

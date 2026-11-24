@@ -124,11 +124,7 @@ const resolveVariableDisplayType = (variableDeclaration, context) => {
 	// Fall back to `context.wordType` only for genuinely unknown initializers
 	// (no initializer, or an expression that resolves to no type at all).
 	const inferredType =
-		resolveCallExpressionType(
-			init,
-			context.allExports,
-			context.importAliases,
-		) ??
+		resolveCallExpressionType(init, context) ??
 		resolveVariableType(
 			context.syntaxTree,
 			variableDeclaration,

@@ -13,7 +13,7 @@ void fade() {
 	i16 step = 1;
 
 	while (true) {
-		core_gpio::setAnalog(core_gpio::Pin::PIN_10, value);
+		core_gpio::setAnalog(core_gpio::Pin::PIN_10, (u8)(value));
 		value = value + step;
 
 		if (value >= (i16)(MAX_VALUE)) {

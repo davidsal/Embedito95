@@ -19,7 +19,7 @@ import {
 } from "./final-checks.js";
 import { collectImportAliases, makeResolveImportedName } from "./imports.js";
 import {
-	buildLibraryFunctionReturnTypes,
+	buildLibraryFunctionDefinitions,
 	flattenLibraryObjectTypes,
 } from "./library-types.js";
 import { checkMemberAccess } from "./member-access-checks.js";
@@ -29,6 +29,7 @@ import {
 } from "./method-checks.js";
 import { collectNullNarrowing } from "./narrowing.js";
 import { checkNullableUses } from "./nullable-checks.js";
+import { resolveDefinitionReturnType } from "./overloads.js";
 import {
 	checkAsyncBuiltinCalls,
 	checkAwaitUsage,
@@ -91,10 +92,14 @@ export const check = (ast, libs = {}) => {
 	const wordType = resolveWordDataType(wordSize);
 	const importAliases = collectImportAliases(ast);
 	const resolveImportedName = makeResolveImportedName(importAliases);
-	const libFunctionReturnTypes =
-		buildLibraryFunctionReturnTypes(libraryFunctions);
-	const resolveLibraryCallType = (name) => {
-		return libFunctionReturnTypes[resolveImportedName(name)] ?? null;
+	const libFunctionDefinitions =
+		buildLibraryFunctionDefinitions(libraryFunctions);
+	const resolveLibraryCallType = (name, argumentTypes = []) => {
+		return resolveDefinitionReturnType(
+			libFunctionDefinitions[resolveImportedName(name)],
+			argumentTypes,
+			wordSize,
+		);
 	};
 
 	const objectTypes = flattenLibraryObjectTypes(libraryObjectTypes);

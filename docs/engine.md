@@ -109,6 +109,15 @@ Enabling and disabling:
   by a single byte. The count saturates at 16383 instead of spilling into the
   color bits.
 
+Floating-point width:
+
+- `E95_FLOAT64_SOFTWARE` (default `0`) reports that the target's `f64` is the
+  portable `_e95_f64` type instead of a native `double`. It comes from the same
+  generated `e95_config.h`, written from the platform's `float64` mode, and
+  shared C++ that has to pick between a native and a software double (for
+  example `math`) reads it with `__has_include("e95_config.h")` plus a `0`
+  fallback. It is a property of the target, not a project option.
+
 Measured cost: roughly 1.3 KB of code plus 528 bytes of static RAM on a 64-bit
 host with the default worklist, and roughly 1.4 KB of flash plus 138 bytes of
 static RAM on AVR (ATmega328P / ATtiny85). The AVR static RAM is much lower than
