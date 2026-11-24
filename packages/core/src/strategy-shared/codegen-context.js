@@ -229,6 +229,7 @@ export const buildClosureMetadata = (
 	libraryFunctions,
 	userFunctionReturnTypes,
 	additionalUserObjectMethods,
+	userTypeNames = null,
 ) => {
 	const anonymousObjectTypes = {};
 	const userObjectMethods = collectObjectMethods(ast, objectTypes);
@@ -246,6 +247,7 @@ export const buildClosureMetadata = (
 		ast,
 		userFunctionReturnTypes,
 		anonymousObjectTypes,
+		userTypeNames,
 	);
 	const isClosureClassType = (returnType) => {
 		return (

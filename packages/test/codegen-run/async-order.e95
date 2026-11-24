@@ -1,0 +1,46 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Three top-level coroutines interleaved by the event loop. They exercise the
+// subset step (alternating offsets), the catch-up pass (children spawned during
+// a pass start their timer in that same pass) and the RUNNING/COMPLETED/
+// CONSUMED transitions that decide when a queue slot is released.
+const shortPulse = async () => {
+    setDigital(Pin.2, HIGH)
+    await sleep(3)
+    setDigital(Pin.2, LOW)
+}
+
+const longPulse = async () => {
+    setDigital(Pin.3, HIGH)
+    await sleep(9)
+    setDigital(Pin.3, LOW)
+}
+
+const readValue = async (): u8 => {
+    await sleep(4)
+    return 42
+}
+
+const consumer = async () => {
+    const value = await readValue()
+    setAnalog(Pin.5, value)
+    await sleep(1)
+    setDigital(Pin.4, HIGH)
+}
+
+const setup = () => {
+    setMode(Pin.2, PinMode.OUTPUT)
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.4, PinMode.OUTPUT)
+    setMode(Pin.5, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    shortPulse()
+    longPulse()
+    consumer()
+}
+
+main()

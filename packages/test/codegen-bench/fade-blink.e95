@@ -1,0 +1,97 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Bench workload for the async scheduler:
+// - `fade` (a ~16 ms step) and `blink` (a ~500 ms half period) are the base load;
+// - `probe` and `heartbeat` add more periodic top-level coroutines;
+// - `scaler` awaits a child that returns a scalar (u8) payload;
+// - `sampler` awaits a child that returns a nominal object payload.
+// The two child-awaiting coroutines run forever, so every iteration spawns a
+// real child task, consumes it (slot reuse) and releases its payload. That is
+// the slot churn and queue growth/drain the scheduler rewrite must improve.
+// Loop counters are u16/u32: a u8 counter with a bound above 255 would wrap and
+// never finish. The u8 cast happens only where a PWM value is written.
+// The bench driver stops the program after `--passes` complete passes.
+type Sample = {
+    value: u8,
+    half: u8
+}
+
+const readLevel = async (seed: u8): u8 => {
+    await sleep(5)
+    return seed
+}
+
+const readSample = async (seed: u8): Sample => {
+    await sleep(7)
+    return { value: seed, half: (seed % 2) as u8 }
+}
+
+const fade = async () => {
+    for (let step: u16 = 0; step < 1250; step += 1) {
+        setAnalog(Pin.5, step as u8)
+        await sleep(16)
+    }
+}
+
+const blink = async () => {
+    for (let cycle: u16 = 0; cycle < 20; cycle += 1) {
+        setDigital(Pin.10, HIGH)
+        await sleep(500)
+        setDigital(Pin.10, LOW)
+        await sleep(500)
+    }
+}
+
+const probe = async () => {
+    for (let sample: u16 = 0; sample < 340; sample += 1) {
+        setAnalog(Pin.6, 1)
+        await sleep(25)
+        setAnalog(Pin.6, 0)
+        await sleep(33)
+    }
+}
+
+const heartbeat = async () => {
+    for (let beat: u16 = 0; beat < 1000; beat += 1) {
+        setDigital(Pin.9, HIGH)
+        await sleep(21)
+    }
+}
+
+const scaler = async () => {
+    for (let step: u32 = 0; step < 100000; step += 1) {
+        const level = await readLevel((step % 200) as u8)
+        setAnalog(Pin.7, level)
+        await sleep(11)
+    }
+}
+
+const sampler = async () => {
+    for (let step: u32 = 0; step < 100000; step += 1) {
+        const sample = await readSample((step % 250) as u8)
+        setAnalog(Pin.8, sample.value)
+        await sleep(13)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.5, PinMode.OUTPUT)
+    setMode(Pin.6, PinMode.OUTPUT)
+    setMode(Pin.7, PinMode.OUTPUT)
+    setMode(Pin.8, PinMode.OUTPUT)
+    setMode(Pin.9, PinMode.OUTPUT)
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    fade()
+    blink()
+    probe()
+    heartbeat()
+    scaler()
+    sampler()
+}
+
+main()

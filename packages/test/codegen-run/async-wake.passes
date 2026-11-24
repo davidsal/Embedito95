@@ -1,0 +1,7 @@
+# The final event (digital 10 HIGH) arrives after the child wake-up plus a
+# 10 ms inlined sleep. In this host clock each millis() call advances 1 tick, so
+# the current scheduler reaches it in pass 39. The range keeps a generous
+# margin below and above that value: too low means a wait was skipped, too high
+# means wake-up stopped being prompt.
+min 10
+max 60

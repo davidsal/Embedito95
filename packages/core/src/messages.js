@@ -12,10 +12,13 @@ const DIAG_MESSAGES = {
 		"Missing required function '{name}'. Add: const {name} = () => {}",
 	[ERROR_CODE.unusedFunction]: "Unused function '{name}'",
 	[ERROR_CODE.unusedConstant]: "Unused constant '{name}'",
+	[ERROR_CODE.unusedParameter]: "Unused parameter '{name}'",
 	[ERROR_CODE.unusedType]: "Unused type '{name}'",
 	[ERROR_CODE.unusedEnum]: "Unused enum '{name}'",
 	[ERROR_CODE.missingSetupCall]:
 		"First statement in 'main' should be a call to 'setup()'",
+	[ERROR_CODE.entryPointNotCalled]:
+		"Entry point '{name}' is declared but never called. Add '{name}()' at the end of the module.",
 	[ERROR_CODE.usedBeforeDeclaration]: "'{name}' is used before its declaration",
 	[ERROR_CODE.emptyImport]: "Import specifiers cannot be empty",
 	[ERROR_CODE.emptyImportSource]: "Import source cannot be empty",
@@ -54,6 +57,19 @@ const DIAG_MESSAGES = {
 	[ERROR_CODE.undefinedMethod]: "'{name}' is not a method of type '{typeName}'",
 	[ERROR_CODE.invalidMemberAccess]:
 		"Cannot access member '{name}' on type '{type}': '{type}' has no members.",
+	[ERROR_CODE.unknownMember]: "Type '{type}' has no member '{name}'.",
+	[ERROR_CODE.asyncTaskMemberAccess]:
+		"Type '{type}' has no member '{name}': await the async call that produces the value before using its result, e.g. 'const value = await getResult()'.",
+	[ERROR_CODE.asyncTaskArgument]:
+		"Argument '{name}' expects type '{expected}' but receives the AsyncTask wrapper '{actual}'; await the async call that produces the value instead of awaiting the variable, e.g. 'consume(await getValue())'.",
+	[ERROR_CODE.asyncTaskCall]:
+		"'{name}' is an '{type}' wrapper and cannot be called; await it first, e.g. 'const value = await {name}'.",
+	[ERROR_CODE.callTargetNotCallable]:
+		"Cannot call '{name}': its type '{type}' is not a function.",
+	[ERROR_CODE.functionReferenceCall]:
+		"'{name}' is a function reference; e95 does not support calling functions through variables. Call '{target}' directly.",
+	[ERROR_CODE.unconvertibleTemplateExpression]:
+		"Cannot interpolate a value of type '{type}' into a template literal: it is not convertible to 'string'.",
 	[ERROR_CODE.invalidReceiverCast]:
 		"Cannot call a method on a cast from '{source}' to '{target}': the cast target must be a handle type that matches the source.",
 	[ERROR_CODE.exportNotAllowed]: "'export' is only allowed in library files",

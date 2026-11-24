@@ -1,4 +1,8 @@
-import { getNonNullableType, isObjectShapeType } from "../checker/index.js";
+import {
+	getNonNullableType,
+	isObjectShapeType,
+	NULL_TYPE,
+} from "../checker/index.js";
 import { AST_NODE, DATA_TYPE, OBJECT_TYPE } from "../constants.js";
 import { resolveAnonymousObjectTypeName } from "./anonymous-type-names.js";
 import { optionalName } from "./c-types.js";
@@ -51,7 +55,10 @@ export const renderOptionalWrap = (entry, rendered) => {
 };
 
 export const resolveOptionalEntry = (type, context) => {
-	const nonNullType = getNonNullableType(type);
+	// A `null`-only value matches the `null` literal's `nullable<u8>` storage;
+	// stripping the nulls would keep it `null` and recurse through `toCType`.
+	const nonNullType =
+		type === NULL_TYPE ? DATA_TYPE.u8 : getNonNullableType(type);
 	const isObject = isObjectShapeType(nonNullType);
 	const isHandle = isObject && Boolean(context.isObjectHandle?.(nonNullType));
 	const isString = nonNullType === DATA_TYPE.string;
@@ -69,6 +76,7 @@ export const resolveOptionalEntry = (type, context) => {
 					nonNullType,
 					context.anonymousObjectTypes,
 					context.getCurrentFunctionName?.(),
+					context.userTypeNames,
 				)
 		: context.toCType(nonNullType);
 	return {

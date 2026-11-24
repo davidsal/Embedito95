@@ -1,7 +1,7 @@
 {
 	"arduino-nano": {
 		"examples/arduino-nano/async-locals.test.e95": {
-			"flash": 8344,
+			"flash": 8416,
 			"ram": 246,
 			"flashMax": 30720,
 			"ramMax": 2048
@@ -97,8 +97,8 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/async.test.e95": {
-			"flash": 7960,
-			"ram": 227,
+			"flash": 11128,
+			"ram": 255,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -129,6 +129,12 @@
 		"core/arduino-nano/const-object.test.e95": {
 			"flash": 5370,
 			"ram": 402,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
+		"core/arduino-nano/contextual-cast.test.e95": {
+			"flash": 3360,
+			"ram": 193,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -300,6 +306,12 @@
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
+		"core/arduino-nano/template-literal.test.e95": {
+			"flash": 17248,
+			"ram": 404,
+			"flashMax": 30720,
+			"ramMax": 2048
+		},
 		"core/arduino-nano/time.test.e95": {
 			"flash": 1790,
 			"ram": 41,
@@ -315,7 +327,7 @@
 	},
 	"stm32-bluepill": {
 		"examples/stm32-bluepill/async-locals.test.e95": {
-			"flash": 13524,
+			"flash": 13568,
 			"ram": 2340,
 			"flashMax": 65536,
 			"ramMax": 20480
@@ -405,7 +417,7 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/async.test.e95": {
-			"flash": 13836,
+			"flash": 16808,
 			"ram": 2316,
 			"flashMax": 65536,
 			"ramMax": 20480
@@ -437,6 +449,12 @@
 		"core/stm32-bluepill/const-object.test.e95": {
 			"flash": 12508,
 			"ram": 2364,
+			"flashMax": 65536,
+			"ramMax": 20480
+		},
+		"core/stm32-bluepill/contextual-cast.test.e95": {
+			"flash": 9620,
+			"ram": 2280,
 			"flashMax": 65536,
 			"ramMax": 20480
 		},
@@ -604,6 +622,12 @@
 		},
 		"core/stm32-bluepill/string-mutation.test.e95": {
 			"flash": 14356,
+			"ram": 2348,
+			"flashMax": 65536,
+			"ramMax": 20480
+		},
+		"core/stm32-bluepill/template-literal.test.e95": {
+			"flash": 16176,
 			"ram": 2348,
 			"flashMax": 65536,
 			"ramMax": 20480

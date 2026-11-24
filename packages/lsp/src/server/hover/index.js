@@ -28,6 +28,7 @@ import {
 } from "./declaration-steps.js";
 import {
 	collectCastWarnings,
+	formatCastWarningsSection,
 	formatObjectMemberSignature,
 } from "./formatting.js";
 import {
@@ -79,7 +80,13 @@ const resolveLiteralOrMemberHover = (context) => {
 		return {
 			contents: {
 				kind: "markdown",
-				value: `\`\`\`e95\nliteral ${literalType} = ${literalValue}\n\`\`\``,
+				value:
+					`\`\`\`e95\nliteral ${literalType} = ${literalValue}\n\`\`\`` +
+					formatCastWarningsSection(
+						context.line,
+						context.column,
+						context.allCastWarnings,
+					),
 			},
 		};
 	}
@@ -139,6 +146,20 @@ const enrichHoverContext = (context, document) => {
 	context.narrowingRegions = collectNullNarrowing(context.syntaxTree);
 };
 
+const collectContextCastWarnings = (context) => {
+	const parameterTypesByName = buildParameterTypesByName(
+		context.syntaxTree,
+		context.allExports,
+	);
+	context.allCastWarnings = collectCastWarnings(
+		context.syntaxTree,
+		context.variableTypes,
+		parameterTypesByName,
+		context.hoverWordSize,
+		context.objectTypes,
+	);
+};
+
 const resolveNamedHover = (context) => {
 	context.name = context.identifier
 		? context.identifier.name
@@ -168,18 +189,6 @@ const resolveNamedHover = (context) => {
 	if (memberObjectHover !== NOT_HANDLED) {
 		return memberObjectHover;
 	}
-
-	const parameterTypesByName = buildParameterTypesByName(
-		context.syntaxTree,
-		context.allExports,
-	);
-	context.allCastWarnings = collectCastWarnings(
-		context.syntaxTree,
-		context.variableTypes,
-		parameterTypesByName,
-		context.hoverWordSize,
-		context.objectTypes,
-	);
 
 	for (const step of [
 		resolveStatementDeclarationHover,
@@ -219,6 +228,9 @@ export const onHover = async (requestParameters, documents) => {
 		? null
 		: findObjectPropertyKeyAt(context.syntaxTree, context.line, context.column);
 
+	enrichHoverContext(context, document);
+	collectContextCastWarnings(context);
+
 	if (!context.identifier && !context.objectPropertyAt) {
 		const anchoredHover = resolveLiteralOrMemberHover(context);
 
@@ -226,8 +238,6 @@ export const onHover = async (requestParameters, documents) => {
 			return anchoredHover;
 		}
 	}
-
-	enrichHoverContext(context, document);
 
 	const objectPropertyHover = resolveObjectPropertyHover(context);
 

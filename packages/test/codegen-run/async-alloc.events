@@ -1,0 +1,5 @@
+# Final event (digital 10 HIGH) is the last emission from the last task to
+# finish; after it the queue must drain without leaking payloads.
+analog 3 1
+analog 4 5
+digital 10 1

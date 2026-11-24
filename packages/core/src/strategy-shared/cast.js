@@ -1,10 +1,21 @@
 import {
+	getNonNullableType,
 	isNumericType,
 	rangeFitsWithin,
 	TYPE_RANGES,
 } from "../checker/index.js";
+import { INTEGER_TYPES } from "../checker/types.js";
 import { DATA_TYPE } from "../constants.js";
 import { dataTypeToCType, isFloatType } from "./c-types.js";
+
+export const isFloatToIntegerCast = (valueType, targetType) => {
+	return (
+		Boolean(valueType) &&
+		Boolean(targetType) &&
+		isFloatType(getNonNullableType(valueType)) &&
+		INTEGER_TYPES.has(getNonNullableType(targetType))
+	);
+};
 
 const fitsInTargetRange = (rhsType, targetType) => {
 	return rangeFitsWithin(TYPE_RANGES[rhsType], TYPE_RANGES[targetType]);

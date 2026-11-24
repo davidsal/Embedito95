@@ -9,9 +9,10 @@ i32 computeRatio() {
 
 	const f32 viaCast = ((f32)(((i32)(a) + (i32)(b)))) / c;
 	const f32 viaFloatOperand = (f32)(((i32)(a) + (i32)(b))) / c;
-	const i32 integerFirst = ((i32)(a) + (i32)(b)) / (i32)(c);
+	const i32 floatOperandRatio = ((i32)(a) + (i32)(b)) / (i32)(c);
+	const i32 integerDivision = ((i32)(a) + (i32)(b)) / (i32)(2);
 
-	return (i32)((viaCast + viaFloatOperand)) + integerFirst;
+	return ((i32)((viaCast + viaFloatOperand)) + floatOperandRatio) + integerDivision;
 }
 
 f32 computeAccumulation() {

@@ -1,0 +1,4 @@
+# Both coroutines are due on the same pass. The lower queue slot (alpha) must
+# wake first, then beta, deterministically.
+analog 3 1
+analog 4 2

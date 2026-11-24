@@ -69,6 +69,10 @@ export const VSCODE_LANGUAGE_CONFIGURATION_FILE = join(
 	PACKAGE_DIRECTORY,
 	"../lsp-vscode/src/language-configuration.json",
 );
+export const VSCODE_PACKAGE_FILE = join(
+	PACKAGE_DIRECTORY,
+	"../lsp-vscode/package.json",
+);
 
 export const LANGUAGE_DIRECTORY_NAME = "language";
 export const FORMATTER_DIRECTORY_NAME = "formatter";
@@ -203,12 +207,27 @@ export const COMPILE_SIZES_SNAPSHOT_STATUS = {
 };
 
 export const ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP = "async-local-types";
+export const ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP = "async-intermediate";
+export const ASYNC_INTERMEDIATE_TEMP_DIRECTORY_PREFIX =
+	"embedito95-async-intermediate-";
 export const ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP = "async-task-type";
+export const EVENT_LOOP_UNIT_CHECKS_GROUP = "event-loop";
+export const BENCH_UNIT_CHECKS_GROUP = "bench";
+export const MEMBER_ACCESS_UNIT_CHECKS_GROUP = "member-access";
+export const METHOD_ARGUMENT_UNIT_CHECKS_GROUP = "method-argument";
+export const CALL_TARGET_UNIT_CHECKS_GROUP = "call-target";
+export const UNUSED_SCOPE_UNIT_CHECKS_GROUP = "unused-scope";
+export const UNUSED_PARAMETERS_UNIT_CHECKS_GROUP = "unused-parameters";
+export const ENTRY_POINT_UNIT_CHECKS_GROUP = "entry-point";
 export const FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP = "function-type-parser";
 export const CLI_PROJECT_UNIT_CHECKS_GROUP = "cli-project";
 export const MONITOR_STATE_UNIT_CHECKS_GROUP = "monitor-state";
+export const TOOLING_UNIT_CHECKS_GROUP = "tooling";
 export const CYCLES_FLAG_UNIT_CHECKS_GROUP = "cycles-flag";
 export const CONFIG_INCLUDE_UNIT_CHECKS_GROUP = "config-include";
+export const CODEGEN_HERMETIC_UNIT_CHECKS_GROUP = "codegen-hermetic";
+export const CODEGEN_HERMETIC_TEMP_DIRECTORY_PREFIX =
+	"embedito95-codegen-hermetic-";
 export const DOC_GENERATOR_UNIT_CHECKS_GROUP = "doc-generator";
 export const CORE_SURFACE_UNIT_CHECKS_GROUP = "core-surface";
 export const CLOSURE_FACTORY_UNIT_CHECKS_GROUP = "closure-factory";
@@ -233,9 +252,18 @@ export const LSP_COMPLETION_UNIT_CHECKS_GROUP = "lsp-completion";
 export const LSP_HOVER_UNIT_CHECKS_GROUP = "lsp-hover";
 export const LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP = "lsp-diagnostics";
 export const VSCODE_INDENTATION_UNIT_CHECKS_GROUP = "vscode-indentation";
+export const VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP =
+	"vscode-quick-suggestions";
 export const SHARED_CONSTANTS_UNIT_CHECKS_GROUP = "shared-constants";
 export const NUMERIC_CONVERSION_UNIT_CHECKS_GROUP = "numeric-conversion";
 export const WORD_SIZE_UNIT_CHECKS_GROUP = "word-size";
+export const CAST_CONTEXT_UNIT_CHECKS_GROUP = "cast-context";
+export const TEMPLATE_LITERAL_UNIT_CHECKS_GROUP = "template-literal";
+export const TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP =
+	"template-codegen-guard";
+export const TEMPLATE_CODEGEN_GUARD_TEMP_DIRECTORY_PREFIX =
+	"embedito95-template-codegen-guard-";
+export const CALL_TARGET_TEMP_DIRECTORY_PREFIX = "embedito95-call-target-";
 export const SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP = "supported-platforms";
 export const TEST_COMPILE_UNIT_CHECKS_GROUP = "test-compile";
 export const LINT_SCRIPT_NAME = "lint";

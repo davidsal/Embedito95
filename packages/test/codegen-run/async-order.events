@@ -1,0 +1,9 @@
+# Three interleaved coroutines: short pulse, long pulse and a consumer that
+# awaits a child then an inline sleep. The order pins the subset/catch-up
+# interleaving and the COMPLETED/CONSUMED transitions.
+digital 2 1
+digital 3 1
+digital 2 0
+analog 5 42
+digital 4 1
+digital 3 0

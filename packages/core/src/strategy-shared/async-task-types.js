@@ -1,4 +1,9 @@
-import { parseArrayType } from "../checker/index.js";
+import {
+	decodeObjectShape,
+	isObjectShapeType,
+	NULL_TYPE,
+	parseArrayType,
+} from "../checker/index.js";
 import { INDENT } from "../constants.js";
 import {
 	ADD_TASK_FUNCTION_NAME,
@@ -91,6 +96,18 @@ const defaultObjectValue = (typeName, objectTypes, visited) => {
 	return `{ ${values.join(", ")} }`;
 };
 
+const defaultShapeValue = (shapeType, objectTypes, visited) => {
+	const fields = decodeObjectShape(shapeType) ?? {};
+	const values = Object.entries(fields)
+		.filter(([, definition]) => {
+			return !definition.optional;
+		})
+		.map(([fieldName, definition]) => {
+			return `${fieldName}: ${defaultFieldValue(definition.type, objectTypes, visited)}`;
+		});
+	return `{ ${values.join(", ")} }`;
+};
+
 const defaultFieldValue = (type, objectTypes, visited) => {
 	if (type === "boolean") {
 		return "false";
@@ -98,16 +115,44 @@ const defaultFieldValue = (type, objectTypes, visited) => {
 	if (type === "string") {
 		return '""';
 	}
-	if (objectTypes?.[type]) {
-		return defaultObjectValue(type, objectTypes, visited);
+	// A field typed exactly `null` (e.g. an inlined `await sleep` value that is
+	// only ever compared to `null`) must start as `null`, not as `0`.
+	if (type === NULL_TYPE) {
+		return "null";
 	}
+	// An array of shapes (`object:{…}[]`) also starts with the shape prefix, so
+	// the array check must come first or the default would be a single object.
 	if (isArrayType(type)) {
 		return "[]";
+	}
+	if (isObjectShapeType(type)) {
+		return defaultShapeValue(type, objectTypes, visited);
+	}
+	if (objectTypes?.[type]) {
+		return defaultObjectValue(type, objectTypes, visited);
 	}
 	if (isUnionType(type)) {
 		return "null";
 	}
 	return "0";
+};
+
+// Object fields start as a non-allocating `null` handle: the task payload may
+// not be produced until a later step (`await`, return), and allocating an empty
+// object up front would both waste heap and diverge from the real value.
+//
+// These members stay NON-optional on purpose: marking them `?` would lower the
+// task struct to `nullable<Object<T>>` instead of the bare `Object<T>` handle
+// (the default would wrap too), changing the generated C++ and the payload
+// assignments. The `null` default is valid for the generated intermediate
+// because it is checked with `isEntry: false` (see the checker's
+// `allowNullObjectDefaults`), which is also how the editor classifies files
+// under `build/`.
+const defaultWrapperFieldValue = (type, objectTypes, visited) => {
+	if (isObjectShapeType(type) || objectTypes?.[type]) {
+		return "null";
+	}
+	return defaultFieldValue(type, objectTypes, visited);
 };
 
 const buildWrapperObject = (members, objectTypes) => {
@@ -117,7 +162,7 @@ const buildWrapperObject = (members, objectTypes) => {
 		}
 		const value = member.isParam
 			? member.name
-			: defaultFieldValue(member.type, objectTypes, new Set());
+			: defaultWrapperFieldValue(member.type, objectTypes, new Set());
 		return `${member.name}: ${value}`;
 	});
 

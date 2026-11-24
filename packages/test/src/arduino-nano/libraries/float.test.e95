@@ -12,9 +12,10 @@ const computeRatio = () => {
 
     const viaCast: f32 = ((a + b) as f32) / c
     const viaFloatOperand: f32 = (a + b) / c
-    const integerFirst = (a + b) / c
+    const floatOperandRatio = (a + b) / c
+    const integerDivision = (a + b) / 2
 
-    return viaCast + viaFloatOperand + integerFirst
+    return viaCast + viaFloatOperand + floatOperandRatio + integerDivision
 }
 
 const computeAccumulation = () => {

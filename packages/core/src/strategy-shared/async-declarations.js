@@ -110,14 +110,31 @@ const sortHandlesByTypeDependency = (handles) => {
 	return sorted;
 };
 
+// A synthesized `_<name>AsyncAdd` wrapper is only reachable from an await that
+// was NOT inlined into the caller's task. Core timers (`await sleep`) inline
+// every call site, so their wrapper would be dead code. Drop a wrapper when the
+// lowered program never references it; its handler/type/enum case stay because
+// the event loop still dispatches real timer tasks.
+const filterReachableWrappers = (handles, referencedNames) => {
+	if (!referencedNames) {
+		return handles;
+	}
+	return handles.filter((handle) => {
+		return referencedNames.has(`_${handle.name}${ASYNC_ADD_SUFFIX}`);
+	});
+};
+
 export const buildAddStatements = (
 	handles,
 	synthesizedComments,
 	sourceLineCount,
 	objectTypes,
+	referencedNames = null,
 ) => {
 	const statements = [];
-	const sortedHandles = sortHandlesByTypeDependency(handles);
+	const sortedHandles = sortHandlesByTypeDependency(
+		filterReachableWrappers(handles, referencedNames),
+	);
 
 	if (sortedHandles.length > 0) {
 		statements.push(buildAddTaskNode(sourceLineCount));

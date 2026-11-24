@@ -1,4 +1,4 @@
-import { TOKEN_TYPE } from "../constants.js";
+import { OBJECT_SHAPE_PREFIX, TOKEN_TYPE } from "../constants.js";
 import { parseExpression } from "./expressions.js";
 import { parseIdentifier } from "./imports.js";
 import { extendLocation, makeLocation } from "./location.js";
@@ -156,6 +156,25 @@ const formatTypeArguments = (typeArguments) => {
 		.join(", ")}>`;
 };
 
+const appendArraySuffixes = (context, parsedType) => {
+	let { name } = parsedType;
+	const { loc } = parsedType;
+	let { end } = loc;
+	while (peek(context).type === TOKEN_TYPE.leftBracket) {
+		consume(context);
+		let capacity = "";
+		if (peek(context).type === TOKEN_TYPE.number) {
+			capacity = consume(context).value;
+		}
+		const close = expectRequiredOrEof(context, TOKEN_TYPE.rightBracket);
+		name += `[${capacity}]`;
+		if (close) {
+			end = { line: close.line, column: close.column + 1 };
+		}
+	}
+	return { ...parsedType, name, loc: { start: loc.start, end } };
+};
+
 export const parseTypeName = (context, token, options = {}) => {
 	const { allowTypeArguments = true } = options;
 	let name = token.value;
@@ -177,19 +196,68 @@ export const parseTypeName = (context, token, options = {}) => {
 			loc.end = lastArgument.loc.end;
 		}
 	}
-	while (peek(context).type === TOKEN_TYPE.leftBracket) {
-		consume(context);
-		let capacity = "";
-		if (peek(context).type === TOKEN_TYPE.number) {
-			capacity = consume(context).value;
+	return appendArraySuffixes(context, { name, loc, typeArguments });
+};
+
+// Forward-declared anonymous object shapes are encoded as
+// `object:{field:type;…}` (see `encodeObjectShape`). They only reach the
+// parser through a synthesized intermediate: a hoisted async local keeps the
+// inferred shape of its initializer, and the task type annotation must carry it
+// as a single field instead of letting the `;`/`:` separators split it into
+// extra members. The encoding has no whitespace and its field types may nest
+// (`object:{…}`) or be arrays (`object:{…}[]`), so the body is consumed as one
+// balanced `{…}` group and reattached verbatim.
+const SHAPE_OPENER_IDENTIFIER = "object";
+
+const isObjectShapeAnnotation = (context) => {
+	const token = peek(context);
+	const colon = context.tokens[context.position + 1];
+	const brace = context.tokens[context.position + 2];
+	return (
+		token.type === TOKEN_TYPE.identifier &&
+		token.value === SHAPE_OPENER_IDENTIFIER &&
+		colon?.type === TOKEN_TYPE.colon &&
+		brace?.type === TOKEN_TYPE.leftBrace
+	);
+};
+
+const parseObjectShapeBody = (context) => {
+	let depth = 1;
+	let text = "";
+	let lastToken = peek(context);
+
+	while (peek(context).type !== TOKEN_TYPE.eof) {
+		const token = consume(context);
+		lastToken = token;
+		if (token.type === TOKEN_TYPE.leftBrace) {
+			depth += 1;
+			text += token.value;
+			continue;
 		}
-		const close = expectRequiredOrEof(context, TOKEN_TYPE.rightBracket);
-		name += `[${capacity}]`;
-		if (close) {
-			loc.end = { line: close.line, column: close.column + 1 };
+		if (token.type === TOKEN_TYPE.rightBrace) {
+			depth -= 1;
+			if (depth === 0) {
+				break;
+			}
+			text += token.value;
+			continue;
 		}
+		text += token.value;
 	}
-	return { name, loc, typeArguments };
+
+	return { text, lastToken };
+};
+
+const parseObjectShapeAnnotation = (context) => {
+	const startToken = consume(context);
+	consume(context);
+	consume(context);
+	const { text, lastToken } = parseObjectShapeBody(context);
+	const shape = {
+		name: `${OBJECT_SHAPE_PREFIX}{${text}}`,
+		loc: makeLocation(startToken, extendLocation(lastToken)),
+	};
+	return appendArraySuffixes(context, shape);
 };
 
 export const parseTypeReference = (context) => {
@@ -198,6 +266,10 @@ export const parseTypeReference = (context) => {
 	if (token.type === TOKEN_TYPE.keyword && token.value === "null") {
 		consume(context);
 		return { name: "null", loc: makeLocation(token, extendLocation(token)) };
+	}
+
+	if (isObjectShapeAnnotation(context)) {
+		return parseObjectShapeAnnotation(context);
 	}
 
 	if (token.type !== TOKEN_TYPE.identifier) {

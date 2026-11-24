@@ -5,8 +5,27 @@ import { describeExpression } from "./arguments.js";
 import { getDeclaration } from "./declaration-accessors.js";
 import { expressionHasEffect } from "./passes.js";
 import { checkFunctionReturnTypes } from "./return-checking.js";
-import { REQUIRED_FUNCTIONS } from "./types.js";
+import { ENTRY_FUNCTION, REQUIRED_FUNCTIONS, SETUP_FUNCTION } from "./types.js";
 import { walk } from "./walk.js";
+
+const isEntryCallStatement = (statement) => {
+	if (statement?.type !== AST_NODE.expressionStatement) {
+		return false;
+	}
+	const expression = statement.expression;
+	return (
+		expression?.type === AST_NODE.callExpression &&
+		expression.callee?.type === AST_NODE.identifier &&
+		expression.callee.name === ENTRY_FUNCTION
+	);
+};
+
+// Only a module-level `main()` runs the entry point: a call nested inside a
+// function body is never executed unless something else invokes that function,
+// so it does not satisfy the entry contract.
+const callsEntryPointAtModuleLevel = (state) => {
+	return (state.ast.body ?? []).some(isEntryCallStatement);
+};
 
 export const checkLiteralAndArrayUsage = (state) => {
 	walk(state.ast, {
@@ -103,7 +122,7 @@ export const checkRequiredFunctionsAndSetup = (state) => {
 		}
 	}
 
-	const mainStatement = state.defined.get(REQUIRED_FUNCTIONS[1]);
+	const mainStatement = state.defined.get(ENTRY_FUNCTION);
 	if (mainStatement) {
 		const declaration = getDeclaration(mainStatement);
 		if (declaration?.init?.type === AST_NODE.functionExpression) {
@@ -113,7 +132,7 @@ export const checkRequiredFunctionsAndSetup = (state) => {
 				!first ||
 				first.type !== AST_NODE.expressionStatement ||
 				first.expression?.type !== AST_NODE.callExpression ||
-				first.expression.callee?.name !== REQUIRED_FUNCTIONS[0]
+				first.expression.callee?.name !== SETUP_FUNCTION
 			) {
 				state.errors.push(
 					makeDiagnostic({
@@ -123,6 +142,19 @@ export const checkRequiredFunctionsAndSetup = (state) => {
 					}),
 				);
 			}
+		}
+		// The declaration exists but nothing invokes it, so codegen would emit an
+		// empty entry and the firmware would do nothing. Point at the declaration
+		// (same anchor as `missingSetupCall`) so the fix, adding `main()` at the
+		// end of the module, is easy to locate.
+		if (!callsEntryPointAtModuleLevel(state)) {
+			state.errors.push(
+				makeDiagnostic({
+					code: ERROR_CODE.entryPointNotCalled,
+					params: { name: ENTRY_FUNCTION },
+					location: declaration?.id?.loc ?? mainStatement.loc,
+				}),
+			);
 		}
 	}
 };

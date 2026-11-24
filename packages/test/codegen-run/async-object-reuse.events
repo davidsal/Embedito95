@@ -1,0 +1,10 @@
+# Four child awaits returning a nominal object; each child slot is reused and
+# its object payload released. The exact order proves no lost/duplicated value.
+analog 3 1
+analog 4 11
+analog 3 2
+analog 4 12
+analog 3 3
+analog 4 13
+analog 3 4
+analog 4 14

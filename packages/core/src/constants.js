@@ -58,6 +58,7 @@ export const ERROR_CODE = {
 	missingRequiredFunction: `${ERROR_PREFIX}missingRequiredFunction`,
 	unusedFunction: `${ERROR_PREFIX}unusedFunction`,
 	missingSetupCall: `${ERROR_PREFIX}missingSetupCall`,
+	entryPointNotCalled: `${ERROR_PREFIX}entryPointNotCalled`,
 	usedBeforeDeclaration: `${ERROR_PREFIX}usedBeforeDeclaration`,
 	emptyImport: `${ERROR_PREFIX}emptyImport`,
 	emptyImportSource: `${ERROR_PREFIX}emptyImportSource`,
@@ -80,6 +81,13 @@ export const ERROR_CODE = {
 	duplicateDeclaration: `${ERROR_PREFIX}duplicateDeclaration`,
 	undefinedMethod: `${ERROR_PREFIX}undefinedMethod`,
 	invalidMemberAccess: `${ERROR_PREFIX}invalidMemberAccess`,
+	unknownMember: `${ERROR_PREFIX}unknownMember`,
+	asyncTaskMemberAccess: `${ERROR_PREFIX}asyncTaskMemberAccess`,
+	asyncTaskArgument: `${ERROR_PREFIX}asyncTaskArgument`,
+	asyncTaskCall: `${ERROR_PREFIX}asyncTaskCall`,
+	callTargetNotCallable: `${ERROR_PREFIX}callTargetNotCallable`,
+	functionReferenceCall: `${ERROR_PREFIX}functionReferenceCall`,
+	unconvertibleTemplateExpression: `${ERROR_PREFIX}unconvertibleTemplateExpression`,
 	invalidReceiverCast: `${ERROR_PREFIX}invalidReceiverCast`,
 	exportNotAllowed: `${ERROR_PREFIX}exportNotAllowed`,
 	missingTypeAnnotation: `${ERROR_PREFIX}missingTypeAnnotation`,
@@ -93,6 +101,7 @@ export const ERROR_CODE = {
 	argumentTypeMismatch: `${ERROR_PREFIX}argumentTypeMismatch`,
 	argumentValueNotAllowed: `${ERROR_PREFIX}argumentValueNotAllowed`,
 	unusedConstant: `${ERROR_PREFIX}unusedConstant`,
+	unusedParameter: `${ERROR_PREFIX}unusedParameter`,
 	unusedType: `${ERROR_PREFIX}unusedType`,
 	unusedEnum: `${ERROR_PREFIX}unusedEnum`,
 	missingReturnStatement: `${ERROR_PREFIX}missingReturnStatement`,
@@ -415,4 +424,4 @@ export const ENUM_UNDERLYING_C_TYPE = {
 	[DATA_TYPE.u128]: "unsigned __int128",
 };
 
-export const ANONYMOUS_OBJECT_FALLBACK_NAME = "AnonymousObject";
+export const ANONYMOUS_OBJECT_FALLBACK_NAME = "_AnonymousObject";

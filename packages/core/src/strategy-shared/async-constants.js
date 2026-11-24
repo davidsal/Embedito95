@@ -33,7 +33,15 @@ export const EVENT_LOOP_CATCHUP_LIMIT_NAME = "catchUpLimit";
 export const EVENT_LOOP_CATCHUP_STEP = 1;
 export const EVENT_LOOP_ITERATIONS_NAME = "iterationsSinceCompact";
 export const EVENT_LOOP_COMPACT_INTERVAL = 5;
+// Compaction keeps up to this many CONSUMED slots as reusable holes instead of
+// dropping every consumed slot. Two holes cover the two child-awaiting
+// coroutines the scheduler has to feed every pass (one hole each) without
+// pinning more payload slots than the Nano's 2 KB of RAM can spare.
+export const EVENT_LOOP_RETAINED_HOLE_LIMIT = 2;
 export const COMPACT_WRITE_INDEX_NAME = "writeIndex";
+export const COMPACT_HOLES_COUNT_NAME = "retainedHoles";
+export const EVENT_LOOP_IDLE_INDEX_NAME = "idleIndex";
+export const EVENT_LOOP_IDLE_CONSUMED_COUNT_NAME = "idleConsumedCount";
 export const COMPACT_ITEM_PARAMETER_NAME = "current";
 export const CHILD_FIELD_PREFIX = "child";
 export const STEP_REFERENCE = `${TASK_ITEM_PARAMETER_NAME}.step`;
@@ -69,6 +77,10 @@ export const INLINE_ASYNC_TIMERS = new Map([
 	["sleepMicros", { now: "getMicros", elapsed: "hasElapsedMicros" }],
 ]);
 export const INLINE_ASYNC_FUNCTION_NAMES = new Set(INLINE_ASYNC_TIMERS.keys());
+// Only the timers that come from this core package are inlined. A user function
+// that happens to be named `sleep` has a different origin and must keep the
+// regular child-task lowering.
+export const INLINE_ASYNC_MODULE_SOURCE = "@embedito95/async";
 export const ASYNC_INTERMEDIATE_FILE_NAME = "async-task.e95";
 export const ASYNC_INTERMEDIATE_IMPORT_SOURCE = `./${ASYNC_INTERMEDIATE_FILE_NAME}`;
 export const EVENT_LOOP_SPACING_PATTERN = new RegExp(

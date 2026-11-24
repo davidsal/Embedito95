@@ -1,0 +1,27 @@
+# Two interleaved spawn/await/consume loops. Every iteration reuses the child
+# slot released by the previous one; a hole or duplicate would change this
+# exact sequence.
+analog 3 1
+analog 6 100
+digital 10 0
+analog 3 2
+analog 6 101
+digital 10 0
+analog 3 3
+analog 6 102
+digital 10 0
+analog 3 4
+analog 6 103
+digital 10 0
+analog 3 5
+analog 6 104
+digital 10 0
+analog 3 6
+analog 6 105
+digital 10 0
+analog 3 7
+analog 3 8
+analog 3 9
+analog 3 10
+analog 3 11
+analog 3 12

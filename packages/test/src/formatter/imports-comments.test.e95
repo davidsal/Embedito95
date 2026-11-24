@@ -1,0 +1,23 @@
+// comment before the first import
+import { delay } from '@embedito95/time'
+// comment between imports
+import { setMode } from '@embedito95/gpio'
+const first = 1
+
+import { getMillis } from '@embedito95/time' // import { Serial } from '@embedito95/serial'
+const second = 2
+
+import { getAnalog } from '@embedito95/gpio'
+// comment attached to the declaration below
+const third = 3
+
+import { getMicros } from '@embedito95/time'
+// import { Serial } from '@embedito95/serial'
+type Persona = {
+    name: string
+    age: i32
+}
+
+const readTemperature = () => {
+    return getMicros()
+}

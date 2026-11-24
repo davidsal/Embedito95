@@ -2,8 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { UTF8 } from "embedito95-core";
+import { runAsyncIntermediateChecks } from "./async-intermediate-checks.js";
 import { runAsyncLocalChecks } from "./async-locals-checks.js";
 import { runAsyncTaskTypeChecks } from "./async-task-type-checks.js";
+import { runBenchMetricsChecks } from "./bench-metrics-checks.js";
+import { runCallTargetChecks } from "./call-target-checks.js";
 import {
 	listCategories,
 	listEntryFiles,
@@ -11,20 +14,29 @@ import {
 	listTestDirectory,
 	validatePlatformTestParity,
 } from "./case-discovery.js";
+import { runCastContextChecks } from "./cast-context-checks.js";
 import { runCliProjectChecks } from "./cli-project-checks.js";
 import { runClosureFactoryChecks } from "./closure-factory-checks.js";
+import { runCodegenHermeticChecks } from "./codegen-hermetic-checks.js";
 import { runConfigIncludeChecks } from "./config-include-checks.js";
 import { runConsoleChecks } from "./console-checks.js";
 import {
+	ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP,
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
+	BENCH_UNIT_CHECKS_GROUP,
+	CALL_TARGET_UNIT_CHECKS_GROUP,
+	CAST_CONTEXT_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
 	CLOSURE_FACTORY_UNIT_CHECKS_GROUP,
+	CODEGEN_HERMETIC_UNIT_CHECKS_GROUP,
 	CONFIG_INCLUDE_UNIT_CHECKS_GROUP,
 	CONSOLE_UNIT_CHECKS_GROUP,
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	CYCLES_FLAG_UNIT_CHECKS_GROUP,
 	DOC_GENERATOR_UNIT_CHECKS_GROUP,
+	ENTRY_POINT_UNIT_CHECKS_GROUP,
+	EVENT_LOOP_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
 	FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
@@ -34,6 +46,8 @@ import {
 	LSP_COMPLETION_UNIT_CHECKS_GROUP,
 	LSP_DIAGNOSTICS_UNIT_CHECKS_GROUP,
 	LSP_HOVER_UNIT_CHECKS_GROUP,
+	MEMBER_ACCESS_UNIT_CHECKS_GROUP,
+	METHOD_ARGUMENT_UNIT_CHECKS_GROUP,
 	MONITOR_STATE_UNIT_CHECKS_GROUP,
 	NUMERIC_CONVERSION_UNIT_CHECKS_GROUP,
 	POSIX_STRATEGY_UNIT_CHECKS_GROUP,
@@ -53,15 +67,23 @@ import {
 	STM32_DOCTOR_UNIT_CHECKS_GROUP,
 	STM32_FIRMWARE_UNIT_CHECKS_GROUP,
 	SUPPORTED_PLATFORMS_UNIT_CHECKS_GROUP,
+	TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP,
+	TEMPLATE_LITERAL_UNIT_CHECKS_GROUP,
 	TEST_SOURCES_DIRECTORY,
+	TOOLING_UNIT_CHECKS_GROUP,
+	UNUSED_PARAMETERS_UNIT_CHECKS_GROUP,
+	UNUSED_SCOPE_UNIT_CHECKS_GROUP,
 	UPDATE_SNAPSHOTS_FLAG,
 	VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
+	VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP,
 	WORD_SIZE_UNIT_CHECKS_GROUP,
 } from "./constants.js";
 import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
 import { runCyclesFlagChecks } from "./cycles-flag-checks.js";
 import { runDocGeneratorChecks } from "./doc-generator-checks.js";
+import { runEntryPointChecks } from "./entry-point-checks.js";
+import { runEventLoopChecks } from "./event-loop-checks.js";
 import { runFunctionTypeParserChecks } from "./function-type-parser-checks.js";
 import { runRegistryIntTypeParityChecks } from "./int-type-parity-checks.js";
 import { listLanguageSnapshots } from "./language-snapshots.js";
@@ -79,6 +101,8 @@ import { runLspString3Checks } from "./lsp-string3-checks.js";
 import { runLspUnionChecks } from "./lsp-union-checks.js";
 import { runLspWireChecks } from "./lsp-wire-checks.js";
 import { runLspWireSlaveChecks } from "./lsp-wire-slave-checks.js";
+import { runMemberAccessChecks } from "./member-access-checks.js";
+import { runMethodArgumentChecks } from "./method-argument-checks.js";
 import { runNumericConversionChecks } from "./numeric-conversion-checks.js";
 import { runPosixStrategyChecks } from "./posix-strategy-checks.js";
 import { buildEntry, copyEntryFiles, createProject } from "./project-setup.js";
@@ -95,8 +119,15 @@ import { runStm32DoctorChecks } from "./stm32-doctor-checks.js";
 import { runStm32FirmwareChecks } from "./stm32-firmware-checks.js";
 import { runStm32ParallelCompileChecks } from "./stm32-parallel-compile-checks.js";
 import { runSupportedPlatformsChecks } from "./supported-platforms-checks.js";
+import { runTemplateCodegenGuardChecks } from "./template-codegen-guard-checks.js";
+import { runTemplateInterpolationChecks } from "./template-interpolation-checks.js";
+import { runTemplateLiteralChecks } from "./template-literal-checks.js";
+import { runToolingChecks } from "./tooling-checks.js";
 import { runMonitorStateChecks } from "./unit-checks.js";
+import { runUnusedParameterChecks } from "./unused-parameters-checks.js";
+import { runUnusedScopeChecks } from "./unused-scope-checks.js";
 import { runVscodeIndentationChecks } from "./vscode-indentation-checks.js";
+import { runVscodeQuickSuggestionsChecks } from "./vscode-quick-suggestions-checks.js";
 import { runWordSizeChecks } from "./word-size-checks.js";
 
 const buildLanguageResults = (updateSnapshots) => {
@@ -227,6 +258,10 @@ export const run = async () => {
 	reportUnitChecks(CORE_SURFACE_UNIT_CHECKS_GROUP, coreSurfaceResults);
 	collectMismatches(coreSurfaceResults, mismatches);
 
+	const toolingResults = await runToolingChecks();
+	reportUnitChecks(TOOLING_UNIT_CHECKS_GROUP, toolingResults);
+	collectMismatches(toolingResults, mismatches);
+
 	const cyclesFlagResults = await runCyclesFlagChecks();
 	reportUnitChecks(CYCLES_FLAG_UNIT_CHECKS_GROUP, cyclesFlagResults);
 	collectMismatches(cyclesFlagResults, mismatches);
@@ -239,13 +274,56 @@ export const run = async () => {
 	reportUnitChecks(CONFIG_INCLUDE_UNIT_CHECKS_GROUP, configIncludeResults);
 	collectMismatches(configIncludeResults, mismatches);
 
+	const codegenHermeticResults = await runCodegenHermeticChecks();
+	reportUnitChecks(CODEGEN_HERMETIC_UNIT_CHECKS_GROUP, codegenHermeticResults);
+	collectMismatches(codegenHermeticResults, mismatches);
+
 	const asyncLocalResults = runAsyncLocalChecks();
 	reportUnitChecks(ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP, asyncLocalResults);
 	collectMismatches(asyncLocalResults, mismatches);
 
+	const asyncIntermediateResults = await runAsyncIntermediateChecks();
+	reportUnitChecks(
+		ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP,
+		asyncIntermediateResults,
+	);
+	collectMismatches(asyncIntermediateResults, mismatches);
+
 	const asyncTaskTypeResults = runAsyncTaskTypeChecks();
 	reportUnitChecks(ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP, asyncTaskTypeResults);
 	collectMismatches(asyncTaskTypeResults, mismatches);
+
+	const eventLoopResults = runEventLoopChecks();
+	reportUnitChecks(EVENT_LOOP_UNIT_CHECKS_GROUP, eventLoopResults);
+	collectMismatches(eventLoopResults, mismatches);
+
+	const benchMetricsResults = runBenchMetricsChecks();
+	reportUnitChecks(BENCH_UNIT_CHECKS_GROUP, benchMetricsResults);
+	collectMismatches(benchMetricsResults, mismatches);
+
+	const memberAccessResults = runMemberAccessChecks();
+	reportUnitChecks(MEMBER_ACCESS_UNIT_CHECKS_GROUP, memberAccessResults);
+	collectMismatches(memberAccessResults, mismatches);
+
+	const methodArgumentResults = runMethodArgumentChecks();
+	reportUnitChecks(METHOD_ARGUMENT_UNIT_CHECKS_GROUP, methodArgumentResults);
+	collectMismatches(methodArgumentResults, mismatches);
+
+	const callTargetResults = await runCallTargetChecks();
+	reportUnitChecks(CALL_TARGET_UNIT_CHECKS_GROUP, callTargetResults);
+	collectMismatches(callTargetResults, mismatches);
+
+	const unusedScopeResults = runUnusedScopeChecks();
+	reportUnitChecks(UNUSED_SCOPE_UNIT_CHECKS_GROUP, unusedScopeResults);
+	collectMismatches(unusedScopeResults, mismatches);
+
+	const unusedParameterResults = runUnusedParameterChecks();
+	reportUnitChecks(UNUSED_PARAMETERS_UNIT_CHECKS_GROUP, unusedParameterResults);
+	collectMismatches(unusedParameterResults, mismatches);
+
+	const entryPointResults = runEntryPointChecks();
+	reportUnitChecks(ENTRY_POINT_UNIT_CHECKS_GROUP, entryPointResults);
+	collectMismatches(entryPointResults, mismatches);
 
 	const functionTypeParserResults = runFunctionTypeParserChecks();
 	reportUnitChecks(
@@ -331,12 +409,23 @@ export const run = async () => {
 	reportUnitChecks(WORD_SIZE_UNIT_CHECKS_GROUP, wordSizeResults);
 	collectMismatches(wordSizeResults, mismatches);
 
+	const castContextResults = runCastContextChecks();
+	reportUnitChecks(CAST_CONTEXT_UNIT_CHECKS_GROUP, castContextResults);
+	collectMismatches(castContextResults, mismatches);
+
 	const vscodeIndentationResults = runVscodeIndentationChecks();
 	reportUnitChecks(
 		VSCODE_INDENTATION_UNIT_CHECKS_GROUP,
 		vscodeIndentationResults,
 	);
 	collectMismatches(vscodeIndentationResults, mismatches);
+
+	const vscodeQuickSuggestionsResults = runVscodeQuickSuggestionsChecks();
+	reportUnitChecks(
+		VSCODE_QUICK_SUGGESTIONS_UNIT_CHECKS_GROUP,
+		vscodeQuickSuggestionsResults,
+	);
+	collectMismatches(vscodeQuickSuggestionsResults, mismatches);
 
 	const stm32ParallelCompileResults = await runStm32ParallelCompileChecks();
 	reportUnitChecks(
@@ -363,6 +452,24 @@ export const run = async () => {
 		supportedPlatformsResults,
 	);
 	collectMismatches(supportedPlatformsResults, mismatches);
+
+	const templateLiteralResults = runTemplateLiteralChecks();
+	reportUnitChecks(TEMPLATE_LITERAL_UNIT_CHECKS_GROUP, templateLiteralResults);
+	collectMismatches(templateLiteralResults, mismatches);
+
+	const templateInterpolationResults = runTemplateInterpolationChecks();
+	reportUnitChecks(
+		TEMPLATE_LITERAL_UNIT_CHECKS_GROUP,
+		templateInterpolationResults,
+	);
+	collectMismatches(templateInterpolationResults, mismatches);
+
+	const templateCodegenGuardResults = await runTemplateCodegenGuardChecks();
+	reportUnitChecks(
+		TEMPLATE_CODEGEN_GUARD_UNIT_CHECKS_GROUP,
+		templateCodegenGuardResults,
+	);
+	collectMismatches(templateCodegenGuardResults, mismatches);
 
 	const lspHoverResults = await runLspHoverChecks();
 	reportUnitChecks(LSP_HOVER_UNIT_CHECKS_GROUP, lspHoverResults);

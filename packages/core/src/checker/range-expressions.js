@@ -15,7 +15,6 @@ import {
 	CHARACTER_TYPES,
 	COMPARISON_OPERATORS,
 	getNonNullableType,
-	INTEGER_TYPES,
 	isNullableType,
 	isNumericType,
 	LOGICAL_OPERATORS,
@@ -92,19 +91,6 @@ export const checkCastTargetType = (state, node) => {
 				location: node.targetType.loc,
 			}),
 		);
-	}
-
-	if (FLOAT_TYPES.has(node.targetType.name)) {
-		const targetType = state.targetTypeStack[state.targetTypeStack.length - 1];
-
-		if (targetType && INTEGER_TYPES.has(targetType)) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.explicitFloatInIntContext,
-					location: node.loc,
-				}),
-			);
-		}
 	}
 };
 

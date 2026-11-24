@@ -13,6 +13,37 @@ const blink = async () => {
     setDigital(Pin.10, LOW)
 }
 
+// Regression: an async task that captures a local whose inferred type is an
+// anonymous shape must keep it as a shared `Object<Shape>` field, declared
+// after the shape struct and with its trace/TypeInfo wired in.
+const getPersona = () => {
+    return { name: "David", age: 31 }
+}
+
+const readPersona = async () => {
+    const persona = getPersona()
+    await readSensor()
+    delay(persona.age)
+}
+
+// Regression: an async helper with an inferred object return. Its task payload
+// must be the shared shape (`_getPersonaReturn`), not the scalar fallback, and
+// the parent must be able to await it and read the fields.
+const readAsyncPersona = async () => {
+    await readSensor()
+    return { name: "David", age: 31 }
+}
+
+const consumePersona = async () => {
+    const persona = await readAsyncPersona()
+    const first = persona.name
+    const second = persona.name
+    delay(persona.age)
+    if (first == second) {
+        setAnalog(Pin.3, 1)
+    }
+}
+
 const setup = () => {
     setMode(Pin.10, PinMode.OUTPUT)
 }
@@ -20,6 +51,8 @@ const setup = () => {
 const main = () => {
     setup()
     blink()
+    readPersona()
+    consumePersona()
 }
 
 main()

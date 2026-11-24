@@ -164,8 +164,33 @@ export const isObjectHandleCast = (node, context) => {
 // type-erased as a `core_mem::AnyObject` and each handler reinterprets its
 // storage pointer to mutate the shared fields in place. Primitive casts keep
 // their value semantics.
+// `500 as f32` on an integer literal: the value is already exactly the float
+// literal, so render it in float form instead of a redundant `(f32)(500)` cast.
+// In a float context it carries the `f` suffix; in an integer context the
+// enclosing cast (`(i32)(500.0)`) does the truncation.
+const renderFloatCastLiteral = (node, targetName, context) => {
+	if (
+		targetName !== DATA_TYPE.f32 ||
+		node?.type !== AST_NODE.literal ||
+		typeof node.value !== "number" ||
+		!Number.isInteger(node.value)
+	) {
+		return null;
+	}
+	const suffix = context.floatContext === DATA_TYPE.f32 ? "f" : "";
+	return `${String(node.value)}.0${suffix}`;
+};
+
 const renderAsExpression = (node, context, lines) => {
 	const targetName = node.targetType.name;
+	const floatLiteral = renderFloatCastLiteral(
+		node.expression,
+		targetName,
+		context,
+	);
+	if (floatLiteral !== null) {
+		return floatLiteral;
+	}
 	const rendered = renderGroupedExpression(node.expression, context, lines);
 
 	const sourceType = expressionDataType(

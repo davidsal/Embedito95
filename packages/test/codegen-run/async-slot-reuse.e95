@@ -1,0 +1,41 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Heavy slot reuse: two joined coroutines each run many spawn/await/consume
+// cycles. A child is marked CONSUMED at its last read so the next spawn reuses
+// its queue slot immediately. Under ASan a slot reused before the payload is
+// fully released shows up as a use-after-free; a hole or duplicate shows up as
+// a missing/extra GPIO event.
+const tick = async (input: u8): u8 => {
+    await sleep(2)
+    return input
+}
+
+const countUp = async () => {
+    for (let index: u8 = 0; index < 12; index += 1) {
+        const value = await tick(index + 1)
+        setAnalog(Pin.3, value)
+    }
+}
+
+const countDown = async () => {
+    for (let index: u8 = 0; index < 6; index += 1) {
+        const value = await tick(100 + index)
+        setAnalog(Pin.6, value)
+        setDigital(Pin.10, LOW)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.6, PinMode.OUTPUT)
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    countUp()
+    countDown()
+}
+
+main()

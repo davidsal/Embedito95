@@ -1,6 +1,7 @@
 import {
 	decodeObjectShape,
 	isObjectShapeType,
+	NULL_TYPE,
 	parseArrayType,
 } from "../checker/index.js";
 import {
@@ -24,6 +25,9 @@ const OBJECT_FIELD_VALUE_TYPES = new Set([
 		(typeName) => typeName !== DATA_TYPE.void,
 	),
 	OBJECT_TYPE,
+	// A `null`-only field lowers to `nullable<u8>` (a trivially-copyable value
+	// struct), so it is owned by the enclosing box like any other scalar.
+	NULL_TYPE,
 ]);
 
 // Named types that are trivially-copyable POD VALUE types can be owned directly
@@ -106,21 +110,52 @@ const isObjectFieldCandidate = (objectInfo, isDeclaredHere) => {
 // element is one of those (the element must itself be owned so
 // `Array<Object<...>>` can be freed in cascade). An element that is itself
 // another array is not owned here yet.
-const isFieldTypeOwnedByHandle = (isHandle, fieldType, ownedFieldTypes) => {
-	const arrayType = parseArrayType(fieldType);
-	if (arrayType) {
-		const elementType = arrayType.elementType;
-		return (
-			OBJECT_FIELD_VALUE_TYPES.has(elementType) ||
-			isHandle.has(elementType) ||
-			ownedFieldTypes.has(elementType)
-		);
+// An ANONYMOUS shape (`object:{…}`) has no named declaration to consult, so its
+// ownership is decided structurally from its decoded field graph: it is owned
+// when every field is owned. Shapes are acyclic, and `shapeCache` (reset on each
+// fixpoint round, because `isHandle` shrinks) keeps the recursion cheap.
+const isShapeFieldsOwnedByHandle = (
+	isHandle,
+	shapeType,
+	ownedFieldTypes,
+	shapeCache,
+) => {
+	if (shapeCache.has(shapeType)) {
+		return shapeCache.get(shapeType);
 	}
-	return (
-		OBJECT_FIELD_VALUE_TYPES.has(fieldType) ||
-		isHandle.has(fieldType) ||
-		ownedFieldTypes.has(fieldType)
-	);
+	shapeCache.set(shapeType, false);
+	const fields = decodeObjectShape(shapeType) ?? {};
+	const result = Object.values(fields).every((field) => {
+		return isFieldTypeOwnedByHandle(
+			isHandle,
+			field.type,
+			ownedFieldTypes,
+			shapeCache,
+		);
+	});
+	shapeCache.set(shapeType, result);
+	return result;
+};
+
+const isFieldTypeOwnedByHandle = (
+	isHandle,
+	fieldType,
+	ownedFieldTypes,
+	shapeCache,
+) => {
+	const arrayType = parseArrayType(fieldType);
+	const key = arrayType ? arrayType.elementType : fieldType;
+	if (
+		OBJECT_FIELD_VALUE_TYPES.has(key) ||
+		isHandle.has(key) ||
+		ownedFieldTypes.has(key)
+	) {
+		return true;
+	}
+	if (!isObjectShapeType(key)) {
+		return false;
+	}
+	return isShapeFieldsOwnedByHandle(isHandle, key, ownedFieldTypes, shapeCache);
 };
 
 export const deriveObjectHandleTypeNames = (
@@ -137,13 +172,21 @@ export const deriveObjectHandleTypeNames = (
 	let changed = true;
 	while (changed) {
 		changed = false;
+		const shapeCache = new Map();
 		for (const name of names) {
 			if (!isHandle.has(name)) {
 				continue;
 			}
 			const fields = objectTypes[name]?.fields ?? {};
 			for (const field of Object.values(fields)) {
-				if (!isFieldTypeOwnedByHandle(isHandle, field.type, ownedFieldTypes)) {
+				if (
+					!isFieldTypeOwnedByHandle(
+						isHandle,
+						field.type,
+						ownedFieldTypes,
+						shapeCache,
+					)
+				) {
 					isHandle.delete(name);
 					changed = true;
 					break;
@@ -166,40 +209,20 @@ export const makeShapeHandlePredicate = (
 	ownedFieldTypes,
 ) => {
 	const memo = new Map();
-	const isFieldOwned = (fieldType) => {
-		const arrayType = parseArrayType(fieldType);
-		if (arrayType) {
-			const elementType = arrayType.elementType;
-			return (
-				OBJECT_FIELD_VALUE_TYPES.has(elementType) ||
-				isHandleKey(elementType) ||
-				ownedFieldTypes.has(elementType)
-			);
-		}
-		return (
-			OBJECT_FIELD_VALUE_TYPES.has(fieldType) ||
-			isHandleKey(fieldType) ||
-			ownedFieldTypes.has(fieldType)
-		);
-	};
-	const isHandleKey = (typeName) => {
+	return (typeName) => {
 		if (namedObjectHandleTypeNames.has(typeName)) {
 			return true;
 		}
 		if (!isObjectShapeType(typeName)) {
 			return false;
 		}
-		if (memo.has(typeName)) {
-			return memo.get(typeName);
-		}
-		const fields = decodeObjectShape(typeName) ?? {};
-		const result = Object.values(fields).every((field) => {
-			return isFieldOwned(field.type);
-		});
-		memo.set(typeName, result);
-		return result;
+		return isShapeFieldsOwnedByHandle(
+			namedObjectHandleTypeNames,
+			typeName,
+			ownedFieldTypes,
+			memo,
+		);
 	};
-	return isHandleKey;
 };
 
 // A library type declared by ANOTHER module was already compiled there, so the

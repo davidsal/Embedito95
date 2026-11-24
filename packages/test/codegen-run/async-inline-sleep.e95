@@ -1,8 +1,8 @@
 import { Pin, setMode, PinMode, setDigital, HIGH, LOW } from '@embedito95/gpio'
 import { sleep } from '@embedito95/async'
 
-// Two `await sleep` sites in one function: the inlined timer fields cannot be
-// shared, so they get a numeric suffix (`childSleepMilliseconds1`/`2`).
+// Two `await sleep` sites in one function reuse the single inlined timer pair
+// (`childSleepMilliseconds`/`childSleepStart`) because they run sequentially.
 const pulse = async () => {
     for (let index: u8 = 0; index < 2; index += 1) {
         setDigital(Pin.10, HIGH)

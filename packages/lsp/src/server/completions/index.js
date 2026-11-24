@@ -9,6 +9,7 @@ import { buildProjectTypeInference } from "../shared/type-inference.js";
 import { resolveDefaultCompletions } from "./default-completions.js";
 import { KEYWORD_COMPLETIONS } from "./keyword-completions.js";
 import {
+	isUnresolvedDotContext,
 	NOT_HANDLED,
 	resolveCallArgumentCompletions,
 	resolveDotMemberCompletions,
@@ -19,6 +20,61 @@ import {
 	resolveThisMemberCompletions,
 	resolveTypeCompletions,
 } from "./steps.js";
+
+// While the user is still typing inside `${...}`, the lexer cannot close the
+// template and drops the whole token, so the partial member access never
+// reaches the AST. Closing the interpolation and the template at the cursor
+// yields the same nodes the completed source would produce, and lets the
+// existing receiver/completion steps work unchanged.
+const TEMPLATE_INTERPOLATION_TAIL_PATTERN = /\$\{[^}]*$/;
+const TEMPLATE_INTERPOLATION_CLOSERS = "}`";
+
+const isCursorCovered = (tokens, position) => {
+	const eof = tokens[tokens.length - 1];
+
+	if (eof.line !== position.line + 1) {
+		return eof.line > position.line + 1;
+	}
+
+	return eof.column >= position.character + 1;
+};
+
+const closeTemplateInterpolationAtCursor = (source, position) => {
+	const lines = source.split("\n");
+	const currentLine = lines[position.line] ?? "";
+	const beforeCursor = currentLine.slice(0, position.character);
+
+	if (!TEMPLATE_INTERPOLATION_TAIL_PATTERN.test(beforeCursor)) {
+		return source;
+	}
+
+	const afterCursor = currentLine.slice(position.character);
+	lines[position.line] =
+		`${beforeCursor}${TEMPLATE_INTERPOLATION_CLOSERS}${afterCursor}`;
+
+	return lines.join("\n");
+};
+
+const parseSyntaxTree = (source) => {
+	const { tokens } = tokenize(source);
+	return { tokens, syntaxTree: parse(tokens).ast };
+};
+
+const parseCompletionSource = (source, position) => {
+	const { tokens, syntaxTree } = parseSyntaxTree(source);
+
+	if (isCursorCovered(tokens, position)) {
+		return syntaxTree;
+	}
+
+	const repairedSource = closeTemplateInterpolationAtCursor(source, position);
+
+	if (repairedSource === source) {
+		return syntaxTree;
+	}
+
+	return parseSyntaxTree(repairedSource).syntaxTree;
+};
 
 const buildCompletionContext = (requestParameters, document, platform) => {
 	const source = document.getText();
@@ -36,8 +92,7 @@ const buildCompletionContext = (requestParameters, document, platform) => {
 };
 
 const parseCompletionSyntax = (context) => {
-	const { tokens } = tokenize(context.source);
-	const { ast: syntaxTree } = parse(tokens);
+	const syntaxTree = parseCompletionSource(context.source, context.position);
 	const narrowingRegions = collectNullNarrowing(syntaxTree);
 	const inference = buildProjectTypeInference({
 		syntaxTree,
@@ -94,6 +149,10 @@ export const onCompletion = (requestParameters, documents, platform) => {
 		if (completions !== NOT_HANDLED) {
 			return completions;
 		}
+	}
+
+	if (isUnresolvedDotContext(context)) {
+		return [];
 	}
 
 	return resolveDefaultCompletions(context);

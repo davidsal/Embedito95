@@ -1,4 +1,8 @@
-import { walk } from "../checker/index.js";
+import {
+	collectFunctionDeclarations,
+	collectReferencedNames,
+	walk,
+} from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import { format } from "../formatter/index.js";
 import { tokenize } from "../lexer/index.js";
@@ -6,10 +10,13 @@ import { parse } from "../parser/index.js";
 import { rebaseLines } from "./async-ast-utils.js";
 import { rewriteAsyncCalls } from "./async-call-rewrite.js";
 import {
+	collectAsyncDeclarations,
 	collectAsyncFunctionNames,
 	collectAsyncParams,
 	collectImportedNames,
 	collectImportedSet,
+	collectInlineTimers,
+	collectInlineWrappers,
 	collectLibraryAsync,
 	collectLocalReturnTypes,
 	collectObjectTypes,
@@ -19,7 +26,6 @@ import {
 	ASYNC_ADD_SUFFIX,
 	ASYNC_INTERMEDIATE_IMPORT_SOURCE,
 	ASYNC_TYPE_LINE_OFFSET,
-	INLINE_ASYNC_FUNCTION_NAMES,
 	SYNTHESIZED_LINE_OFFSET,
 	SYNTHESIZED_STRIDE,
 	toAsyncTypeName,
@@ -41,6 +47,10 @@ import {
 } from "./async-import-partition.js";
 import { pruneUnusedImports } from "./async-imports.js";
 import { mergeLibraryImports } from "./async-imports-merge.js";
+import {
+	applyAsyncReturnAliases,
+	insertReturnAliasTypes,
+} from "./async-return-aliases.js";
 import {
 	formatAsyncIntermediate,
 	formatMainIntermediate,
@@ -72,7 +82,8 @@ const desugarEntryAsyncFunctions = (
 	source,
 	functionReturnTypes,
 	asyncFunctionNames,
-	inlineAsyncNames,
+	inlineTimers,
+	inlineWrappers,
 	asyncParams,
 	variableTypes,
 ) => {
@@ -107,9 +118,11 @@ const desugarEntryAsyncFunctions = (
 			source,
 			functionReturnTypes,
 			asyncFunctionNames,
-			inlineAsyncNames,
+			inlineTimers,
+			inlineWrappers,
 			asyncParams,
 			variableTypes,
+			functionReturnTypes?.[name] ?? null,
 		);
 
 		declarator.id.name = handleName;
@@ -189,25 +202,50 @@ const lowerAsyncFunctions = (
 		...functionReturnTypes,
 		...collectLocalReturnTypes(ast),
 	};
+	const entryFunctions = collectFunctionDeclarations(ast)
+		.map(({ declaration }) => {
+			return {
+				name: declaration?.id?.name,
+				init: declaration?.init ?? null,
+			};
+		})
+		.filter((entry) => {
+			return Boolean(entry.name);
+		});
+	const entryAsyncNames = new Set(
+		collectAsyncDeclarations(ast, "").map((declaration) => {
+			return declaration.name;
+		}),
+	);
+	const aliasedReturns = applyAsyncReturnAliases(
+		ast,
+		entryFunctions,
+		entryAsyncNames,
+		returnTypes,
+	);
+	insertReturnAliasTypes(
+		ast,
+		aliasedReturns.aliases,
+		sourceLineCount + ASYNC_TYPE_LINE_OFFSET,
+	);
+	const aliasedReturnTypes = aliasedReturns.returnTypes;
 	const objectTypes = collectObjectTypes([
 		ast,
 		...libraries.map((library) => {
 			return library.ast;
 		}),
 	]);
-	const inlineAsyncNames = new Set(
-		[...INLINE_ASYNC_FUNCTION_NAMES].filter((name) => {
-			return asyncFunctionNames.has(name);
-		}),
-	);
+	const inlineTimers = collectInlineTimers(ast, entryAsyncNames);
+	const inlineWrappers = collectInlineWrappers(ast, inlineTimers);
 	const asyncParams = collectAsyncParams(ast, libraries, imported);
 	const handles = desugarEntryAsyncFunctions(
 		ast,
 		sourceLineCount,
 		source,
-		returnTypes,
+		aliasedReturnTypes,
 		asyncFunctionNames,
-		inlineAsyncNames,
+		inlineTimers,
+		inlineWrappers,
 		asyncParams,
 		variableTypes,
 	);
@@ -216,9 +254,8 @@ const lowerAsyncFunctions = (
 		libraries,
 		sourceLineCount + ASYNC_TYPE_LINE_OFFSET,
 		imported,
-		returnTypes,
+		aliasedReturnTypes,
 		asyncFunctionNames,
-		inlineAsyncNames,
 		asyncParams,
 	);
 
@@ -235,11 +272,13 @@ const lowerAsyncFunctions = (
 		),
 	);
 
+	const referencedNames = collectReferencedNames(ast);
 	const addStatements = buildAddStatements(
 		allHandles,
 		synthesizedComments,
 		sourceLineCount,
 		objectTypes,
+		referencedNames,
 	);
 
 	insertAddStatements(ast, allHandles, addStatements);

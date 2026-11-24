@@ -273,10 +273,8 @@ const checkCodegen = () => {
 			true,
 		),
 		expectEqual(
-			"i64 into i32 emits an explicit cast",
-			integerProgram.includes(
-				"i32 narrowed64 = core_numeric::narrow((i32)(wide64));",
-			),
+			"i64 into i32 converts implicitly without an explicit cast",
+			integerProgram.includes("i32 narrowed64 = core_numeric::narrow(wide64);"),
 			true,
 		),
 		expectEqual(
@@ -522,6 +520,7 @@ const countWarningsFor = (lines) => {
 			"    setup()",
 			...body,
 			"}",
+			"main()",
 		].join("\n")}\n`,
 	);
 	const errors = check(ast, buildLibraries()).errors;

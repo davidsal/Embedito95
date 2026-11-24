@@ -1,0 +1,30 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Wake-up contract: `await asyncFunction()` resumes through a child task and
+// `await sleep(ms)` resumes through the inlined timer. The `.passes` sidecar
+// pins the pass window in which the last event must be observed, so a scheduler
+// change cannot make either wake-up take an unbounded number of passes.
+const readSensor = async (): u8 => {
+    await sleep(6)
+    return 9
+}
+
+const run = async () => {
+    const value = await readSensor()
+    setAnalog(Pin.3, value)
+    await sleep(10)
+    setDigital(Pin.10, HIGH)
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

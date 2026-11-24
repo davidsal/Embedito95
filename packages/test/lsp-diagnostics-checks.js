@@ -21,6 +21,7 @@ import {
 	findEnclosingLibraryConfig,
 	loadLibrariesFromContext,
 } from "../lsp/src/server/shared/libraries.js";
+import { ASYNC_TASK_DECLARATION } from "./async-task-type-parser-checks.js";
 import { SNAPSHOT_STATUS } from "./constants.js";
 import { expectEqual } from "./reporting.js";
 import { CORE_LIBRARY_DIRECTORY } from "./src/language/language-snapshot-harness.mjs";
@@ -42,8 +43,111 @@ const LSP_SEVERITY_NAMES = {
 const ERROR_SEVERITY_LABEL = LSP_SEVERITY_NAMES[LSP_SEVERITY.error];
 
 const TYPE_MISMATCH_SOURCE = 'const x: u8 = "hola";';
+const UNKNOWN_MEMBER_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
+	"const probando = (value: string) => {}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probando(persona.nom)",
+	"}",
+].join("\n");
+const INFERRED_UNKNOWN_MEMBER_SOURCE = [
+	'const getPersona = () => { return { name: "ana", age: 30 } }',
+	"const probando = (value: string) => {}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probando(persona.nom)",
+	"}",
+].join("\n");
+const ASYNC_TASK_MEMBER_ACCESS_SOURCE = [
+	ASYNC_TASK_DECLARATION,
+	'const getPersona = async () => { return { name: "David", age: 31 } }',
+	"const consume = (value: string) => {}",
+	"const test = async () => {",
+	"    const persona = getPersona()",
+	"    consume(persona.name)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    test()",
+	"}",
+	"main()",
+].join("\n");
+const ASYNC_TASK_ARGUMENT_SOURCE = [
+	ASYNC_TASK_DECLARATION,
+	'const getPersona = async () => { return { name: "David", age: 31 } }',
+	"type Persona = { name: string, age: i32 }",
+	"const consume = (value: Persona) => { return value.name }",
+	"const test = async () => {",
+	"    const persona = getPersona()",
+	"    consume(persona)",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    test()",
+	"}",
+	"main()",
+].join("\n");
+const CALL_TARGET_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const n = 1",
+	"    const m = n()",
+	"}",
+	"main()",
+].join("\n");
+const UNCONVERTIBLE_INTERPOLATION_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
+	"const probando = (value: string) => {}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = getPersona()",
+	"    probando(`${persona}`)",
+	"}",
+].join("\n");
 const SETUP_ONLY_SOURCE = "const setup = () => {}";
 const EMPTY_SOURCE = "";
+const EMPTY_ARRAY_INTERPOLATION_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const valor = `${[]}`",
+	"}",
+].join("\n");
+const NUMBER_ARRAY_INTERPOLATION_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const valor = `${[1, 2]}`",
+	"}",
+].join("\n");
+const SELF_MEMBER_INTERPOLATION_SOURCE = [
+	"type Labeled = { value: i32, text: string, describe: () => string }",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	'    const item: Labeled = { value: 1, text: "x",',
+	"        describe: () => { return `${this.text}-${this.value}-${this.describe()}` } }",
+	"}",
+].join("\n");
+const SHADOWED_FUNCTION_INTERPOLATION_SOURCE = [
+	"const peek = () => { return 1 }",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const probando = (peek: i32) => { const valor = `${peek}` }",
+	"}",
+].join("\n");
 const LOCAL_ERROR_LINE_FIVE_SOURCE = [
 	"const setup = () => {}",
 	"",
@@ -54,6 +158,27 @@ const LOCAL_ERROR_LINE_FIVE_SOURCE = [
 const TWO_UNUSED_CONSTANTS_SOURCE = [
 	"const first = 1;",
 	"const second = 2;",
+].join("\n");
+const UNUSED_PARAMETER_SOURCE = [
+	"const setup = () => {}",
+	"const f = (unused: i32) => { return 1 }",
+	"const main = () => {",
+	"    setup()",
+	"    f(1)",
+	"}",
+].join("\n");
+const SHADOWED_UNUSED_LOCAL_SOURCE = [
+	"type Persona = { name: string, age: i32 }",
+	'const getPersona = (): Persona => { return { name: "ana", age: 30 } }',
+	"const other = () => {",
+	"    const persona = 1",
+	"}",
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"    const persona = 2",
+	`    const value = \`\${persona}\``,
+	"}",
 ].join("\n");
 const TWO_LOCAL_ERRORS_SOURCE = [
 	"const setup = () => {}",
@@ -78,10 +203,49 @@ const MISSING_SETUP_CALL_ONLY_SOURCE = [
 	"const main = () => {",
 	"}",
 ].join("\n");
+const ENTRY_POINT_NOT_CALLED_SOURCE = [
+	"const setup = () => {}",
+	"const main = () => {",
+	"    setup()",
+	"}",
+].join("\n");
 const EXPECTED_TYPE_MISMATCH_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.assignmentTypeMismatch,
 	params: { rhsType: "string", name: "x", type: "u8" },
 });
+const EXPECTED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.unknownMember,
+	params: { name: "nom", type: "Persona" },
+});
+const EXPECTED_INFERRED_UNKNOWN_MEMBER_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.unknownMember,
+	params: { name: "nom", type: "object:{name:string;age:i8}" },
+});
+const EXPECTED_ASYNC_TASK_MEMBER_ACCESS_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.asyncTaskMemberAccess,
+	params: { name: "name", type: "AsyncTask<object:{name:string;age:i8}>" },
+});
+const EXPECTED_ASYNC_TASK_ARGUMENT_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.asyncTaskArgument,
+	params: {
+		name: "value",
+		expected: "Persona",
+		actual: "AsyncTask<object:{name:string;age:i8}>",
+	},
+});
+const EXPECTED_CALL_TARGET_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.callTargetNotCallable,
+	params: { name: "n", type: "i8" },
+});
+const EXPECTED_UNCONVERTIBLE_INTERPOLATION_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.unconvertibleTemplateExpression,
+	params: { type: "Persona" },
+});
+const EXPECTED_UNCONVERTIBLE_ARRAY_INTERPOLATION_MESSAGE =
+	formatDiagnosticMessage({
+		code: ERROR_CODE.unconvertibleTemplateExpression,
+		params: { type: "array" },
+	});
 const EXPECTED_MISSING_MAIN_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.missingRequiredFunction,
 	params: { name: "main" },
@@ -94,6 +258,10 @@ const EXPECTED_MISSING_SETUP_CALL_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.missingSetupCall,
 	params: {},
 });
+const EXPECTED_ENTRY_POINT_NOT_CALLED_MESSAGE = formatDiagnosticMessage({
+	code: ERROR_CODE.entryPointNotCalled,
+	params: { name: "main" },
+});
 const EXPECTED_EOF_MESSAGE = formatDiagnosticMessage({
 	code: ERROR_CODE.unexpectedEof,
 	params: {},
@@ -104,6 +272,12 @@ const MISSING_IMPORT_BRACE_TRAILING_SOURCE = [
 	"import { X",
 	"const setup = () => {}",
 ].join("\n");
+const DANGLING_MEMBER_TEMPLATE_SOURCE = `const a = \`\${persona.}\``;
+const DANGLING_MEMBER_STATEMENT_SOURCE = [
+	"const nombre = persona.",
+	"const otro = 1",
+].join("\n");
+const FOUND_DOT = '"."';
 const MISSING_IF_PARENTHESIS_SOURCE = "if (1 {}) {}";
 const NESTED_MISSING_IF_PARENTHESIS_SOURCE = [
 	"if (1) {",
@@ -421,6 +595,277 @@ const checkLocalTypeErrorHasPriorityOverMissingSetup = () => {
 	);
 };
 
+const checkUnknownMemberLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(UNKNOWN_MEMBER_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an unknown object member at the property location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[1, ERROR_CODE.unknownMember, EXPECTED_UNKNOWN_MEMBER_MESSAGE, "8:22"].join(
+			"|",
+		),
+	);
+};
+
+const checkUnconvertibleInterpolationLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(
+		UNCONVERTIBLE_INTERPOLATION_SOURCE,
+	);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an unconvertible template interpolation at the expression location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unconvertibleTemplateExpression,
+			EXPECTED_UNCONVERTIBLE_INTERPOLATION_MESSAGE,
+			"8:17",
+		].join("|"),
+	);
+};
+
+const checkCompoundLiteralInterpolationLspDiagnostic = () => {
+	const emptyArrayDiagnostics = computeEntryDiagnostics(
+		EMPTY_ARRAY_INTERPOLATION_SOURCE,
+	);
+	const numberArrayDiagnostics = computeEntryDiagnostics(
+		NUMBER_ARRAY_INTERPOLATION_SOURCE,
+	);
+	const emptyArrayError = findErrorDiagnostic(emptyArrayDiagnostics);
+	const numberArrayError = findErrorDiagnostic(numberArrayDiagnostics);
+	const renderRange = (diagnostic) => {
+		if (!diagnostic) {
+			return "none";
+		}
+		const start = diagnostic.range.start;
+		const end = diagnostic.range.end;
+		return `${start.line + 1}:${start.character + 1}-${end.line + 1}:${end.character + 1}`;
+	};
+	return expectEqual(
+		"LSP shows unannotated array interpolations at the expression range",
+		[
+			countErrorDiagnostics(emptyArrayDiagnostics),
+			emptyArrayError?.code,
+			emptyArrayError?.message,
+			renderRange(emptyArrayError),
+			countErrorDiagnostics(numberArrayDiagnostics),
+			numberArrayError?.code,
+			numberArrayError?.message,
+			renderRange(numberArrayError),
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unconvertibleTemplateExpression,
+			EXPECTED_UNCONVERTIBLE_ARRAY_INTERPOLATION_MESSAGE,
+			"4:22-4:23",
+			1,
+			ERROR_CODE.unconvertibleTemplateExpression,
+			EXPECTED_UNCONVERTIBLE_ARRAY_INTERPOLATION_MESSAGE,
+			"4:22-4:27",
+		].join("|"),
+	);
+};
+
+const checkConvertibleInterpolationLspDiagnostics = () => {
+	const sources = [
+		SELF_MEMBER_INTERPOLATION_SOURCE,
+		SHADOWED_FUNCTION_INTERPOLATION_SOURCE,
+	];
+	const counts = sources.map((source) => {
+		return computeEntryDiagnostics(source).filter((diagnostic) => {
+			return diagnostic.code === ERROR_CODE.unconvertibleTemplateExpression;
+		}).length;
+	});
+	return expectEqual(
+		"LSP does not flag this.<field>, this.<method>() or shadowed function names as unconvertible",
+		counts.join("|"),
+		"0|0",
+	);
+};
+
+const checkInferredUnknownMemberLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(INFERRED_UNKNOWN_MEMBER_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an unknown member of an inferred anonymous shape at the property location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unknownMember,
+			EXPECTED_INFERRED_UNKNOWN_MEMBER_MESSAGE,
+			"7:22",
+		].join("|"),
+	);
+};
+
+const checkAsyncTaskMemberAccessLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(ASYNC_TASK_MEMBER_ACCESS_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an un-awaited AsyncTask member access at the property location",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}-${errorDiagnostic.range.end.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.asyncTaskMemberAccess,
+			EXPECTED_ASYNC_TASK_MEMBER_ACCESS_MESSAGE,
+			"9:21-25",
+		].join("|"),
+	);
+};
+
+const checkAsyncTaskArgumentLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(ASYNC_TASK_ARGUMENT_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows an un-awaited AsyncTask argument at the source argument",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}-${errorDiagnostic.range.end.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.asyncTaskArgument,
+			EXPECTED_ASYNC_TASK_ARGUMENT_MESSAGE,
+			"10:13-20",
+		].join("|"),
+	);
+};
+
+const checkCallTargetLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(CALL_TARGET_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP shows a call on a non-callable variable at the callee",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}-${errorDiagnostic.range.end.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.callTargetNotCallable,
+			EXPECTED_CALL_TARGET_MESSAGE,
+			"5:15-16",
+		].join("|"),
+	);
+};
+
+const checkDanglingMemberParserErrorKeepsNextStatement = () => {
+	const templateResult = parseSource(DANGLING_MEMBER_TEMPLATE_SOURCE);
+	const templateError = templateResult.errors[0];
+	const statementResult = parseSource(DANGLING_MEMBER_STATEMENT_SOURCE);
+	const statementError = statementResult.errors[0];
+	const trailingStatement = statementResult.ast.body[1];
+	return expectEqual(
+		"parser reports a dangling member at the dot and keeps the next statement",
+		[
+			templateResult.errors.length,
+			templateError?.code,
+			formatUnexpectedToken(templateError?.params ?? {}),
+			`${templateError?.location?.start?.line}:${templateError?.location?.start?.column}`,
+			statementResult.errors.length,
+			statementError?.code,
+			formatUnexpectedToken(statementError?.params ?? {}),
+			`${statementError?.location?.start?.line}:${statementError?.location?.start?.column}`,
+			trailingStatement?.type,
+			trailingStatement?.declarations?.[0]?.id?.name,
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:21",
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:23",
+			AST_NODE.variableDeclaration,
+			"otro",
+		].join("|"),
+	);
+};
+
+const checkDanglingMemberLspDiagnostic = async () => {
+	const templateDiagnostics = await computeDiagnostics(
+		DANGLING_MEMBER_TEMPLATE_SOURCE,
+		null,
+		{},
+		false,
+		true,
+	);
+	const templateError = findErrorDiagnostic(templateDiagnostics);
+	const statementDiagnostics = await computeDiagnostics(
+		DANGLING_MEMBER_STATEMENT_SOURCE,
+		null,
+		{},
+		false,
+		true,
+	);
+	const statementError = findErrorDiagnostic(statementDiagnostics);
+	return expectEqual(
+		"LSP shows a dangling member syntax error at the dot",
+		[
+			countErrorDiagnostics(templateDiagnostics),
+			templateError?.code,
+			templateError?.message,
+			templateError
+				? `${templateError.range.start.line + 1}:${templateError.range.start.character + 1}`
+				: "none",
+			countErrorDiagnostics(statementDiagnostics),
+			statementError?.code,
+			statementError?.message,
+			statementError
+				? `${statementError.range.start.line + 1}:${statementError.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:21",
+			1,
+			ERROR_CODE.unexpectedToken,
+			formatUnexpectedToken({ expected: "identifier", found: FOUND_DOT }),
+			"1:23",
+		].join("|"),
+	);
+};
+
 const checkMissingRequiredFunctionStillShownWithoutLocalErrors = () => {
 	const setupOnlyDiagnostics = computeEntryDiagnostics(SETUP_ONLY_SOURCE);
 	const setupOnlyError = findErrorDiagnostic(setupOnlyDiagnostics);
@@ -567,6 +1012,28 @@ const checkMissingSetupCallShownWithoutLocalErrors = () => {
 	);
 };
 
+const checkEntryPointNotCalledLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(ENTRY_POINT_NOT_CALLED_SOURCE);
+	const errorDiagnostic = findErrorDiagnostic(diagnostics);
+	return expectEqual(
+		"LSP reports the uncalled entry point error at the main declaration",
+		[
+			countErrorDiagnostics(diagnostics),
+			errorDiagnostic?.code,
+			errorDiagnostic?.message,
+			errorDiagnostic
+				? `${errorDiagnostic.range.start.line + 1}:${errorDiagnostic.range.start.character + 1}`
+				: "none",
+		].join("|"),
+		[
+			1,
+			ERROR_CODE.entryPointNotCalled,
+			EXPECTED_ENTRY_POINT_NOT_CALLED_MESSAGE,
+			"2:7",
+		].join("|"),
+	);
+};
+
 const checkExactlyOneVisibleErrorPerFile = () => {
 	const sources = [
 		TYPE_MISMATCH_SOURCE,
@@ -604,6 +1071,46 @@ const checkWarningsAreAllEmitted = () => {
 		[2, `${ERROR_CODE.unusedConstant},${ERROR_CODE.unusedConstant}`, 1].join(
 			"|",
 		),
+	);
+};
+
+const checkShadowedUnusedLocalLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(SHADOWED_UNUSED_LOCAL_SOURCE);
+	const unusedConstants = diagnostics.filter((diagnostic) => {
+		return diagnostic.code === ERROR_CODE.unusedConstant;
+	});
+	const otherDeclarationLine = 3;
+	const mainDeclarationLine = 8;
+	const otherDeclarationShown = unusedConstants.some((diagnostic) => {
+		return diagnostic.range.start.line === otherDeclarationLine;
+	});
+	const mainDeclarationShown = unusedConstants.some((diagnostic) => {
+		return diagnostic.range.start.line === mainDeclarationLine;
+	});
+	return expectEqual(
+		"LSP keeps the unused warning for a local shadowed by a used homonym",
+		[unusedConstants.length, otherDeclarationShown, mainDeclarationShown].join(
+			"|",
+		),
+		"2|true|false",
+	);
+};
+
+const checkUnusedParameterLspDiagnostic = () => {
+	const diagnostics = computeEntryDiagnostics(UNUSED_PARAMETER_SOURCE);
+	const unusedParameters = diagnostics.filter((diagnostic) => {
+		return diagnostic.code === ERROR_CODE.unusedParameter;
+	});
+	const [diagnostic] = unusedParameters;
+	return expectEqual(
+		"LSP shows the unused parameter warning at the parameter range",
+		[
+			unusedParameters.length,
+			diagnostic?.severity,
+			diagnostic?.range.start.line,
+			diagnostic?.range.start.character,
+		].join("|"),
+		[1, LSP_SEVERITY.warning, 1, 11].join("|"),
 	);
 };
 
@@ -645,14 +1152,27 @@ export const runLspDiagnosticsChecks = async () => {
 		checkParserAlwaysReturnsTraversableAst(),
 		checkValidSourceStillParses(),
 		checkLocalTypeErrorHasPriorityOverMissingSetup(),
+		checkUnknownMemberLspDiagnostic(),
+		checkInferredUnknownMemberLspDiagnostic(),
+		checkAsyncTaskMemberAccessLspDiagnostic(),
+		checkAsyncTaskArgumentLspDiagnostic(),
+		checkCallTargetLspDiagnostic(),
+		checkUnconvertibleInterpolationLspDiagnostic(),
+		checkCompoundLiteralInterpolationLspDiagnostic(),
+		checkConvertibleInterpolationLspDiagnostics(),
+		checkDanglingMemberParserErrorKeepsNextStatement(),
+		await checkDanglingMemberLspDiagnostic(),
 		checkMissingRequiredFunctionStillShownWithoutLocalErrors(),
 		checkLocalErrorOnLineFiveHasPriorityOverMissingMain(),
 		checkEarliestLocalErrorByLineIsVisible(),
 		checkEarliestLocalErrorByColumnIsVisible(),
 		checkLocalErrorHasPriorityOverMissingSetupCall(),
 		checkMissingSetupCallShownWithoutLocalErrors(),
+		checkEntryPointNotCalledLspDiagnostic(),
 		checkExactlyOneVisibleErrorPerFile(),
 		checkWarningsAreAllEmitted(),
+		checkShadowedUnusedLocalLspDiagnostic(),
+		checkUnusedParameterLspDiagnostic(),
 		await checkCoreLibraryDocumentHasNoDuplicateDeclaration(),
 	];
 };

@@ -11,9 +11,14 @@ import {
 
 const SOURCE_NAME = "embedito95";
 
+// Entry-contract errors concern the whole module: they are only shown when no
+// local error competes for the single visible error slot, and they dim the rest
+// of the file. `entryPointNotCalled` belongs here for the same reason as the
+// missing-function and missing-setup errors.
 const ENTRY_GLOBAL_ERROR_CODES = new Set([
 	ERROR_CODE.missingRequiredFunction,
 	ERROR_CODE.missingSetupCall,
+	ERROR_CODE.entryPointNotCalled,
 ]);
 
 const computeDimmedRange = (source, visibleError) => {

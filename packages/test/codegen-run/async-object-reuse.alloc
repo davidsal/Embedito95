@@ -1,0 +1,2 @@
+# Allocation stability: object payloads and child handles must be released when
+# their slot is consumed/reused; the live-block delta must not grow after drain.

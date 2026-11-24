@@ -1,0 +1,24 @@
+import { getSerial, Serial } from '@embedito95/serial'
+
+const serial = getSerial(Serial.1)
+
+// Valid template-literal interpolations: string, i32, f32 and boolean
+// primitives lower to `core_string::String(x)`. The same source must keep
+// compiling on AVR and STM32, so the codegen keeps emitting the overload chain.
+
+const setup = () => {
+    serial.initialize(9600)
+}
+
+const main = () => {
+    setup()
+
+    const nombre: string = "ana"
+    const contador: i32 = 42
+    const ratio: f32 = 1.5
+    const flag: boolean = true
+    const texto = `${nombre}-${contador}-${ratio}-${flag}`
+    serial.sendLine(texto)
+}
+
+main()

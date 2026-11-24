@@ -1,0 +1,37 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Allocation check: a child task, an inline timer and a plain coroutine that
+// finish in a known order. The `.alloc` sidecar makes the host driver count
+// live malloc blocks after the queue drains, so a leaked task payload or child
+// handle shows up as an extra live block.
+const reader = async (): u8 => {
+    await sleep(3)
+    return 5
+}
+
+const quick = async () => {
+    await sleep(2)
+    setAnalog(Pin.3, 1)
+}
+
+const owner = async () => {
+    const value = await reader()
+    setAnalog(Pin.4, value)
+    await sleep(6)
+    setDigital(Pin.10, HIGH)
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.4, PinMode.OUTPUT)
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    quick()
+    owner()
+}
+
+main()

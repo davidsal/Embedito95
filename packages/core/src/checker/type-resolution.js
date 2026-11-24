@@ -1,4 +1,4 @@
-import { evaluateConstant } from "../const-eval.js";
+import { evaluateConstant, nodeContainsFloat } from "../const-eval.js";
 import {
 	AST_NODE,
 	DATA_TYPE,
@@ -249,6 +249,10 @@ export const typeIsKnown = (
 };
 
 export const resolveFoldedNaturalType = (ast, initializer, expressionType) => {
+	if (nodeContainsFloat(ast, initializer)) {
+		return expressionType;
+	}
+
 	const resolvedValue = evaluateConstant(ast, initializer);
 
 	return typeof resolvedValue === "number" && Number.isInteger(resolvedValue)

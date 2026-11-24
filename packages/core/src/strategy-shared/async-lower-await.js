@@ -1,4 +1,3 @@
-import { walk } from "../checker/index.js";
 import { AST_NODE, INDENT } from "../constants.js";
 import {
 	ASYNC_STATUS_COMPLETED,
@@ -33,6 +32,14 @@ const registerChild = (state, childName) => {
 	state.childNames.push(childName);
 };
 
+// Once the child's value has been read and the child marked CONSUMED the parent
+// no longer needs the child task slot. Reset the optional child field to a null
+// handle so the child `_AsyncTaskItem` can be reclaimed instead of being kept
+// alive by the parent until the parent itself dies.
+const releaseChild = (fieldName) => {
+	return `${toChildReference(fieldName)} = null`;
+};
+
 // Renders the awaited call as a child: omitted trailing parameters with a
 // default are filled in first, then the child flag is appended. Rendering it
 // from the parts (instead of string-splicing) keeps a zero-arg call on a
@@ -54,46 +61,39 @@ const renderChildCall = (state, argument, childName) => {
 	return `${callee}(${args.join(", ")})`;
 };
 
-// The inlined core `sleep` keeps its timer in two fields of the caller's task
-// instead of spawning a child task: `<childSleep>Milliseconds` and
-// `<childSleep>Start`. When a function awaits `sleep` more than once the fields
-// cannot be shared, so each site gets a numeric suffix (…Milliseconds1,
-// …Milliseconds2, …).
-export const countInlineAwaitSites = (node, inlineAsyncNames) => {
-	if (!inlineAsyncNames || inlineAsyncNames.size === 0) {
-		return 0;
-	}
-
-	let count = 0;
-
-	walk(node, {
-		enter: (value) => {
-			if (value.type === AST_NODE.functionExpression) {
-				return false;
-			}
-			if (
-				value.type === AST_NODE.expressionStatement &&
-				value.expression?.type === AST_NODE.awaitExpression &&
-				value.expression.argument?.type === AST_NODE.callExpression &&
-				value.expression.argument.callee?.type === AST_NODE.identifier &&
-				inlineAsyncNames.has(value.expression.argument.callee.name)
-			) {
-				count += 1;
-			}
-			return undefined;
-		},
-	});
-
-	return count;
+// The inlined core timers keep their timer in two fields of the caller's task
+// instead of spawning a child task: `<base>Milliseconds` and `<base>Start`,
+// where `<base>` is `toChildFieldName(childName)` (so `sleep` uses
+// `childSleepMilliseconds` / `childSleepStart`).
+//
+// One pair per inlined timer of a task is enough because the awaits in a task
+// are SEQUENTIAL: each inline timer writes the duration and the start time,
+// jumps to a step that returns until it elapses, and only then continues with
+// the rest (including a second `await sleep` in the same expression). The two
+// timers are never active in the same step, so the second write happens after
+// the first wait is over. If concurrent awaits inside one task are ever added
+// (an `await all`), each concurrently pending timer will need its own pair;
+// today that case does not exist.
+const inlineTimerFields = (childName) => {
+	const base = toChildFieldName(childName);
+	return {
+		milliseconds: `${base}Milliseconds`,
+		start: `${base}Start`,
+	};
 };
 
-const inlineTimerFields = (state, childName) => {
-	const base = toChildFieldName(childName);
-	const suffix = state.inlineSiteCount > 1 ? `${state.inlineIndex}` : "";
-	return {
-		milliseconds: `${base}Milliseconds${suffix}`,
-		start: `${base}Start${suffix}`,
-	};
+const inlineTimerFieldExists = (state, name) => {
+	return state.inlineFields.some((field) => {
+		return field.name === name;
+	});
+};
+
+const registerInlineTimerFields = (state, fields) => {
+	for (const name of [fields.milliseconds, fields.start]) {
+		if (!inlineTimerFieldExists(state, name)) {
+			state.inlineFields.push({ name, type: "u32" });
+		}
+	}
 };
 
 const isZeroLiteral = (node) => {
@@ -103,10 +103,9 @@ const isZeroLiteral = (node) => {
 // A zero (or omitted, defaulting to zero) duration needs no timer: the await
 // becomes a plain yield, advancing to the next step and returning so the rest
 // runs on the next tick.
-const inlineDurationIsZero = (state, argument, childName) => {
-	const provided = argument.arguments?.[0];
-	if (provided) {
-		return isZeroLiteral(provided);
+const inlineDurationIsZero = (state, childName, duration) => {
+	if (duration) {
+		return isZeroLiteral(duration);
 	}
 	const params = state.asyncParams?.get(childName);
 	const defaultValue = params?.[0]?.defaultValue;
@@ -116,25 +115,24 @@ const inlineDurationIsZero = (state, argument, childName) => {
 // `await sleep(ms)` with the core timer inlined: store the duration and the
 // start time on the caller's task, then jump to a step that returns until it
 // elapses. No child task, no queue slot. A zero duration is lowered to a plain
-// yield (no timer fields, no clock reads).
-const lowerInlineTimer = (state, current, argument, childName) => {
-	if (inlineDurationIsZero(state, argument, childName)) {
+// yield (no timer fields, no clock reads). All the inline awaits of a task share
+// the same pair of fields, which is correct because they run sequentially.
+const lowerInlineTimer = (state, current, timerName, duration) => {
+	if (inlineDurationIsZero(state, timerName, duration)) {
 		const after = createStepBlock(state);
 		setJumpTerminator(current, after.id);
 		return after;
 	}
 
-	const { now, elapsed } = INLINE_ASYNC_TIMERS.get(childName) ?? {
+	const { now, elapsed } = INLINE_ASYNC_TIMERS.get(timerName) ?? {
 		now: "getMillis",
 		elapsed: "hasElapsed",
 	};
 
-	state.inlineIndex += 1;
-	const { milliseconds, start } = inlineTimerFields(state, childName);
-	state.inlineFields.push({ name: milliseconds, type: "u32" });
-	state.inlineFields.push({ name: start, type: "u32" });
+	const fields = inlineTimerFields(timerName);
+	registerInlineTimerFields(state, fields);
+	const { milliseconds, start } = fields;
 
-	const duration = argument.arguments?.[0];
 	current.lines.push(
 		`task.${milliseconds} = ${duration ? renderExpression(state, duration) : "0"}`,
 	);
@@ -149,6 +147,88 @@ const lowerInlineTimer = (state, current, argument, childName) => {
 	const after = createStepBlock(state);
 	setJumpTerminator(check, after.id);
 	return after;
+};
+
+// `await sleep(ms)` leaves no payload: the core timer reports progress through
+// the task state and its awaited value is `null`. Materialize that value as a
+// plain null literal, not a cast to `AsyncTask`: a declaration whose value is
+// never read drops the assignment, an argument accepts it through `T | null`,
+// and a condition stays falsy instead of turning the empty task handle truthy.
+const NULL_LITERAL_RAW = "null";
+
+const makeInlineAwaitValue = (loc) => {
+	return { type: AST_NODE.literal, value: null, raw: NULL_LITERAL_RAW, loc };
+};
+
+// Collects every await expression inside `node` in source order, so the
+// lowering can inline all the timers of an expression whose value is discarded.
+export const collectAwaitExpressions = (node, result = []) => {
+	if (!node || typeof node !== "object") {
+		return result;
+	}
+	if (node.type === AST_NODE.awaitExpression) {
+		result.push(node);
+		return result;
+	}
+	if (Array.isArray(node)) {
+		for (const item of node) {
+			collectAwaitExpressions(item, result);
+		}
+		return result;
+	}
+	for (const [property, value] of Object.entries(node)) {
+		if (property === "loc") {
+			continue;
+		}
+		collectAwaitExpressions(value, result);
+	}
+	return result;
+};
+
+// Resolves an await that can be inlined into the caller's task, returning the
+// canonical timer and the duration expression of the call site, or null. Two
+// shapes inline: a direct core timer (`await sleep(ms)`, with an import alias
+// resolving through the module's `inlineTimers` map) and a wrapper whose whole
+// body forwards its only parameter to one (`await wait(50)` where
+// `wait = async (ms) => { await sleep(ms) }`), resolved through `inlineWrappers`.
+// A wrapper call must pass exactly one argument; more than one cannot be
+// forwarded unchanged, so it keeps the child-task lowering.
+export const resolveInlineAwait = (state, awaitExpression) => {
+	const argument = awaitExpression?.argument;
+	const childName = resolveChildName(argument);
+	if (!childName) {
+		return null;
+	}
+	const timer = state.inlineTimers?.get(childName);
+	if (timer) {
+		return { timer, duration: argument.arguments?.[0] ?? null };
+	}
+	const wrapperTimer = state.inlineWrappers?.get(childName);
+	if (!wrapperTimer) {
+		return null;
+	}
+	const callArguments = argument.arguments ?? [];
+	if (callArguments.length !== 1) {
+		return null;
+	}
+	return { timer: wrapperTimer, duration: callArguments[0] };
+};
+
+// Inlines one timer await in place, returning the block that runs once the
+// duration elapsed plus the expression that stands in for the awaited value.
+export const lowerInlineAwaitNode = (
+	state,
+	current,
+	awaitExpression,
+	resolution,
+) => {
+	const after = lowerInlineTimer(
+		state,
+		current,
+		resolution.timer,
+		resolution.duration,
+	);
+	return { after, value: makeInlineAwaitValue(awaitExpression.loc) };
 };
 
 // Turns an awaited async call into a child task slot: create the child, then
@@ -174,6 +254,7 @@ const startChild = (state, current, argument, childName, markConsumed) => {
 		check.lines.push(
 			`${toChildStatusReference(fieldName)} = ${ASYNC_STATUS_CONSUMED}`,
 		);
+		check.lines.push(releaseChild(fieldName));
 	}
 
 	const after = createStepBlock(state);
@@ -184,21 +265,26 @@ const startChild = (state, current, argument, childName, markConsumed) => {
 // `await f()` as its own statement: wait for the child, the value is discarded.
 export const lowerAwaitStatement = (state, statement, current) => {
 	const argument = statement.expression.argument;
-	const childName = resolveChildName(argument);
+	const resolution = resolveInlineAwait(state, statement.expression);
+	if (resolution) {
+		return lowerInlineTimer(
+			state,
+			current,
+			resolution.timer,
+			resolution.duration,
+		);
+	}
 
+	const childName = resolveChildName(argument);
 	if (!childName || !state.asyncFunctionNames?.has(childName)) {
 		current.lines.push(renderExpression(state, argument));
 		return current;
 	}
 
-	if (state.inlineAsyncNames?.has(childName)) {
-		return lowerInlineTimer(state, current, argument, childName);
-	}
-
 	return startChild(state, current, argument, childName, true).after;
 };
 
-const findAwait = (node, parent = null, key = null) => {
+export const findAwaitExpression = (node, parent = null, key = null) => {
 	if (!node || typeof node !== "object") {
 		return null;
 	}
@@ -207,7 +293,7 @@ const findAwait = (node, parent = null, key = null) => {
 	}
 	if (Array.isArray(node)) {
 		for (let index = 0; index < node.length; index++) {
-			const found = findAwait(node[index], node, index);
+			const found = findAwaitExpression(node[index], node, index);
 			if (found) {
 				return found;
 			}
@@ -218,7 +304,7 @@ const findAwait = (node, parent = null, key = null) => {
 		if (property === "loc") {
 			continue;
 		}
-		const found = findAwait(value, node, property);
+		const found = findAwaitExpression(value, node, property);
 		if (found) {
 			return found;
 		}
@@ -268,9 +354,11 @@ const makeChildValueAccessor = (fieldName, taskTypeName, loc) => {
 // Lowers a statement whose await is not a bare statement (`x = await f()`,
 // `g(await f())`, ...). An async callee becomes a child task slot plus a status
 // check, and the await is replaced by the child's return value; an await on a
-// plain sync function is a no-op, so its `await` is simply dropped.
+// plain sync function is a no-op, so its `await` is simply dropped. The inline
+// timers take the same shortcut as a bare `await sleep(ms)`: no child task, the
+// timer state lives on the caller's task and the await becomes its null value.
 export const lowerExpressionAwait = (state, statement, current) => {
-	const found = findAwait(statement);
+	const found = findAwaitExpression(statement);
 	if (!found) {
 		current.lines.push(renderStatement(state, statement));
 		return current;
@@ -278,6 +366,18 @@ export const lowerExpressionAwait = (state, statement, current) => {
 
 	const argument = found.node.argument;
 	const childName = resolveChildName(argument);
+	const resolution = resolveInlineAwait(state, found.node);
+
+	if (resolution) {
+		const { after, value } = lowerInlineAwaitNode(
+			state,
+			current,
+			found.node,
+			resolution,
+		);
+		found.parent[found.key] = value;
+		return lowerExpressionAwait(state, statement, after);
+	}
 
 	if (!childName || !state.asyncFunctionNames?.has(childName)) {
 		found.parent[found.key] = argument;
@@ -303,5 +403,6 @@ export const lowerExpressionAwait = (state, statement, current) => {
 	end.lines.push(
 		`${toChildStatusReference(fieldName)} = ${ASYNC_STATUS_CONSUMED}`,
 	);
+	end.lines.push(releaseChild(fieldName));
 	return end;
 };

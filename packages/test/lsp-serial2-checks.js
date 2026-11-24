@@ -105,6 +105,15 @@ const SERIAL_TIMEOUT_TYPE_DIAGNOSTIC_SOURCE = [
 	"}",
 ].join("\n");
 
+const SERIAL_MEMBER_ARGUMENT_DIAGNOSTIC_SOURCE = [
+	"import { Serial, getSerial } from '@embedito95/serial'",
+	"const serial = getSerial(Serial.1)",
+	"export const badSend = () => {",
+	"    const p = { inner: { x: 1 }, age: 1 }",
+	"    serial.sendLine(p.inner)",
+	"}",
+].join("\n");
+
 const SERIAL_METHOD_HOVER_CASES = [
 	{
 		description: "readText returns string",
@@ -304,6 +313,24 @@ const checkSerialSetReadTimeoutTypeDiagnostics = () => {
 	);
 };
 
+// Same pipeline the editor uses: the member's field type is validated against
+// the method parameter, so the diagnostic lands on the argument in the source
+// instead of surfacing later in the lowered intermediate.
+const checkSerialMemberArgumentDiagnostics = () => {
+	const diagnostics = parseDiagnostics(
+		SERIAL_MEMBER_ARGUMENT_DIAGNOSTIC_SOURCE,
+	);
+	return expectEqual(
+		"LSP reports a method argument member type mismatch at the argument",
+		diagnostics
+			.map((diagnostic) => {
+				return diagnostic.split(" ").slice(0, 2).join(" ");
+			})
+			.join("\n"),
+		"5:21 error.argumentTypeMismatch",
+	);
+};
+
 export const runLspSerial2Checks = async () => {
 	return [
 		...(await checkSerialMethodHovers()),
@@ -314,6 +341,7 @@ export const runLspSerial2Checks = async () => {
 		checkSerialFindTextArityDiagnostics(),
 		checkSerialFindTextUntilTypeDiagnostics(),
 		checkSerialSetReadTimeoutTypeDiagnostics(),
+		checkSerialMemberArgumentDiagnostics(),
 	];
 };
 

@@ -8,33 +8,21 @@
 //   2. take the emitted translation unit (it only needs `core_system.h` and
 //      `core_type.h` for a serial-free program);
 //   3. satisfy those includes with host stand-ins (host/core_*.h) and point the
-//      real Array/Object headers (host-compilable) at the tester's core dir;
+//      real Array/Object headers (host-compilable) at the project's core dir;
 //   4. append a driver that counts net live `malloc`/`free` calls around the
 //      generated `setup()`; a nonzero delta means the codegen leaked.
 import { execFileSync } from "node:child_process";
-import {
-	cpSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	writeFileSync,
-} from "node:fs";
+import { cpSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	BUILD_DIRECTORY_NAME,
-	CONFIG_FILE,
 	CORE_LIBRARIES_DIRECTORY_NAME,
 	ENTRY_OPTION,
-	LIBRARIES_DIRECTORY_NAME,
 	UTF8,
 } from "embedito95-core";
-import {
-	BUILD_COMMAND,
-	GITIGNORE_CONTENT,
-	GITIGNORE_FILE,
-	NODE_EXECUTABLE,
-} from "../constants.js";
+import { BUILD_COMMAND, NODE_EXECUTABLE } from "../constants.js";
+import { createProject } from "../project-setup.js";
 import {
 	CLI_PATH,
 	COMPILER,
@@ -45,8 +33,7 @@ import {
 	runCompiledBinary,
 	runScenarioSuite,
 	TESTER_PLATFORM_NAME,
-	TESTERS_DIRECTORY,
-	withTemporaryDirectory,
+	withTemporaryDirectoryAsync,
 } from "../runner-harness.js";
 
 const MODULE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
@@ -88,12 +75,17 @@ extern "C" void free(void *p) {
 
 extern "C" void *realloc(void *p, size_t n) {
 	static auto real = (void *(*)(void *, size_t))dlsym(RTLD_NEXT, "realloc");
-	if (p) {
-		g_live--;
-	}
 	void *r = real(p, n);
+	// A successful realloc with a non-null pointer is a free of the old block
+	// plus an alloc of the new one, so the net live count is unchanged. A failed
+	// realloc leaves the original block live; realloc(p, 0) frees.
 	if (r) {
+		if (p) {
+			g_live--;
+		}
 		g_live++;
+	} else if (p && n == 0) {
+		g_live--;
 	}
 	return r;
 }
@@ -110,26 +102,16 @@ int main() {
 }
 `;
 
-const mkdirProject = (projectDirectory) => {
-	mkdirSync(projectDirectory, { recursive: true });
-	for (const child of [
-		CORE_LIBRARIES_DIRECTORY_NAME,
-		LIBRARIES_DIRECTORY_NAME,
-	]) {
-		cpSync(join(TESTERS_DIRECTORY, child), join(projectDirectory, child), {
-			recursive: true,
-		});
-	}
-	cpSync(
-		join(TESTERS_DIRECTORY, CONFIG_FILE),
-		join(projectDirectory, CONFIG_FILE),
-	);
-	writeFileSync(join(projectDirectory, GITIGNORE_FILE), GITIGNORE_CONTENT);
+// Copies the suite's provisioned template project (from tracked registry
+// sources) into the scenario directory, so the suite never reads the
+// gitignored `packages/test/testers/` tree.
+const createProjectDirectory = (templateDirectory, projectDirectory) => {
+	cpSync(templateDirectory, projectDirectory, { recursive: true });
 };
 
-const buildFixture = (temporaryDirectory, scenario) => {
+const buildFixture = ({ temporaryDirectory, templateDirectory }, scenario) => {
 	const projectDirectory = join(temporaryDirectory, PROJECT_DIRECTORY_NAME);
-	mkdirProject(projectDirectory);
+	createProjectDirectory(templateDirectory, projectDirectory);
 	writeFileSync(
 		join(projectDirectory, ENTRY_FILE_NAME),
 		readFileSync(join(MODULE_DIRECTORY, scenario), UTF8),
@@ -191,11 +173,9 @@ const buildCompileArguments = (projectDirectory, sourcePath, binary) => {
 	];
 };
 
-const runScenario = (temporaryDirectory, scenario) => {
-	const { projectDirectory, source } = buildFixture(
-		temporaryDirectory,
-		scenario,
-	);
+const runScenario = (context, scenario) => {
+	const { projectDirectory, source } = buildFixture(context, scenario);
+	const { temporaryDirectory } = context;
 	const binary = join(temporaryDirectory, `${scenario}.bin`);
 	const sourcePath = join(temporaryDirectory, `${scenario}${SOURCE_EXTENSION}`);
 	writeFileSync(sourcePath, hostTranslationUnit(source), UTF8);
@@ -209,13 +189,20 @@ const runScenario = (temporaryDirectory, scenario) => {
 	runCompiledBinary(binary, { stdio: "inherit" });
 };
 
-const main = () => {
-	const failures = withTemporaryDirectory(
+const main = async () => {
+	const failures = await withTemporaryDirectoryAsync(
 		TEMP_DIRECTORY_PREFIX,
-		(directory) => {
+		async (temporaryDirectory) => {
+			const templateDirectory = await createProject(
+				temporaryDirectory,
+				TESTER_PLATFORM_NAME,
+			);
 			return runScenarioSuite({
 				scenarios: listScenarios(MODULE_DIRECTORY),
-				runScenario: runScenario.bind(null, directory),
+				runScenario: runScenario.bind(null, {
+					temporaryDirectory,
+					templateDirectory,
+				}),
 				passSuffix: " (no leak)",
 			});
 		},
@@ -223,4 +210,7 @@ const main = () => {
 	process.exit(failures.length > 0 ? 1 : 0);
 };
 
-main();
+main().catch((error) => {
+	console.error(error);
+	process.exit(1);
+});

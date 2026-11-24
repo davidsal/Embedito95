@@ -1,4 +1,10 @@
-import { AST_NODE, DATA_TYPE, ERROR_CODE, SEVERITY } from "../constants.js";
+import {
+	AST_NODE,
+	DATA_TYPE,
+	ERROR_CODE,
+	FLOAT_TYPES,
+	SEVERITY,
+} from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { isAsyncTaskType } from "./async-task-type.js";
 import {
@@ -14,6 +20,7 @@ import { checkTernaryAgainstParam, checkTernaryExpression } from "./ternary.js";
 import {
 	CHARACTER_TYPES,
 	getNonNullableType,
+	INTEGER_TYPES,
 	isArbitraryUnionType,
 	isNullableType,
 	isNullLiteralNode,
@@ -35,6 +42,19 @@ const collectLocalBindingNames = (rangeScopes) => {
 	return names;
 };
 
+// `value as f32` is a legal, exact cast wherever it appears; the snag is
+// storing the resulting float value in an integer target, which is an implicit
+// float -> int conversion and therefore an error (not a truncation warning).
+// A plain float literal (`const x: i16 = 1.5`) is not an explicit float cast
+// and keeps its current truncating-literal behavior.
+const isExplicitFloatCast = (node) => {
+	const expression = unwrapParentheses(node);
+	return (
+		expression?.type === AST_NODE.asExpression &&
+		FLOAT_TYPES.has(expression.targetType?.name)
+	);
+};
+
 export const buildCheckContext = ({
 	ast,
 	errors,
@@ -49,6 +69,7 @@ export const buildCheckContext = ({
 	wordSize,
 	resolveCallType,
 	narrowingRegions,
+	allowNullObjectDefaults = false,
 }) => {
 	const rangeScopes = [new Map()];
 
@@ -136,6 +157,7 @@ export const buildCheckContext = ({
 					resolveVariableNameType,
 					wordSize,
 					localNames,
+					allowNullObjectDefaults,
 				),
 				...checkMethodOnlyObjectLiteral(
 					rhsNode,
@@ -237,6 +259,16 @@ export const buildCheckContext = ({
 			}
 		}
 
+		if (isExplicitFloatCast(rhsNode) && INTEGER_TYPES.has(nonNullTarget)) {
+			errors.push(
+				makeDiagnostic({
+					code: ERROR_CODE.explicitFloatInIntContext,
+					location,
+				}),
+			);
+			return;
+		}
+
 		if (
 			resolveAssignmentTruncation(
 				rhsNode,
@@ -324,6 +356,20 @@ export const buildCheckContext = ({
 
 	const resolveMethodArgumentType = (node) => {
 		if (node?.type === AST_NODE.arrayLiteral) {
+			return resolveExpressionType(
+				resolveVariableTypeAt,
+				node,
+				undefined,
+				resolveCallType,
+				wordSize,
+				objectTypes,
+				ast,
+			);
+		}
+		if (node?.type === AST_NODE.awaitExpression) {
+			// `await AsyncTask<T>` yields `T`; the expression resolver already
+			// unwraps the task payload, so the method argument path delegates to
+			// it instead of duplicating the unwrapping.
 			return resolveExpressionType(
 				resolveVariableTypeAt,
 				node,

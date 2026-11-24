@@ -1,8 +1,9 @@
-import { AST_NODE, ERROR_CODE, SEVERITY } from "../constants.js";
+import { AST_NODE, ERROR_CODE, FLOAT_TYPES, SEVERITY } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { checkAllowedArgumentValue } from "./allowed-values.js";
 import { parseArrayElementType, parseArrayType } from "./arrays.js";
 import { identifierMatchesType, literalMatchesType } from "./narrowing.js";
+import { resolveObjectFieldType } from "./object-shapes.js";
 import { inferLiteralType, resolveLiteralDataType } from "./type-resolution.js";
 import {
 	getNonNullableType,
@@ -131,6 +132,9 @@ export const describeExpression = (node) => {
 	if (node.type === AST_NODE.callExpression) {
 		return `${describeExpression(node.callee) ?? "call"}(...)`;
 	}
+	if (node.type === AST_NODE.awaitExpression) {
+		return `await ${describeExpression(node.argument) ?? ""}`;
+	}
 	return null;
 };
 
@@ -162,6 +166,107 @@ const literalMatchesMethodParam = (argument, type, libEnumTypeNames) => {
 		return false;
 	}
 	return literalMatchesType(argument, type);
+};
+
+// A member argument carries the type of the field it reads, not the type of the
+// receiver. The field is resolved from the receiver's type, which supports both
+// nominal objects and `AsyncTask<T>.value` payloads; a receiver the resolver
+// cannot type leaves the field type unknown so the caller skips diagnostics.
+const resolveMemberFieldType = (
+	argument,
+	resolveVariableTypeAt,
+	resolveExpressionType,
+	objectTypes,
+) => {
+	const propertyName = argument.property?.name;
+	if (!propertyName) {
+		return null;
+	}
+	const objectType =
+		argument.object?.type === AST_NODE.identifier
+			? (resolveVariableTypeAt?.(argument.object.name, argument.object.loc) ??
+				null)
+			: (resolveExpressionType?.(argument.object) ?? null);
+	if (!objectType) {
+		return null;
+	}
+	return resolveObjectFieldType(objectType, propertyName, objectTypes);
+};
+
+const pushResolvedArgumentMismatch = (
+	errors,
+	argument,
+	param,
+	argumentType,
+	severity,
+) => {
+	errors.push(
+		makeDiagnostic({
+			code: ERROR_CODE.argumentTypeMismatch,
+			params: {
+				name: param.name,
+				expected: param.type,
+				actual: argumentType,
+				value: describeExpression(argument),
+			},
+			location: argument.loc,
+			severity,
+		}),
+	);
+};
+
+// Widening an integer into a wider integer parameter is allowed; narrowing only
+// warns. Mirrors the identifier branch and `checkMemberNumericArgument`.
+const resolveResolvedArgumentSeverity = (argumentType, hasNumericMember) => {
+	if (hasNumericMember && INTEGER_TYPES.has(getNonNullableType(argumentType))) {
+		return SEVERITY.warning;
+	}
+	return SEVERITY.error;
+};
+
+// Validates an already-resolved argument type (member or `await` expression)
+// against the parameter using the same union matching as identifiers. A float
+// flowing into a numeric parameter truncates without an error, like the member
+// numeric path.
+const checkResolvedFieldArgument = (
+	argument,
+	param,
+	errors,
+	argumentType,
+	memberTypes,
+	hasNumericMember,
+) => {
+	if (isNullableType(argumentType) && !isNullableType(param.type)) {
+		pushResolvedArgumentMismatch(
+			errors,
+			argument,
+			param,
+			argumentType,
+			SEVERITY.error,
+		);
+		return;
+	}
+
+	const accepted = memberTypes.some((type) => {
+		return identifierMatchesType(argumentType, type);
+	});
+	if (accepted) {
+		return;
+	}
+
+	if (hasNumericMember && FLOAT_TYPES.has(getNonNullableType(argumentType))) {
+		// A float field passed to an integer parameter is truncated, not
+		// rejected; the hover warning covers the implicit conversion.
+		return;
+	}
+
+	pushResolvedArgumentMismatch(
+		errors,
+		argument,
+		param,
+		argumentType,
+		resolveResolvedArgumentSeverity(argumentType, hasNumericMember),
+	);
 };
 
 const isOutsideParameterRange = (value, param) => {
@@ -198,6 +303,7 @@ export const checkMethodArgument = (
 	libEnumMembersByType,
 	libEnumTypeNames,
 	resolveExpressionType = null,
+	objectTypes = null,
 ) => {
 	checkAllowedArgumentValue(errors, argument, param);
 	if (!param?.type) {
@@ -289,25 +395,61 @@ export const checkMethodArgument = (
 		const objectName = argument.object?.name;
 		const propertyName = argument.property?.name;
 
-		if (
-			objectName &&
-			propertyName &&
-			libEnumTypeNames.has(param.type) &&
-			!libEnumMembersByType[param.type]?.has(propertyName)
-		) {
-			errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.argumentTypeMismatch,
-					params: {
-						name: param.name,
-						expected: param.type,
-						actual: `${objectName}.${propertyName}`,
-						value: `${objectName}.${propertyName}`,
-					},
-					location: argument.loc,
-				}),
-			);
+		if (libEnumTypeNames.has(param.type)) {
+			if (
+				objectName &&
+				propertyName &&
+				!libEnumMembersByType[param.type]?.has(propertyName)
+			) {
+				errors.push(
+					makeDiagnostic({
+						code: ERROR_CODE.argumentTypeMismatch,
+						params: {
+							name: param.name,
+							expected: param.type,
+							actual: `${objectName}.${propertyName}`,
+							value: `${objectName}.${propertyName}`,
+						},
+						location: argument.loc,
+					}),
+				);
+			}
+			return;
 		}
+
+		const fieldType = resolveMemberFieldType(
+			argument,
+			resolveVariableTypeAt,
+			resolveExpressionType,
+			objectTypes,
+		);
+		if (!fieldType) {
+			return;
+		}
+		checkResolvedFieldArgument(
+			argument,
+			param,
+			errors,
+			fieldType,
+			memberTypes,
+			hasNumericMember,
+		);
+		return;
+	}
+
+	if (argument.type === AST_NODE.awaitExpression) {
+		const argumentType = resolveExpressionType?.(argument) ?? null;
+		if (!argumentType) {
+			return;
+		}
+		checkResolvedFieldArgument(
+			argument,
+			param,
+			errors,
+			argumentType,
+			memberTypes,
+			hasNumericMember,
+		);
 		return;
 	}
 

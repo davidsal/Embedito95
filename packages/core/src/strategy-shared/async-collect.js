@@ -1,9 +1,15 @@
-import { check, collectReferencedNames } from "../checker/index.js";
+import {
+	check,
+	collectReferencedNames,
+	getImportEffectiveName,
+} from "../checker/index.js";
 import { AST_NODE } from "../constants.js";
 import { tokenize } from "../lexer/index.js";
 import { parse } from "../parser/index.js";
 import { rebaseLines } from "./async-ast-utils.js";
 import {
+	INLINE_ASYNC_FUNCTION_NAMES,
+	INLINE_ASYNC_MODULE_SOURCE,
 	SYNTHESIZED_STRIDE,
 	toAsyncTypeName,
 	toHandlerFunctionName,
@@ -47,6 +53,103 @@ export const collectImportedNames = (ast) => {
 	}
 
 	return names;
+};
+
+// Resolves, per module, which local timer name refers to a core timer. Only
+// imports from `@embedito95/async` whose ORIGINAL name is a known core timer
+// contribute; the map key is the local name (the alias, or the name itself) and
+// the value is the canonical timer name. A local async declaration of the same
+// module always wins: it shadows the import and is never inlined.
+export const collectInlineTimers = (ast, localAsyncNames = new Set()) => {
+	const inlineTimers = new Map();
+
+	for (const statement of ast.body) {
+		if (statement.type !== AST_NODE.importDeclaration) {
+			continue;
+		}
+		if (statement.source !== INLINE_ASYNC_MODULE_SOURCE) {
+			continue;
+		}
+		for (const specifier of statement.specifiers ?? []) {
+			if (!INLINE_ASYNC_FUNCTION_NAMES.has(specifier.name)) {
+				continue;
+			}
+			const localName = getImportEffectiveName(specifier);
+			if (localAsyncNames.has(localName)) {
+				continue;
+			}
+			inlineTimers.set(localName, specifier.name);
+		}
+	}
+
+	return inlineTimers;
+};
+
+const resolveForwardedTimer = (functionNode, inlineTimers) => {
+	const body = functionNode.body?.body;
+	if (!Array.isArray(body) || body.length !== 1) {
+		return null;
+	}
+	const statement = body[0];
+	if (statement.type !== AST_NODE.expressionStatement) {
+		return null;
+	}
+	const expression = statement.expression;
+	if (expression?.type !== AST_NODE.awaitExpression) {
+		return null;
+	}
+	const call = expression.argument;
+	if (
+		call?.type !== AST_NODE.callExpression ||
+		call.callee?.type !== AST_NODE.identifier
+	) {
+		return null;
+	}
+	const timer = inlineTimers.get(call.callee.name);
+	if (!timer) {
+		return null;
+	}
+	const params = functionNode.params ?? [];
+	if (params.length !== 1 || params[0].defaultValue) {
+		return null;
+	}
+	const parameterName = params[0].name;
+	const args = call.arguments ?? [];
+	if (args.length !== 1) {
+		return null;
+	}
+	const forwarded = args[0];
+	if (
+		forwarded.type !== AST_NODE.identifier ||
+		forwarded.name !== parameterName
+	) {
+		return null;
+	}
+	return timer;
+};
+
+// Wrappers whose whole body is a single `await sleep(param)` /
+// `await sleepMicros(param)` that forwards its only parameter. A call to one of
+// them is inlined into the caller's task exactly like a direct timer await, so
+// no child task is spawned for the wrapper. Any other shape (more statements, a
+// transformed or defaulted parameter, a local `sleep` that is not the core
+// timer) keeps the regular child-task lowering.
+export const collectInlineWrappers = (ast, inlineTimers) => {
+	const wrappers = new Map();
+
+	for (const declaration of collectAsyncDeclarations(ast, "")) {
+		// A declaration named like the core timer is a user shadow, never a
+		// wrapper of it.
+		if (INLINE_ASYNC_FUNCTION_NAMES.has(declaration.name)) {
+			continue;
+		}
+		const timer = resolveForwardedTimer(declaration.init, inlineTimers);
+		if (timer) {
+			wrappers.set(declaration.name, timer);
+		}
+	}
+
+	return wrappers;
 };
 
 // A library lives in its own project, so it gets its own checker run: the
@@ -230,7 +333,8 @@ const desugarLibraryDeclarations = (
 	startIndex,
 	functionReturnTypes,
 	asyncFunctionNames,
-	inlineAsyncNames,
+	inlineTimers,
+	inlineWrappers,
 	asyncParams,
 	variableTypes,
 ) => {
@@ -248,9 +352,11 @@ const desugarLibraryDeclarations = (
 			library.source,
 			functionReturnTypes,
 			asyncFunctionNames,
-			inlineAsyncNames,
+			inlineTimers,
+			inlineWrappers,
 			asyncParams,
 			variableTypes,
+			functionReturnTypes?.[declaration.name] ?? null,
 		);
 
 		if (!desugared.statement) {
@@ -280,7 +386,6 @@ export const collectLibraryAsync = (
 	imported,
 	functionReturnTypes,
 	asyncFunctionNames,
-	inlineAsyncNames,
 	asyncParams,
 ) => {
 	const handles = [];
@@ -294,6 +399,20 @@ export const collectLibraryAsync = (
 			continue;
 		}
 
+		const libraryDeclarations = collectAsyncDeclarations(
+			library.ast,
+			library.source,
+		);
+		const inlineTimers = collectInlineTimers(
+			library.ast,
+			new Set(
+				libraryDeclarations.map((declaration) => {
+					return declaration.name;
+				}),
+			),
+		);
+		const inlineWrappers = collectInlineWrappers(library.ast, inlineTimers);
+
 		importNodes.push(...collectLibraryImportNodes(library, declarations));
 		const libraryHandles = desugarLibraryDeclarations(
 			library,
@@ -302,7 +421,8 @@ export const collectLibraryAsync = (
 			index,
 			functionReturnTypes,
 			asyncFunctionNames,
-			inlineAsyncNames,
+			inlineTimers,
+			inlineWrappers,
 			asyncParams,
 			library.variableTypes,
 		);

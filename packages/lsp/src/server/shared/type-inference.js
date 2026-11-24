@@ -53,6 +53,19 @@ export const collectProjectObjectTypes = (syntaxTree, allExports) => {
 	};
 };
 
+// Resolves an imported name to its library function export, reapplying the
+// local import alias to match the export's original name. Hover needs the whole
+// export (parameters included) when a function is bound as a value, not only its
+// return type.
+export const findLibraryFunctionExport = (name, allExports, importAliases) => {
+	const originalName = importAliases?.get(name) ?? name;
+	return (
+		allExports?.find((exportItem) => {
+			return exportItem.name === originalName && exportItem.kind === "function";
+		}) ?? null
+	);
+};
+
 // Resolves the concrete signature a library call selects. Hover uses it to show
 // the width the checker picked, so the editor never reimplements the overload
 // rule.
@@ -63,10 +76,11 @@ export const resolveLibraryCallSignature = (
 	argumentTypes = [],
 	wordSize = 0,
 ) => {
-	const originalName = importAliases?.get(name) ?? name;
-	const libraryFunction = allExports.find((exportItem) => {
-		return exportItem.name === originalName && exportItem.kind === "function";
-	});
+	const libraryFunction = findLibraryFunctionExport(
+		name,
+		allExports,
+		importAliases,
+	);
 
 	if (!libraryFunction) {
 		return null;

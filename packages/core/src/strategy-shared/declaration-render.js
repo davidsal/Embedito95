@@ -7,6 +7,7 @@ import {
 	parseArrayType,
 	resolveVariableType,
 } from "../checker/index.js";
+import { resolveObjectFieldType } from "../checker/object-shapes.js";
 import { evaluateConstant } from "../const-eval.js";
 import {
 	AST_NODE,
@@ -15,7 +16,7 @@ import {
 	UNRESOLVED_TYPE,
 } from "../constants.js";
 import { isFloatType } from "./c-types.js";
-import { storageCast } from "./cast.js";
+import { isFloatToIntegerCast, storageCast } from "./cast.js";
 import {
 	renderArrayDeclaration,
 	resolveArrayElementType,
@@ -313,10 +314,18 @@ export const renderAssignmentExpression = (node, context, lines) => {
 					node.left.property?.name
 				]?.type ?? null)
 			: null;
+	const memberFieldType =
+		node.left?.type === AST_NODE.memberExpression && !thisFieldType
+			? resolveObjectFieldType(
+					resolveMemberReceiverType(node.left.object, context),
+					node.left.property?.name,
+					context.objectTypes,
+				)
+			: null;
 	const targetName = leftIsIdentifier ? node.left?.name : null;
 	const targetType = targetName
 		? (context.resolveNameType(targetName) ?? null)
-		: thisFieldType;
+		: (thisFieldType ?? memberFieldType);
 	context.floatContext = isFloatType(targetType) ? targetType : null;
 	const isLiteral = node.right?.type === AST_NODE.literal;
 	const rhsType = expressionDataType(
@@ -351,16 +360,19 @@ export const renderAssignmentExpression = (node, context, lines) => {
 		handleTargetType
 			? `${context.toCType(handleTargetType)}(${context.objectStorageCType(handleTargetType)}${rendered})`
 			: null;
-	const stored =
-		isLiteral || objectLiteralInit
-			? (objectLiteralInit ?? rendered)
-			: storageCast(
-					rendered,
-					targetType,
-					rhsType,
-					context.wordCType,
-					context.toCType,
-				);
+	const floatTruncation = isFloatToIntegerCast(rhsType, targetType);
+	const skipStorageCast =
+		Boolean(objectLiteralInit) ||
+		((isLiteral || Boolean(memberFieldType)) && !floatTruncation);
+	const stored = skipStorageCast
+		? (objectLiteralInit ?? rendered)
+		: storageCast(
+				rendered,
+				targetType,
+				rhsType,
+				context.wordCType,
+				context.toCType,
+			);
 	const nullableStored = renderNullableAssignmentValue(
 		node,
 		stored,

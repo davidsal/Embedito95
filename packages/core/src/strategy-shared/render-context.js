@@ -2,11 +2,12 @@ import {
 	getNonNullableType,
 	isNullableType,
 	isObjectShapeType,
+	NULL_TYPE,
 	parseArrayType,
 } from "../checker/index.js";
 import { ENUM_C_TYPE_PREFIX, OBJECT_TYPE } from "../constants.js";
 import { resolveAnonymousObjectTypeName } from "./anonymous-type-names.js";
-import { dataTypeToCType, optionalName } from "./c-types.js";
+import { dataTypeToCType, NULL_ONLY_C_TYPE, optionalName } from "./c-types.js";
 import { hasDataFields } from "./object-info.js";
 
 const wrapObjectHandle = (isObjectHandleKey, key, valueCType) => {
@@ -32,6 +33,7 @@ const resolveObjectStorageCType = (
 			type,
 			anonymousObjectTypes,
 			currentFunctionName,
+			userTypeNames,
 		);
 	}
 	const namespace = importNamespaces?.get(type);
@@ -122,6 +124,11 @@ export const makeRenderContext = ({
 		if (type === OBJECT_TYPE) {
 			return OBJECT_POINTER_C_TYPE;
 		}
+		// `null` is nullable but has no non-null member: stripping its nulls
+		// would recurse forever. Use the same representation as a null literal.
+		if (type === NULL_TYPE) {
+			return NULL_ONLY_C_TYPE;
+		}
 		if (isNullableType(type)) {
 			const nonNullType = getNonNullableType(type);
 			return optionalName(resolveCType(nonNullType));
@@ -134,6 +141,7 @@ export const makeRenderContext = ({
 					type,
 					anonymousObjectTypes,
 					currentFunctionName,
+					userTypeNames,
 				),
 			);
 		}

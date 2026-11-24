@@ -1,0 +1,11 @@
+# The keeper stays alive across several 5-pass compactions while the bursts
+# complete and are dropped. All events must still be delivered exactly once.
+digital 7 1
+analog 4 2
+analog 6 4
+analog 3 1
+analog 5 3
+analog 11 6
+analog 9 5
+digital 7 0
+digital 7 1

@@ -7,7 +7,6 @@ import {
 	DEFAULT_LOCAL_TYPE,
 	TASK_STATE_VALUE_KEY,
 } from "./async-constants.js";
-import { countInlineAwaitSites } from "./async-lower-await.js";
 import { lowerSequence } from "./async-lower-statements.js";
 import {
 	buildStepFunctionSource,
@@ -15,6 +14,7 @@ import {
 	createStepBlock,
 } from "./async-step-machine.js";
 import {
+	collectOnlyAssignedTaskLocals,
 	collectTaskParams,
 	hoistTaskLocals,
 	rewriteReferences,
@@ -51,6 +51,17 @@ const addReturnValueField = (fields, returnType) => {
 	});
 };
 
+// The function node only carries an EXPLICIT `: Type` annotation. An async
+// helper with an inferred anonymous object return has no annotation, so the
+// payload must come from the project's resolved return types instead of
+// falling back to the scalar default.
+const resolveFunctionReturnType = (functionNode, resolvedReturnType) => {
+	if (functionNode.returnType?.name) {
+		return functionNode.returnType;
+	}
+	return resolvedReturnType ? { name: resolvedReturnType } : null;
+};
+
 export const desugarAsyncFunction = (
 	name,
 	typeName,
@@ -58,15 +69,26 @@ export const desugarAsyncFunction = (
 	source,
 	functionReturnTypes,
 	asyncFunctionNames = new Set(),
-	inlineAsyncNames = new Set(),
+	inlineTimers = new Map(),
+	inlineWrappers = new Map(),
 	asyncParams = new Map(),
 	variableTypes = null,
+	resolvedReturnType = null,
 ) => {
 	const params = collectTaskParams(functionNode);
-	const fields = hoistTaskLocals(
+	const hoistedFields = hoistTaskLocals(
 		functionNode,
 		functionReturnTypes,
 		variableTypes,
+	);
+	const hoistedNames = new Set(
+		hoistedFields.map((field) => {
+			return field.name;
+		}),
+	);
+	const onlyAssignedLocals = collectOnlyAssignedTaskLocals(
+		functionNode,
+		hoistedNames,
 	);
 
 	if (params.length > 0) {
@@ -85,10 +107,11 @@ export const desugarAsyncFunction = (
 		blocks: [],
 		childNames: [],
 		asyncFunctionNames,
-		inlineAsyncNames,
+		inlineTimers,
+		inlineWrappers,
 		asyncParams,
-		inlineSiteCount: countInlineAwaitSites(functionNode.body, inlineAsyncNames),
-		inlineIndex: 0,
+		unusedAssignmentCounts: onlyAssignedLocals,
+		droppedFieldNames: new Set(),
 		inlineFields: [],
 	};
 	const entry = createStepBlock(state);
@@ -98,8 +121,15 @@ export const desugarAsyncFunction = (
 		exit.lines.push(COMPLETE_RETURN);
 	}
 
+	const fields = hoistedFields.filter((field) => {
+		return !state.droppedFieldNames.has(field.name);
+	});
+
 	if (state.hasReturnValue) {
-		addReturnValueField(fields, functionNode.returnType);
+		addReturnValueField(
+			fields,
+			resolveFunctionReturnType(functionNode, resolvedReturnType),
+		);
 	}
 
 	fields.push(...state.inlineFields);

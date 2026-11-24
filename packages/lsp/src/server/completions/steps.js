@@ -2,7 +2,9 @@ import {
 	ARRAY_METHODS,
 	AST_NODE,
 	DATA_TYPE,
+	decodeObjectShape,
 	isAsyncTaskType,
+	isObjectShapeType,
 	parseArrayType,
 	resolveArrayMethod,
 	resolveReceiverType,
@@ -22,6 +24,12 @@ import {
 } from "./type-completions.js";
 
 export const NOT_HANDLED = Symbol("notHandled");
+
+// A trailing dot (optionally followed by a partial member name) is always a
+// member access or the start of a float literal. When no receiver step resolves
+// members for it, the statement-level fallback would only offer keywords and
+// declarations that cannot appear after a dot, so the completion must be empty.
+const TRAILING_DOT_PATTERN = /(?:^|[^.])\.[a-zA-Z0-9_$]*$/;
 
 const METHOD_COMPLETION_KIND = 3;
 const FIELD_COMPLETION_KIND = 6;
@@ -285,8 +293,22 @@ const buildAsyncTaskValueCompletionItems = (typeName, prefix) => {
 	];
 };
 
+// A receiver type can be a NAMED object (`objectTypes[name]`) or an ANONYMOUS
+// shape (`object:{field:type;…}`) produced by an inferred return. Both expose
+// the same field surface, so the anonymous shape is decoded with the same
+// parser hover uses and wrapped as a type info for `getObjectTypeMembers`.
+const resolveObjectTypeInfo = (typeName, objectTypes) => {
+	if (isObjectShapeType(typeName)) {
+		return { fields: decodeObjectShape(typeName) ?? {} };
+	}
+
+	return objectTypes?.[typeName];
+};
+
 const buildObjectMemberCompletionItems = (typeName, prefix, objectTypes) => {
-	const members = getObjectTypeMembers(objectTypes?.[typeName]);
+	const members = getObjectTypeMembers(
+		resolveObjectTypeInfo(typeName, objectTypes),
+	);
 
 	if (members.length === 0) {
 		return null;
@@ -417,6 +439,10 @@ export const resolveDotMemberCompletions = (context) => {
 	}
 
 	return resolveReceiverCompletionItems(context, "");
+};
+
+export const isUnresolvedDotContext = (context) => {
+	return TRAILING_DOT_PATTERN.test(context.beforeCursor.trimEnd());
 };
 
 export const resolveDotPartialCompletions = (context) => {

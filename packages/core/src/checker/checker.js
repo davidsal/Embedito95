@@ -33,6 +33,7 @@ import { resolveDefinitionReturnType } from "./overloads.js";
 import {
 	checkAsyncBuiltinCalls,
 	checkAwaitUsage,
+	checkCallExpressionTargets,
 	checkSwitchStatements,
 	checkUnreachableCode,
 } from "./passes.js";
@@ -47,6 +48,7 @@ import {
 	collectObjectMethodReturnTypes,
 	resolveProjectTypes,
 } from "./return-projects.js";
+import { checkTemplateLiteralExpressions } from "./template-literal-checks.js";
 import { checkTypeArguments } from "./type-arguments.js";
 import { resolveWordDataType } from "./type-resolution.js";
 import { checkTypeUnions } from "./union-checks.js";
@@ -103,13 +105,14 @@ export const check = (ast, libs = {}) => {
 	const objectTypes = flattenLibraryObjectTypes(libraryObjectTypes);
 	const objectTypeNames = new Set(Object.keys(objectTypes));
 
-	const { variableTypes, resolveCallType } = resolveProjectTypes(
-		ast,
-		wordType,
-		resolveLibraryCallType,
-		wordSize,
-		objectTypes,
-	);
+	const { variableTypes, userFunctionReturnTypes, resolveCallType } =
+		resolveProjectTypes(
+			ast,
+			wordType,
+			resolveLibraryCallType,
+			wordSize,
+			objectTypes,
+		);
 	const narrowingRegions = collectNullNarrowing(ast);
 
 	const defined = new Map();
@@ -241,6 +244,7 @@ export const check = (ast, libs = {}) => {
 		wordSize,
 		resolveCallType,
 		narrowingRegions,
+		allowNullObjectDefaults: !isEntry,
 	});
 	state.context = context;
 	state.targetTypeStack = [];
@@ -265,6 +269,8 @@ export const check = (ast, libs = {}) => {
 	checkTypeUnions(state);
 
 	checkMemberAccess(state);
+	checkCallExpressionTargets(state);
+	checkTemplateLiteralExpressions(state);
 	checkAwaitUsage(state);
 	checkAsyncBuiltinCalls(state);
 	checkUnreachableCode(ast, errors, libs.source);
@@ -283,5 +289,5 @@ export const check = (ast, libs = {}) => {
 
 	errors.sort(compareErrorsByPosition);
 
-	return { ast, errors, exported, variableTypes };
+	return { ast, errors, exported, variableTypes, userFunctionReturnTypes };
 };

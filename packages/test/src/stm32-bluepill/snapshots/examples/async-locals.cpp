@@ -127,6 +127,7 @@ void _animateAsyncHandler(core_object::Object<mod_async_task::_AsyncTaskItem> it
 		case 5:
 			task->awaited = ((_ReadStepAsyncTask*)(task->childReadStep.value->task.value.pointer()))->value;
 			task->childReadStep.value->status = mod_async_task::_AsyncTaskStatus::CONSUMED;
+			task->childReadStep = nullable<core_object::Object<mod_async_task::_AsyncTaskItem>>{ true, core_object::Object<mod_async_task::_AsyncTaskItem>::null() };
 			task->value = (((task->value + task->step) + task->sum) + (i32)(task->transferred)) + (i32)(task->awaited);
 			task->annotated = (i32)(task->annotated) + (i32)(1);
 			task->childSleepMilliseconds = 2;

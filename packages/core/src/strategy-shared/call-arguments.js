@@ -5,8 +5,10 @@ import {
 	resolveOverloadSignature,
 	TYPE_RANGES,
 } from "../checker/index.js";
+import { INTEGER_TYPES } from "../checker/types.js";
 import { AST_NODE, DATA_TYPE, FLOAT_TYPES } from "../constants.js";
 import { isFloatType } from "./c-types.js";
+import { isFloatToIntegerCast } from "./cast.js";
 import { renderExpression } from "./expression.js";
 import {
 	expressionDataType,
@@ -105,6 +107,34 @@ const integerLiteralFitsParameter = (argument, paramType) => {
 	);
 };
 
+// An integer narrowing converts implicitly in C++ and stays visible in the
+// generated call without an explicit cast; the e95 parameter type may be
+// narrower than the native implementation the platform ships, so casting to it
+// would truncate before the ABI. Widening and sign-changing conversions keep
+// their visible cast.
+const isUnsignedInteger = (type) => {
+	const range = TYPE_RANGES[type];
+	return Boolean(range) && range.min >= 0;
+};
+
+const isIntegerNarrowing = (argumentType, paramType) => {
+	if (!INTEGER_TYPES.has(argumentType) || !INTEGER_TYPES.has(paramType)) {
+		return false;
+	}
+	const argumentRange = TYPE_RANGES[argumentType];
+	const parameterRange = TYPE_RANGES[paramType];
+	if (!argumentRange || !parameterRange) {
+		return false;
+	}
+	if (isUnsignedInteger(argumentType) !== isUnsignedInteger(paramType)) {
+		return false;
+	}
+	return (
+		parameterRange.max - parameterRange.min <
+		argumentRange.max - argumentRange.min
+	);
+};
+
 // Decides whether the emitted argument needs an explicit cast. Same type needs
 // none; an integer literal that already fits an integer parameter gets none,
 // but an integer literal into a float parameter always does, because C++ would
@@ -155,6 +185,9 @@ const needsArgumentCast = (
 	) {
 		return true;
 	}
+	if (isIntegerNarrowing(argumentType, paramType)) {
+		return false;
+	}
 	return !rangeFitsWithin(TYPE_RANGES[argumentType], TYPE_RANGES[paramType]);
 };
 
@@ -166,10 +199,16 @@ const castArgument = (
 	wideIntegerCast,
 	context,
 ) => {
+	const argumentType = resolveArgumentType(argument, context);
+	// A float flowing into an integer parameter is a truncation the generated
+	// C++ makes visible on every call, library or local, independently of the
+	// signature-driven casts.
+	if (isFloatToIntegerCast(argumentType, paramType)) {
+		return `(${context.toCType(getNonNullableType(paramType))})(${rendered})`;
+	}
 	if (!castArguments) {
 		return rendered;
 	}
-	const argumentType = resolveArgumentType(argument, context);
 	if (!needsArgumentCast(argument, argumentType, paramType, wideIntegerCast)) {
 		return rendered;
 	}

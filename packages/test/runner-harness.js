@@ -60,6 +60,17 @@ export const withTemporaryDirectory = (prefix, callback) => {
 	}
 };
 
+// Async variant for suites that provision their project template with the async
+// `createProject` helper before running the (synchronous) scenarios.
+export const withTemporaryDirectoryAsync = async (prefix, callback) => {
+	const directory = mkdtempSync(join(tmpdir(), prefix));
+	try {
+		return await callback(directory);
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
+};
+
 // Runs every scenario, printing PASS/FAIL per label and returning the failed
 // labels so the caller can exit with the right status after cleaning up.
 export const runScenarioSuite = ({

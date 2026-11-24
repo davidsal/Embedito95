@@ -38,6 +38,131 @@ export const expressionHasEffect = (node) => {
 	}
 };
 
+// A callable type is expressed as an arrow signature (`(value: i16) => void`).
+// The checker never builds a function value type of its own, so the arrow is the
+// only marker needed here; primitives, shapes, enums and `AsyncTask<T>` lack it.
+const FUNCTION_TYPE_ARROW = "=>";
+
+const unwrapInitializer = (node) => {
+	let current = node;
+	while (current?.type === AST_NODE.parenthesizedExpression) {
+		current = current.expression;
+	}
+	return current ?? null;
+};
+
+// Declarations live in two places: module-level ones in `globalDeclarationRecords`
+// (built from `state.defined`) and block/function locals in `localDeclarations`.
+const findDeclarationRecord = (state, name) => {
+	const globalRecord = state.globalDeclarationRecords?.get(name);
+	if (globalRecord) {
+		return globalRecord;
+	}
+	const localDeclarations = state.localDeclarations ?? [];
+	for (let index = localDeclarations.length - 1; index >= 0; index--) {
+		const record = localDeclarations[index];
+		if (record.name === name && record.declaration) {
+			return record;
+		}
+	}
+	return null;
+};
+
+const isKnownFunctionName = (state, name) => {
+	const resolvedName = state.resolveImportedName(name);
+	if (state.functionDefinitions[resolvedName]) {
+		return true;
+	}
+	const record = findDeclarationRecord(state, name);
+	return (
+		unwrapInitializer(record?.declaration?.init)?.type ===
+		AST_NODE.functionExpression
+	);
+};
+
+// `const f = getPersona; f()` has no plain function type, so it would otherwise
+// look unresolved. Detecting that the initializer is a known function makes the
+// unsupported "call through a variable" case explicit instead of silent.
+const resolveFunctionReferenceName = (state, calleeName) => {
+	const record = findDeclarationRecord(state, calleeName);
+	const initializer = unwrapInitializer(record?.declaration?.init);
+	if (initializer?.type !== AST_NODE.identifier) {
+		return null;
+	}
+	return isKnownFunctionName(state, initializer.name) ? initializer.name : null;
+};
+
+const resolveCallTargetType = (state, name, resolvedName, callee) => {
+	const variableType = state.variableTypes.resolve(name, callee.loc);
+	if (variableType && variableType !== UNRESOLVED_TYPE) {
+		return variableType;
+	}
+	const libraryType = state.libNameToType?.[resolvedName];
+	return libraryType ?? null;
+};
+
+const pushCallTargetDiagnostic = (state, node, name, type) => {
+	if (isAsyncTaskType(type)) {
+		state.errors.push(
+			makeDiagnostic({
+				code: ERROR_CODE.asyncTaskCall,
+				params: { name, type },
+				location: node.callee.loc,
+			}),
+		);
+		return;
+	}
+	state.errors.push(
+		makeDiagnostic({
+			code: ERROR_CODE.callTargetNotCallable,
+			params: { name, type },
+			location: node.callee.loc,
+		}),
+	);
+};
+
+// `value()` is only valid when `value` resolves to a function definition, a
+// function-typed parameter or a library function. Everything else (integers,
+// strings, booleans, objects, shapes, enums, `AsyncTask<T>`, function
+// references) would emit a C++ call on a non-callable value, so it stops in the
+// checker at the callee instead of failing later in the intermediate.
+export const checkCallExpressionTargets = (state) => {
+	walk(state.ast, {
+		enter: (node) => {
+			if (node.type !== AST_NODE.callExpression) {
+				return;
+			}
+			const callee = node.callee;
+			if (callee?.type !== AST_NODE.identifier || !callee.name) {
+				return;
+			}
+			const name = callee.name;
+			const resolvedName = state.resolveImportedName(name);
+			if (state.functionDefinitions[resolvedName]) {
+				return;
+			}
+			const type = resolveCallTargetType(state, name, resolvedName, callee);
+			if (!type) {
+				const functionReferenceName = resolveFunctionReferenceName(state, name);
+				if (functionReferenceName) {
+					state.errors.push(
+						makeDiagnostic({
+							code: ERROR_CODE.functionReferenceCall,
+							params: { name, target: functionReferenceName },
+							location: callee.loc,
+						}),
+					);
+				}
+				return;
+			}
+			if (type.includes(FUNCTION_TYPE_ARROW)) {
+				return;
+			}
+			pushCallTargetDiagnostic(state, node, name, type);
+		},
+	});
+};
+
 export const checkAwaitUsage = (state) => {
 	const { ast, errors } = state;
 	const asyncContextStack = [false];

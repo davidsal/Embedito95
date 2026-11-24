@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	BUILD_DIRECTORY_NAME,
@@ -10,6 +10,7 @@ import {
 	LIBRARY_PROJECT_TYPE,
 	loadLocalModules,
 	loadProjectLibraries,
+	MAIN_FILE,
 	mergeModuleLibraries,
 	STRATEGIES_DIRECTORY_NAME,
 	UTF8,
@@ -89,6 +90,17 @@ export const findEnclosingLibraryConfig = (startDirectory) => {
 
 export const isInsideBuildDirectory = (documentDirectory) => {
 	return documentDirectory.split(/[\\/]/).includes(BUILD_DIRECTORY_NAME);
+};
+
+// A generated intermediate under `build/` keeps the `main.e95` basename but is
+// not the user entry: the compiler re-checks it with `isEntry: false`, which
+// allows the non-allocating `null` defaults the async lowering writes for
+// object-typed task fields.
+export const isEntryDocument = (documentDirectory, documentPath) => {
+	return (
+		!isInsideBuildDirectory(documentDirectory) &&
+		basename(documentPath) === MAIN_FILE
+	);
 };
 
 export const findProjectRoot = (documentDirectory) => {

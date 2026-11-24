@@ -36,7 +36,11 @@ const renderTypeInfoSection = (
 ) => {
 	return renderTypeInfoDeclarations({
 		ast,
-		orderedAnonymousKeys: orderAnonymousObjectTypeKeys(anonymousObjectTypes),
+		orderedAnonymousKeys: orderAnonymousObjectTypeKeys(
+			anonymousObjectTypes,
+			null,
+			renderContext.userTypeNames,
+		),
 		anonymousObjectTypes,
 		renderContext,
 		namespaceName,
@@ -50,9 +54,13 @@ const renderTypeInfoSection = (
 // emitted in post-order over the shape field graph (a leaf first). Children that
 // were only reached through a parent (never reserved on their own) are
 // registered here so their `struct` is emitted too. Only object-shape edges
-// matter: named types are declared separately (in `typeDeclarations`) and always
-// precede this section.
-export const orderAnonymousObjectTypeKeys = (anonymousObjectTypes) => {
+// matter; named types are ordered separately in `renderTypeDeclarations`, which
+// uses this helper to place each named type after the shapes it uses.
+export const orderAnonymousObjectTypeKeys = (
+	anonymousObjectTypes,
+	rootShapeTypes = null,
+	userTypeNames = null,
+) => {
 	const ordered = [];
 	const visited = new Set();
 	const visitFieldType = (fieldType, visit) => {
@@ -62,7 +70,12 @@ export const orderAnonymousObjectTypeKeys = (anonymousObjectTypes) => {
 			return;
 		}
 		if (isObjectShapeType(fieldType)) {
-			resolveAnonymousObjectTypeName(fieldType, anonymousObjectTypes, null);
+			resolveAnonymousObjectTypeName(
+				fieldType,
+				anonymousObjectTypes,
+				null,
+				userTypeNames,
+			);
 			visit(fieldType);
 		}
 	};
@@ -71,23 +84,91 @@ export const orderAnonymousObjectTypeKeys = (anonymousObjectTypes) => {
 			return;
 		}
 		visited.add(shapeType);
+		// Roots reach here directly (never through `visitFieldType`), so make
+		// sure they are registered before the declaration is rendered.
+		resolveAnonymousObjectTypeName(
+			shapeType,
+			anonymousObjectTypes,
+			null,
+			userTypeNames,
+		);
 		const fields = decodeObjectShape(shapeType) ?? {};
 		for (const field of Object.values(fields)) {
 			visitFieldType(field.type, visit);
 		}
 		ordered.push(shapeType);
 	};
-	for (const shapeType of Object.keys(anonymousObjectTypes)) {
+	const roots = rootShapeTypes ?? Object.keys(anonymousObjectTypes);
+	for (const shapeType of roots) {
 		visit(shapeType);
 	}
 	return ordered;
 };
 
-export const renderSetupAndMain = (ast, renderContext, libraryModules) => {
-	const typeDeclarations = ast.body
-		.filter((statement) => statement.type === AST_NODE.typeDeclaration)
-		.map((statement) => renderTypeDeclaration(statement, renderContext));
+// Collect the anonymous shapes a named type references directly through its
+// FIELD types (including inside arrays). The shape's own nested shapes are
+// pulled in by `orderAnonymousObjectTypeKeys`, so only the roots are listed
+// here.
+const collectRootShapeTypes = (fields) => {
+	const roots = [];
+	for (const field of Object.values(fields ?? {})) {
+		const arrayType = parseArrayType(field.type);
+		const key = arrayType ? arrayType.elementType : field.type;
+		if (isObjectShapeType(key)) {
+			roots.push(key);
+		}
+	}
+	return roots;
+};
 
+// Emits every type declaration in dependency order: the anonymous shapes a
+// named type uses (nested first, see `orderAnonymousObjectTypeKeys`) must appear
+// before that named type's struct, because a field becomes an
+// `Object<ShapeStruct>` member. Named type declarations keep their source order;
+// shapes not referenced by any named type are appended afterwards.
+export const renderTypeDeclarations = (
+	ast,
+	renderContext,
+	anonymousObjectTypes,
+) => {
+	const emittedShapes = new Set();
+	const parts = [];
+	const emitShape = (shapeType) => {
+		if (emittedShapes.has(shapeType)) {
+			return;
+		}
+		emittedShapes.add(shapeType);
+		parts.push(
+			renderAnonymousObjectType(shapeType, anonymousObjectTypes, renderContext),
+		);
+	};
+	for (const statement of ast.body) {
+		if (statement.type !== AST_NODE.typeDeclaration) {
+			continue;
+		}
+		const rootShapeTypes = collectRootShapeTypes(
+			renderContext.objectTypes?.[statement.name]?.fields,
+		);
+		for (const shapeType of orderAnonymousObjectTypeKeys(
+			anonymousObjectTypes,
+			rootShapeTypes,
+			renderContext.userTypeNames,
+		)) {
+			emitShape(shapeType);
+		}
+		parts.push(renderTypeDeclaration(statement, renderContext));
+	}
+	for (const shapeType of orderAnonymousObjectTypeKeys(
+		anonymousObjectTypes,
+		null,
+		renderContext.userTypeNames,
+	)) {
+		emitShape(shapeType);
+	}
+	return parts;
+};
+
+export const renderSetupAndMain = (ast, renderContext, libraryModules) => {
 	const setupDeclaration = findDeclarationByName(ast, "setup");
 	renderContext.setCurrentFunctionName("setup");
 	renderContext.functionReturnType = DATA_TYPE.void;
@@ -118,7 +199,7 @@ export const renderSetupAndMain = (ast, renderContext, libraryModules) => {
 			})()
 		: "";
 
-	return { typeDeclarations, mainBody };
+	return { mainBody };
 };
 
 export const buildIncludeSections = (
@@ -157,9 +238,6 @@ export const assembleMainParts = (
 	const parts = [
 		includeSections,
 		...typeDeclarations,
-		...orderAnonymousObjectTypeKeys(anonymousObjectTypes).map((shapeType) =>
-			renderAnonymousObjectType(shapeType, anonymousObjectTypes, renderContext),
-		),
 		renderTypeInfoSection(
 			ast,
 			anonymousObjectTypes,
@@ -210,9 +288,6 @@ export const buildSplitLibraryArtifacts = (
 	generated.libraryHeaderNamespace = [
 		renderProjectLibraryEnumTypedefs(ast, libraryEnumInfo),
 		...typeDeclarations,
-		...orderAnonymousObjectTypeKeys(anonymousObjectTypes).map((shapeType) =>
-			renderAnonymousObjectType(shapeType, anonymousObjectTypes, renderContext),
-		),
 		...(libraryGlobalsInSource ? [] : [constantDeclarations]),
 		prototypes,
 	]

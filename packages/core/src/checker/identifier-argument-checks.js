@@ -128,6 +128,13 @@ const checkIdentifierNumericArgument = (state, argument, param) => {
 		return;
 	}
 
+	if (FLOAT_TYPES.has(argumentType)) {
+		// A float passed to an integer parameter is truncated, not rejected.
+		// The hover warning reports the implicit conversion; the checker keeps
+		// this path error-free so the program still compiles.
+		return;
+	}
+
 	if (!INTEGER_TYPES.has(argumentType)) {
 		state.errors.push(
 			makeDiagnostic({
@@ -257,6 +264,12 @@ const pushMemberMismatch = (state, argument, param, fieldType, severity) => {
 // Mirrors `checkIdentifierNumericArgument`: widening an integer field into a
 // wider integer parameter is allowed, narrowing only warns.
 const checkMemberNumericArgument = (state, argument, param, fieldType) => {
+	if (FLOAT_TYPES.has(fieldType)) {
+		// A float field passed to an integer parameter is truncated, not
+		// rejected; the hover warning covers the implicit conversion.
+		return;
+	}
+
 	if (!INTEGER_TYPES.has(fieldType)) {
 		pushMemberMismatch(state, argument, param, fieldType);
 		return;
