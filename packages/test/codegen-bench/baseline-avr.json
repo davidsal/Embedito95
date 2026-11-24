@@ -1,0 +1,22 @@
+{
+	"label": "baseline",
+	"mode": "avr",
+	"platform": "arduino-nano",
+	"fqbn": "arduino:avr:nano",
+	"toolchain": "arduino-cli  Version: 1.5.1 Commit: Homebrew Date: 2026-06-05T09:39:33Z",
+	"executed": false,
+	"configuration": {
+		"compilerFlags": ""
+	},
+	"sizes": {
+		"flash": {
+			"used": 12220,
+			"maximum": 30720
+		},
+		"ram": {
+			"used": 267,
+			"maximum": 2048
+		}
+	},
+	"note": "Compiled only: the scheduler was not executed on hardware."
+}

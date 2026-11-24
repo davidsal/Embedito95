@@ -1,0 +1,37 @@
+import { Pin, setMode, PinMode, setAnalog } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Slot reuse with an object payload: each iteration awaits a child that returns
+// a nominal object. The child slot is consumed and reused while the object
+// payload is released, so refcounts/cycle collection must stay stable. The
+// `.alloc` sidecar checks that the live-block delta settles (no growth), not an
+// exact allocator value; the events prove no value was lost or duplicated.
+type Reading = {
+    value: u8,
+    scaled: u8
+}
+
+const readSample = async (seed: u8): Reading => {
+    await sleep(3)
+    return { value: seed, scaled: (seed + 10) as u8 }
+}
+
+const run = async () => {
+    for (let index: u8 = 0; index < 4; index += 1) {
+        const reading = await readSample(index + 1)
+        setAnalog(Pin.3, reading.value)
+        setAnalog(Pin.4, reading.scaled)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.4, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

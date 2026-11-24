@@ -1,0 +1,55 @@
+import { Pin, setMode, PinMode, setAnalog } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Slot reuse with a String-bearing payload plus a live cycle trace:
+// - `setup` builds short-lived self-cyclic nodes (`node.next = node`) whose
+//   `label` is a `string` leaf, so the cycle trace/refcount machinery
+//   (`_e95Trace_`/`TypeInfoOf`) must release the node, its `label` box and the
+//   old block instead of leaking or double freeing them;
+// - each async iteration awaits a child that returns a nominal object with a
+//   `string` field. The child slot is consumed and reused by the next spawn
+//   while the payload is released.
+// The `.alloc` sidecar checks the live-block delta settles after the queue
+// drains (no growth), not an exact allocator value; the events prove no value
+// was lost or duplicated.
+// LIMITATION: closing a cycle through the async payload handle itself (or
+// creating one inside a coroutine) currently crashes the host runtime, so that
+// path is not exercised here; it needs a scheduler/payload fix of its own.
+type Node = {
+    label: string
+    next?: Node
+}
+
+type Reading = {
+    label: string
+    value: u8
+}
+
+const readReading = async (seed: u8): Reading => {
+    await sleep(3)
+    return { label: "r", value: seed }
+}
+
+const run = async () => {
+    for (let index: u8 = 0; index < 6; index += 1) {
+        const reading = await readReading(index + 1)
+        setAnalog(Pin.3, reading.value)
+        setAnalog(Pin.4, reading.label.length() as u8)
+    }
+}
+
+const setup = () => {
+    for (let index: u16 = 0; index < 20; index += 1) {
+        const node: Node = { label: "cycle" }
+        node.next = node
+    }
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.4, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+}
+
+main()

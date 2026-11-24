@@ -211,6 +211,8 @@ export const ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP = "async-intermediate";
 export const ASYNC_INTERMEDIATE_TEMP_DIRECTORY_PREFIX =
 	"embedito95-async-intermediate-";
 export const ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP = "async-task-type";
+export const EVENT_LOOP_UNIT_CHECKS_GROUP = "event-loop";
+export const BENCH_UNIT_CHECKS_GROUP = "bench";
 export const MEMBER_ACCESS_UNIT_CHECKS_GROUP = "member-access";
 export const METHOD_ARGUMENT_UNIT_CHECKS_GROUP = "method-argument";
 export const CALL_TARGET_UNIT_CHECKS_GROUP = "call-target";

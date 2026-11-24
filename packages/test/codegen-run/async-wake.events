@@ -1,0 +1,3 @@
+# `await asyncFunction()` (child task) then `await sleep(10)` (inlined timer).
+analog 3 9
+digital 10 1

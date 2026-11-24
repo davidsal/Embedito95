@@ -1,0 +1,4 @@
+# Allocation stability: the child slot is reused while a cyclic payload that
+# also owns a String leaf is released. The live-block delta must not grow after
+# the queue drains (no leaked box, buffer, object block or child handle). An
+# optional `max <n>` line would add an upper bound.

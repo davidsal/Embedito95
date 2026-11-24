@@ -1,0 +1,6 @@
+# Allocation stability check (not an exact count). The host driver counts live
+# malloc blocks, lets the task queue drain, samples the net delta, waits a quiet
+# window and samples again. Both samples must match, so a leaked payload or
+# child handle shows up as growth. The queue backing buffer is an accepted
+# startup cost, so its concrete allocator value is never pinned. An optional
+# `max <n>` line would add an upper bound.

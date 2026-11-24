@@ -1,0 +1,11 @@
+# Fade (~16 ms steps), blink (~500 ms half period) and two extra coroutines.
+# Only ordering/state is pinned here; timing accuracy is measured later.
+digital 10 1
+analog 5 0
+digital 9 1
+analog 5 1
+analog 6 1
+analog 5 2
+analog 6 0
+digital 10 0
+digital 10 1

@@ -75,12 +75,17 @@ extern "C" void free(void *p) {
 
 extern "C" void *realloc(void *p, size_t n) {
 	static auto real = (void *(*)(void *, size_t))dlsym(RTLD_NEXT, "realloc");
-	if (p) {
-		g_live--;
-	}
 	void *r = real(p, n);
+	// A successful realloc with a non-null pointer is a free of the old block
+	// plus an alloc of the new one, so the net live count is unchanged. A failed
+	// realloc leaves the original block live; realloc(p, 0) frees.
 	if (r) {
+		if (p) {
+			g_live--;
+		}
 		g_live++;
+	} else if (p && n == 0) {
+		g_live--;
 	}
 	return r;
 }

@@ -1,0 +1,16 @@
+# One analog write per completed child await, in order. Slot reuse must not drop
+# or duplicate a value while the String-bearing payload is released; the second
+# write reads the payload's `label.length()` (1), proving the string box survived
+# until the consumer read it.
+analog 3 1
+analog 4 1
+analog 3 2
+analog 4 1
+analog 3 3
+analog 4 1
+analog 3 4
+analog 4 1
+analog 3 5
+analog 4 1
+analog 3 6
+analog 4 1

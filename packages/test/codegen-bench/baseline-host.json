@@ -1,0 +1,82 @@
+{
+	"label": "baseline",
+	"mode": "host",
+	"scenario": "fade-blink",
+	"durationPasses": 20000,
+	"clock": {
+		"source": "CLOCK_UPTIME_RAW",
+		"resolutionNanoseconds": 42
+	},
+	"conclusive": true,
+	"conclusiveReason": null,
+	"configuration": {
+		"compilerFlags": "-std=c++17 -O2",
+		"warmUpPasses": 2000,
+		"repetitions": 5
+	},
+	"metrics": {
+		"passes": 100000,
+		"measuredPasses": 90000,
+		"wallTimeNanoseconds": 11380417,
+		"wallTimeMicroseconds": 11380.417,
+		"passTimeNanoseconds": {
+			"total": 9968376,
+			"mean": 110.75973333333333,
+			"minimum": 0,
+			"maximum": 11500,
+			"median": 84,
+			"p95": 209
+		},
+		"passTimeMicroseconds": {
+			"total": 9968.375999999045,
+			"mean": 0.11075973333332273,
+			"minimum": 0,
+			"maximum": 11.5,
+			"median": 0.084,
+			"p95": 0.209
+		},
+		"visits": {
+			"total": 317755,
+			"perPassMean": 3.530611111111111,
+			"perPassMaximum": 5
+		},
+		"dispatches": {
+			"total": 301940,
+			"perPassMean": 3.354888888888889,
+			"perPassMaximum": 5
+		},
+		"compactions": {
+			"count": 18000,
+			"visits": 128320
+		},
+		"allocations": {
+			"allocations": 15075,
+			"frees": 14995,
+			"liveBlocks": 80,
+			"balance": 0,
+			"balanced": true
+		},
+		"wakeLatencyPasses": {
+			"count": 21750,
+			"mean": 0.6834482758620689,
+			"minimum": 0,
+			"maximum": 2,
+			"median": 1,
+			"p95": 1,
+			"histogram": [
+				{
+					"latency": 0,
+					"count": 7030
+				},
+				{
+					"latency": 1,
+					"count": 14575
+				},
+				{
+					"latency": 2,
+					"count": 145
+				}
+			]
+		}
+	}
+}

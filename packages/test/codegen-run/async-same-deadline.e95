@@ -1,0 +1,34 @@
+import { Pin, setMode, PinMode, setAnalog } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Two coroutines with the exact same sleep deadline. They sit on slots of the
+// same parity (the keeper fills slot 1), so the same dispatch pass wakes both;
+// the queue order (slot 0 then slot 2) must decide the emission order. The
+// expected events pin that deterministic wake order.
+const alpha = async () => {
+    await sleep(12)
+    setAnalog(Pin.3, 1)
+}
+
+const keeper = async () => {
+    await sleep(1000)
+}
+
+const beta = async () => {
+    await sleep(12)
+    setAnalog(Pin.4, 2)
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.4, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    alpha()
+    keeper()
+    beta()
+}
+
+main()

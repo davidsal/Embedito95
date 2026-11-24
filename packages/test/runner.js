@@ -5,6 +5,7 @@ import { UTF8 } from "embedito95-core";
 import { runAsyncIntermediateChecks } from "./async-intermediate-checks.js";
 import { runAsyncLocalChecks } from "./async-locals-checks.js";
 import { runAsyncTaskTypeChecks } from "./async-task-type-checks.js";
+import { runBenchMetricsChecks } from "./bench-metrics-checks.js";
 import { runCallTargetChecks } from "./call-target-checks.js";
 import {
 	listCategories,
@@ -23,6 +24,7 @@ import {
 	ASYNC_INTERMEDIATE_UNIT_CHECKS_GROUP,
 	ASYNC_LOCAL_TYPES_UNIT_CHECKS_GROUP,
 	ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP,
+	BENCH_UNIT_CHECKS_GROUP,
 	CALL_TARGET_UNIT_CHECKS_GROUP,
 	CAST_CONTEXT_UNIT_CHECKS_GROUP,
 	CLI_PROJECT_UNIT_CHECKS_GROUP,
@@ -33,6 +35,7 @@ import {
 	CORE_SURFACE_UNIT_CHECKS_GROUP,
 	CYCLES_FLAG_UNIT_CHECKS_GROUP,
 	ENTRY_POINT_UNIT_CHECKS_GROUP,
+	EVENT_LOOP_UNIT_CHECKS_GROUP,
 	FORMATTER_COPIES_DIRECTORY_NAME,
 	FORMATTER_DIRECTORY_NAME,
 	FUNCTION_TYPE_PARSER_UNIT_CHECKS_GROUP,
@@ -77,6 +80,7 @@ import { runCoreSurfaceChecks } from "./core-surface-checks.js";
 import { runCubeIdeChecks } from "./cubeide-checks.js";
 import { runCyclesFlagChecks } from "./cycles-flag-checks.js";
 import { runEntryPointChecks } from "./entry-point-checks.js";
+import { runEventLoopChecks } from "./event-loop-checks.js";
 import { runFunctionTypeParserChecks } from "./function-type-parser-checks.js";
 import { runRegistryIntTypeParityChecks } from "./int-type-parity-checks.js";
 import { listLanguageSnapshots } from "./language-snapshots.js";
@@ -280,6 +284,14 @@ export const run = async () => {
 	const asyncTaskTypeResults = runAsyncTaskTypeChecks();
 	reportUnitChecks(ASYNC_TASK_TYPE_UNIT_CHECKS_GROUP, asyncTaskTypeResults);
 	collectMismatches(asyncTaskTypeResults, mismatches);
+
+	const eventLoopResults = runEventLoopChecks();
+	reportUnitChecks(EVENT_LOOP_UNIT_CHECKS_GROUP, eventLoopResults);
+	collectMismatches(eventLoopResults, mismatches);
+
+	const benchMetricsResults = runBenchMetricsChecks();
+	reportUnitChecks(BENCH_UNIT_CHECKS_GROUP, benchMetricsResults);
+	collectMismatches(benchMetricsResults, mismatches);
 
 	const memberAccessResults = runMemberAccessChecks();
 	reportUnitChecks(MEMBER_ACCESS_UNIT_CHECKS_GROUP, memberAccessResults);

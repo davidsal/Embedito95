@@ -1,0 +1,61 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// A long-lived coroutine stays alive while short coroutines are spawned and
+// completed across several 5-pass compactions. Compaction must shift the live
+// task down without corrupting its state (it keeps emitting after each
+// compaction) and must drop the consumed slots without skipping tasks.
+const keeper = async () => {
+    setDigital(Pin.7, HIGH)
+    await sleep(40)
+    setDigital(Pin.7, LOW)
+    await sleep(20)
+    setDigital(Pin.7, HIGH)
+}
+
+const burstOne = async () => {
+    await sleep(1)
+    setAnalog(Pin.3, 1)
+}
+
+const burstTwo = async () => {
+    await sleep(3)
+    setAnalog(Pin.4, 2)
+}
+
+const burstThree = async () => {
+    await sleep(5)
+    setAnalog(Pin.5, 3)
+}
+
+const burstFour = async () => {
+    await sleep(7)
+    setAnalog(Pin.6, 4)
+}
+
+const burstFive = async () => {
+    await sleep(9)
+    setAnalog(Pin.9, 5)
+}
+
+const burstSix = async () => {
+    await sleep(11)
+    setAnalog(Pin.11, 6)
+}
+
+const setup = () => {
+    setMode(Pin.7, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    keeper()
+    burstOne()
+    burstTwo()
+    burstThree()
+    burstFour()
+    burstFive()
+    burstSix()
+}
+
+main()

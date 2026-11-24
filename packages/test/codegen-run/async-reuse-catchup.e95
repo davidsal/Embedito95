@@ -1,0 +1,41 @@
+import { Pin, setMode, PinMode, setAnalog } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// Same-pass slot reuse (catch-up contract): the parent lives on a low queue slot
+// (0) and its child on slot 2, so both are visited by the same subset stride.
+// When the child completes, the parent consumes it and immediately spawns the
+// next child, which `_addAsyncTask` reuses on slot 2. Because slot 2 is still
+// ahead of the pass index and below `limit`, the new child must run its first
+// step in that same pass. A lost or duplicated slot changes this exact event
+// sequence. The keeper keeps a middle slot alive so `limit` stays above the
+// child slot and compaction never shifts it between iterations.
+const keeper = async () => {
+    await sleep(1000)
+}
+
+const child = async (input: u8): u8 => {
+    setAnalog(Pin.4, 1)
+    await sleep(3)
+    return input
+}
+
+const run = async () => {
+    for (let index: u8 = 0; index < 3; index += 1) {
+        const next: u8 = (index + 1) as u8
+        const value = await child(next)
+        setAnalog(Pin.3, value)
+    }
+}
+
+const setup = () => {
+    setMode(Pin.3, PinMode.OUTPUT)
+    setMode(Pin.4, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    run()
+    keeper()
+}
+
+main()

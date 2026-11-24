@@ -1,0 +1,49 @@
+import { Pin, setMode, PinMode, setAnalog, setDigital, HIGH, LOW } from '@embedito95/gpio'
+import { sleep } from '@embedito95/async'
+
+// The blink/fade workload (a ~16 ms fade step and a ~500 ms blink half period)
+// with two extra coroutines. Timing accuracy is measured in a later task; here
+// the scenario only pins the ordering and state transitions under long sleeps.
+const fade = async () => {
+    for (let step: u8 = 0; step < 3; step += 1) {
+        setAnalog(Pin.5, step)
+        await sleep(16)
+    }
+}
+
+const blink = async () => {
+    setDigital(Pin.10, HIGH)
+    await sleep(500)
+    setDigital(Pin.10, LOW)
+    await sleep(500)
+    setDigital(Pin.10, HIGH)
+}
+
+const probe = async () => {
+    await sleep(30)
+    setAnalog(Pin.6, 1)
+    await sleep(30)
+    setAnalog(Pin.6, 0)
+}
+
+const heartbeat = async () => {
+    await sleep(20)
+    setDigital(Pin.9, HIGH)
+}
+
+const setup = () => {
+    setMode(Pin.5, PinMode.OUTPUT)
+    setMode(Pin.6, PinMode.OUTPUT)
+    setMode(Pin.9, PinMode.OUTPUT)
+    setMode(Pin.10, PinMode.OUTPUT)
+}
+
+const main = () => {
+    setup()
+    fade()
+    blink()
+    probe()
+    heartbeat()
+}
+
+main()

@@ -1,0 +1,11 @@
+# Same-pass child slot reuse. Each child's first step emits analog 4 1 as soon
+# as it is spawned; when the parent consumes a finished child it reuses its slot
+# for the next child in the same pass, so the new child's first-step event is
+# emitted right after the parent's value event (analog 3 N) without a hole or a
+# duplicate. The parent's value proves the awaited payload was not lost.
+analog 4 1
+analog 3 1
+analog 4 1
+analog 3 2
+analog 4 1
+analog 3 3

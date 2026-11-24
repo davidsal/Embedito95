@@ -1,0 +1,6 @@
+# Three child awaits with a 3-pass sleep each; the current scheduler delivers
+# the last event in pass 47. The upper bound leaves a two-pass margin but still
+# fails if same-pass slot reuse regresses (that adds about one pass per
+# iteration).
+min 1
+max 49
