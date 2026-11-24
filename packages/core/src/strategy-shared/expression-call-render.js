@@ -227,9 +227,10 @@ export const renderCallExpression = (node, context, lines) => {
 	const definition = originalName
 		? context.libFunctionDefinitions?.[originalName]
 		: null;
-	// Only an overloaded callee can put an i32 and an i64 parameter under the
-	// same name, so only then does a wide integer need its width spelled out.
-	const wideIntegerCast = (definition?.signatures?.length ?? 0) > 1;
+	const overloadedCallee = (definition?.signatures?.length ?? 0) > 1;
+	// An overloaded callee can hold two same-rank integer signatures (i32 and
+	// u32) under one name, so every integer argument spells out the selected
+	// parameter type to keep the generated C++ call unambiguous.
 
 	return `${renderExpression(node.callee, context, lines)}(${renderCallArguments(
 		node,
@@ -238,6 +239,6 @@ export const renderCallExpression = (node, context, lines) => {
 		Boolean(signature),
 		context,
 		lines,
-		wideIntegerCast,
+		overloadedCallee,
 	)})`;
 };

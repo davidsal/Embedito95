@@ -318,35 +318,35 @@ const checkCodegen = () => {
 		expectEqual(
 			"a u32 above the i32 range selects the i64 overload",
 			integerWidthProgram.includes(
-				"i64 fromUnsigned = core_numeric::wideClamp((i64)(big), 0, 10);",
+				"i64 fromUnsigned = core_numeric::wideClamp((i64)(big), (i64)(0), (i64)(10));",
 			),
 			true,
 		),
 		expectEqual(
 			"a u32 with two i32 arguments still selects the i64 overload",
 			integerWidthProgram.includes(
-				"i64 fromMixed = core_numeric::wideClamp((i64)(big), low, high);",
+				"i64 fromMixed = core_numeric::wideClamp((i64)(big), (i64)(low), (i64)(high));",
 			),
 			true,
 		),
 		expectEqual(
 			"an i32 argument keeps the i32 overload",
 			integerWidthProgram.includes(
-				"i32 fromSigned = core_numeric::wideClamp(whole, 0, 10);",
+				"i32 fromSigned = core_numeric::wideClamp(whole, (i32)(0), (i32)(10));",
 			),
 			true,
 		),
 		expectEqual(
-			"a u8 argument keeps the cheap i32 overload",
+			"a u8 argument keeps the cheap i32 overload and spells out the width",
 			integerWidthProgram.includes(
-				"i32 fromTiny = core_numeric::wideClamp(tiny, 0, 10);",
+				"i32 fromTiny = core_numeric::wideClamp((i32)(tiny), (i32)(0), (i32)(10));",
 			),
 			true,
 		),
 		expectEqual(
-			"a u64 argument falls back to the i64 overload with an explicit cast",
+			"a u64 argument falls back to the i64 overload with explicit casts",
 			integerWidthProgram.includes(
-				"i64 fromWide64 = core_numeric::wideClamp((i64)(wide64), 0, 10);",
+				"i64 fromWide64 = core_numeric::wideClamp((i64)(wide64), (i64)(0), (i64)(10));",
 			),
 			true,
 		),

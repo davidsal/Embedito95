@@ -136,21 +136,36 @@ const isIntegerNarrowing = (argumentType, paramType) => {
 };
 
 // Decides whether the emitted argument needs an explicit cast. Same type needs
-// none; an integer literal that already fits an integer parameter gets none,
-// but an integer literal into a float parameter always does, because C++ would
-// otherwise see an ambiguous `float`/`double` conversion. Narrowing and
+// none; for a non-overloaded callee an integer literal that already fits an
+// integer parameter gets none, but an integer literal into a float parameter
+// always does, because C++ would otherwise see an ambiguous `float`/`double`
+// conversion. An overloaded callee casts every integer argument that is not
+// already the selected parameter type (the i32/u32 ambiguity). Narrowing and
 // int<->float conversions keep the conversion visible in the generated C++.
 const needsArgumentCast = (
 	argument,
 	argumentType,
 	paramType,
-	wideIntegerCast,
+	overloadedCallee,
 ) => {
 	if (!argumentType || !paramType || argumentType === paramType) {
 		return false;
 	}
 	if (!isNumericType(argumentType) || !isNumericType(paramType)) {
 		return false;
+	}
+	// An overloaded callee can expose an i32 and a u32 parameter under the same
+	// name. A bare integer (a literal or a narrower value) converts equally well
+	// to both, so C++ reports the call as ambiguous. Spelling out the parameter
+	// type of the selected signature on every integer argument that is not
+	// already that exact type keeps the C++ call unambiguous. Non-overloaded
+	// callees keep their plain arguments.
+	if (
+		overloadedCallee &&
+		INTEGER_TYPES.has(argumentType) &&
+		INTEGER_TYPES.has(paramType)
+	) {
+		return true;
 	}
 	if (isIntegerLiteral(argument)) {
 		if (FLOAT_TYPES.has(paramType)) {
@@ -172,19 +187,6 @@ const needsArgumentCast = (
 	if (FLOAT_TYPES.has(paramType) !== FLOAT_TYPES.has(argumentType)) {
 		return true;
 	}
-	// When the callee has an i32 and an i64 overload, a wide integer that does
-	// not fit `i32` (a `u32` above 2^31) is widened to the i64 parameter with a
-	// visible cast, so the width the checker selected is also the width the
-	// generated C++ call spells out. A single i64 signature keeps the plain
-	// widening, with no cast.
-	if (
-		wideIntegerCast &&
-		paramType === DATA_TYPE.i64 &&
-		TYPE_RANGES[argumentType] &&
-		!rangeFitsWithin(TYPE_RANGES[argumentType], TYPE_RANGES[DATA_TYPE.i32])
-	) {
-		return true;
-	}
 	if (isIntegerNarrowing(argumentType, paramType)) {
 		return false;
 	}
@@ -196,7 +198,7 @@ const castArgument = (
 	argument,
 	paramType,
 	castArguments,
-	wideIntegerCast,
+	overloadedCallee,
 	context,
 ) => {
 	const argumentType = resolveArgumentType(argument, context);
@@ -209,7 +211,7 @@ const castArgument = (
 	if (!castArguments) {
 		return rendered;
 	}
-	if (!needsArgumentCast(argument, argumentType, paramType, wideIntegerCast)) {
+	if (!needsArgumentCast(argument, argumentType, paramType, overloadedCallee)) {
 		return rendered;
 	}
 	return `(${context.toCType(paramType)})(${rendered})`;
@@ -220,7 +222,7 @@ const renderArgument = (
 	index,
 	paramTypes,
 	castArguments,
-	wideIntegerCast,
+	overloadedCallee,
 	context,
 	lines,
 ) => {
@@ -244,7 +246,7 @@ const renderArgument = (
 		argument,
 		paramType,
 		castArguments,
-		wideIntegerCast,
+		overloadedCallee,
 		context,
 	);
 };
@@ -258,7 +260,7 @@ export const renderCallArguments = (
 	castArguments,
 	context,
 	lines,
-	wideIntegerCast = false,
+	overloadedCallee = false,
 ) => {
 	const args = node.arguments.map((argument, index) => {
 		return renderArgument(
@@ -266,7 +268,7 @@ export const renderCallArguments = (
 			index,
 			paramTypes,
 			castArguments,
-			wideIntegerCast,
+			overloadedCallee,
 			context,
 			lines,
 		);
