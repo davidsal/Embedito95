@@ -1,7 +1,7 @@
 {
 	"arduino-nano": {
 		"examples/arduino-nano/async-locals.test.e95": {
-			"flash": 8416,
+			"flash": 8518,
 			"ram": 246,
 			"flashMax": 30720,
 			"ramMax": 2048
@@ -19,13 +19,13 @@
 			"ramMax": 2048
 		},
 		"examples/arduino-nano/dimmer.test.e95": {
-			"flash": 2002,
+			"flash": 2012,
 			"ram": 41,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
 		"examples/arduino-nano/fade.test.e95": {
-			"flash": 1948,
+			"flash": 1960,
 			"ram": 41,
 			"flashMax": 30720,
 			"ramMax": 2048
@@ -97,7 +97,7 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/async.test.e95": {
-			"flash": 11128,
+			"flash": 11198,
 			"ram": 255,
 			"flashMax": 30720,
 			"ramMax": 2048
@@ -163,7 +163,7 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/gpio.test.e95": {
-			"flash": 2500,
+			"flash": 2508,
 			"ram": 41,
 			"flashMax": 30720,
 			"ramMax": 2048
@@ -205,8 +205,8 @@
 			"ramMax": 2048
 		},
 		"core/arduino-nano/math.test.e95": {
-			"flash": 1872,
-			"ram": 45,
+			"flash": 17568,
+			"ram": 77,
 			"flashMax": 30720,
 			"ramMax": 2048
 		},
@@ -327,7 +327,7 @@
 	},
 	"stm32-bluepill": {
 		"examples/stm32-bluepill/async-locals.test.e95": {
-			"flash": 13568,
+			"flash": 13648,
 			"ram": 2340,
 			"flashMax": 65536,
 			"ramMax": 20480
@@ -417,7 +417,7 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/async.test.e95": {
-			"flash": 16808,
+			"flash": 16920,
 			"ram": 2316,
 			"flashMax": 65536,
 			"ramMax": 20480
@@ -525,7 +525,7 @@
 			"ramMax": 20480
 		},
 		"core/stm32-bluepill/math.test.e95": {
-			"flash": 27864,
+			"flash": 43544,
 			"ram": 2024,
 			"flashMax": 65536,
 			"ramMax": 20480

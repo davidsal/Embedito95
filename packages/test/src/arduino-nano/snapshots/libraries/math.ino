@@ -4,11 +4,11 @@
 #include <core_type.h>
 
 i32 testInterpolateRangeIntegers() {
-	const i32 atMinimum = core_math::interpolateRange(0, 0, 1023, 0, 255);
-	const i32 atMaximum = core_math::interpolateRange(1023, 0, 1023, 0, 255);
-	const i32 middle = core_math::interpolateRange(512, 0, 1023, 0, 255);
-	const i32 inverted = core_math::interpolateRange(1023, 0, 1023, 255, 0);
-	const i32 narrow = core_math::interpolateRange(5, 0, 10, 0, 1);
+	const i32 atMinimum = core_math::interpolateRange((i32)(0), (i32)(0), (i32)(1023), (i32)(0), (i32)(255));
+	const i32 atMaximum = core_math::interpolateRange((i32)(1023), (i32)(0), (i32)(1023), (i32)(0), (i32)(255));
+	const i32 middle = core_math::interpolateRange((i32)(512), (i32)(0), (i32)(1023), (i32)(0), (i32)(255));
+	const i32 inverted = core_math::interpolateRange((i32)(1023), (i32)(0), (i32)(1023), (i32)(255), (i32)(0));
+	const i32 narrow = core_math::interpolateRange((i32)(5), (i32)(0), (i32)(10), (i32)(0), (i32)(1));
 	return (((atMinimum + atMaximum) + middle) + inverted) + narrow;
 }
 
@@ -20,9 +20,9 @@ f32 testInterpolateRangeFloat() {
 }
 
 i32 testClampIntegers() {
-	const i32 below = core_math::clamp(-10, 0, 100);
-	const i32 inside = core_math::clamp(50, 0, 100);
-	const i32 above = core_math::clamp(250, 0, 100);
+	const i32 below = core_math::clamp((i32)(-10), (i32)(0), (i32)(100));
+	const i32 inside = core_math::clamp((i32)(50), (i32)(0), (i32)(100));
+	const i32 above = core_math::clamp((i32)(250), (i32)(0), (i32)(100));
 	return (below + inside) + above;
 }
 
@@ -34,9 +34,9 @@ f32 testClampFloat() {
 }
 
 i32 testIntegerMath() {
-	const i32 magnitude = core_math::absolute(-42);
-	const i32 smallest = core_math::minimum(3, 8);
-	const i32 largest = core_math::maximum(3, 8);
+	const i32 magnitude = core_math::absolute((i32)(-42));
+	const i32 smallest = core_math::minimum((i32)(3), (i32)(8));
+	const i32 largest = core_math::maximum((i32)(3), (i32)(8));
 	return (magnitude + smallest) + largest;
 }
 
@@ -160,35 +160,35 @@ f64 testWidenedIntegerProduct(u32 count, i16 factor) {
 }
 
 i32 testWidenedIntegerNarrowing(u64 wide) {
-	const i32 bounded = (i32)(core_math::clamp((i64)(wide), 0, 100));
+	const i32 bounded = (i32)(core_math::clamp((i64)(wide), (i64)(0), (i64)(100)));
 	return bounded;
 }
 
 i64 testLargeUnsignedIntegerMath(u32 value) {
-	const i64 clamped = core_math::clamp((i64)(value), 0, 10);
-	const i64 wideClamped = core_math::clamp((i64)(value), 0, 4000000000);
-	const i64 smallest = core_math::minimum((i64)(value), 2000000000);
-	const i64 largest = core_math::maximum((i64)(value), 2000000000);
+	const i64 clamped = core_math::clamp((i64)(value), (i64)(0), (i64)(10));
+	const i64 wideClamped = core_math::clamp((i64)(value), (i64)(0), (i64)(4000000000));
+	const i64 smallest = core_math::minimum((i64)(value), (i64)(2000000000));
+	const i64 largest = core_math::maximum((i64)(value), (i64)(2000000000));
 	const i64 magnitude = core_math::absolute(value);
-	const i64 remapped = core_math::interpolateRange((i64)(value), 0, 4000000000, 0, 1000);
+	const i64 remapped = core_math::interpolateRange((i64)(value), (i64)(0), (i64)(4000000000), (i64)(0), (i64)(1000));
 	const u32 zero = 0;
 	const u32 upper = 4000000000;
 	const u32 allUnsigned = core_math::clamp(value, zero, upper);
 	const u32 allUnsignedSmallest = core_math::minimum(value, upper);
-	const i32 small = core_math::clamp(5, 0, 10);
+	const i32 small = core_math::clamp((i32)(5), (i32)(0), (i32)(10));
 	return (((((((clamped + wideClamped) + smallest) + largest) + magnitude) + remapped) + (i64)(allUnsigned)) + (i64)(allUnsignedSmallest)) + (i64)(small);
 }
 
 i64 testLargeUnsignedWithSignedBounds(u32 wide, i32 low, i32 high) {
-	const i64 clamped = core_math::clamp((i64)(wide), low, high);
-	const i64 remapped = core_math::interpolateRange((i64)(wide), low, high, 0, 1000);
+	const i64 clamped = core_math::clamp((i64)(wide), (i64)(low), (i64)(high));
+	const i64 remapped = core_math::interpolateRange((i64)(wide), (i64)(low), (i64)(high), (i64)(0), (i64)(1000));
 	return clamped + remapped;
 }
 
 u32 testMixedUnsignedIntegerMath(u8 small, u32 wide) {
-	const u32 lowFirst = core_math::clamp(small, wide, wide);
-	const u32 lowLast = core_math::clamp(wide, wide, small);
-	const u32 smallest = core_math::minimum(small, wide);
+	const u32 lowFirst = core_math::clamp((u32)(small), wide, wide);
+	const u32 lowLast = core_math::clamp(wide, wide, (u32)(small));
+	const u32 smallest = core_math::minimum((u32)(small), wide);
 	return (lowFirst + lowLast) + smallest;
 }
 
