@@ -90,7 +90,7 @@ export const preciseClamp = clampFloat(precise, 0.0, 3.0)
 export const preciseRoot = squareRoot(precise)`,
 		},
 		{
-			label: "a mixed-width call narrows with a non-blocking warning",
+			label: "a mixed-width call converts silently with a hover-only note",
 			probes: ["narrowed"],
 			body: `import { interpolateRangeFloat } from '@embedito95/math'
 const precise: f64 = 3.14159265358979
@@ -140,7 +140,7 @@ export const badCount = setBitValue(10)`,
 export const missing = notExported`,
 		},
 		{
-			label: "wider integer argument warns on a u8 parameter",
+			label: "wider integer argument converts silently on a u8 parameter",
 			probes: ["widened"],
 			body: `import { setBitValue } from '@embedito95/math'
 export const wideIndex: i32 = 3

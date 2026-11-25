@@ -83,7 +83,7 @@ export const scaled = scale(value)`,
 export const scaled = scale(2)`,
 		},
 		{
-			label: "f64 into an f32 context warns without becoming an error",
+			label: "f64 into an f32 context converts silently; the hover explains the precision loss",
 			probes: ["scaled"],
 			body: `import { scale } from '@test/numeric'
 const value: f64 = 1.5
@@ -98,21 +98,21 @@ const small: i16 = 2
 export const scaled = scale(wide * small)`,
 		},
 		{
-			label: "u64 into an i32 parameter warns but keeps the declared type",
+			label: "u64 into an i32 parameter converts silently but keeps the declared type",
 			probes: ["narrowed"],
 			body: `import { narrow } from '@test/numeric'
 const wide: u64 = 5
 export const narrowed = narrow(wide)`,
 		},
 		{
-			label: "i32 into an f32 parameter warns because the range exceeds 2^24",
+			label: "i32 into an f32 parameter converts silently; the hover explains the range loss",
 			probes: ["converted"],
 			body: `import { onlyFloat } from '@test/numeric'
 const whole: i32 = 1
 export const converted = onlyFloat(whole)`,
 		},
 		{
-			label: "i8 into an f32 parameter fits exactly and does not warn",
+			label: "i8 into an f32 parameter fits exactly and stays silent",
 			probes: ["converted"],
 			body: `import { onlyFloat } from '@test/numeric'
 const small: i8 = 1
@@ -122,8 +122,9 @@ export const converted = onlyFloat(small)`,
 
 	const header = [
 		"// Numeric conversion rule for arguments/constants/let and overload",
-		"// resolution by parameter types. Warnings are non-blocking; no conversion",
-		"// produced by this rule is reported as an error.",
+		"// resolution by parameter types. Numeric conversions are implicit (auto cast",
+		"// with truncation); none of them is reported as a diagnostic, the hover",
+		"// explains the possible loss.",
 		"",
 	];
 

@@ -35,9 +35,9 @@ diagnostics:
 types:
 - missing => unresolved
 
-// wider integer argument warns on a u8 parameter
+// wider integer argument converts silently on a u8 parameter
 diagnostics:
-- warning error.argumentTypeMismatch @ 4:50: Argument 'value' expects type 'u8' but 'wideValue' is 'i32'
+- none
 types:
 - none
 

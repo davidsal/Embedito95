@@ -55,6 +55,57 @@ export const findIdentifierAt = (node, line, column) => {
 	return null;
 };
 
+const AWAIT_KEYWORD_LENGTH = "await".length;
+
+// The await node spans the whole `await <expression>`, so the keyword check
+// keeps the hover anchored to `await` instead of stealing positions from the
+// awaited expression (an identifier there has its own hover).
+const isInAwaitKeyword = (line, column, node) => {
+	const start = node.loc?.start;
+
+	if (!start || start.line !== line) {
+		return false;
+	}
+	return column >= start.column && column < start.column + AWAIT_KEYWORD_LENGTH;
+};
+
+export const findAwaitExpressionAt = (node, line, column) => {
+	if (!node || typeof node !== "object") {
+		return null;
+	}
+
+	if (
+		node.type === AST_NODE.awaitExpression &&
+		isInAwaitKeyword(line, column, node)
+	) {
+		return node;
+	}
+
+	for (const [key, value] of Object.entries(node)) {
+		if (key === "loc") {
+			continue;
+		}
+
+		if (Array.isArray(value)) {
+			for (const item of value) {
+				const found = findAwaitExpressionAt(item, line, column);
+
+				if (found) {
+					return found;
+				}
+			}
+		} else {
+			const found = findAwaitExpressionAt(value, line, column);
+
+			if (found) {
+				return found;
+			}
+		}
+	}
+
+	return null;
+};
+
 export const findLiteralAt = (node, line, column) => {
 	if (!node || typeof node !== "object") {
 		return null;
@@ -267,6 +318,64 @@ export const findObjectPropertyKeyAt = (node, line, column) => {
 	}
 
 	return null;
+};
+
+// `this` inside a method of an annotated type (or of an annotated object
+// literal) resolves to that self type. The nearest enclosing declaration wins,
+// so nested methods keep their own type.
+const findSelfTypeInNode = (
+	node,
+	line,
+	column,
+	objectTypes,
+	currentSelfType,
+) => {
+	if (
+		!node ||
+		typeof node !== "object" ||
+		!isInLocation(line, column, node.loc)
+	) {
+		return currentSelfType;
+	}
+
+	let selfType = currentSelfType;
+	if (node.type === AST_NODE.typeDeclaration && objectTypes?.[node.name]) {
+		selfType = node.name;
+	}
+	if (node.type === AST_NODE.variableDeclaration) {
+		const declarator = node.declarations?.[0];
+		const annotation = declarator?.id?.typeAnnotation?.type;
+
+		if (
+			annotation &&
+			objectTypes?.[annotation] &&
+			declarator?.init?.type === AST_NODE.objectLiteral
+		) {
+			selfType = annotation;
+		}
+	}
+
+	for (const [key, value] of Object.entries(node)) {
+		if (key === "loc") {
+			continue;
+		}
+		const children = Array.isArray(value) ? value : [value];
+
+		for (const child of children) {
+			selfType = findSelfTypeInNode(child, line, column, objectTypes, selfType);
+		}
+	}
+
+	return selfType;
+};
+
+export const findEnclosingSelfType = (
+	syntaxTree,
+	line,
+	column,
+	objectTypes,
+) => {
+	return findSelfTypeInNode(syntaxTree, line, column, objectTypes, null);
 };
 
 export const findTypeMemberAt = (syntaxTree, line, column) => {

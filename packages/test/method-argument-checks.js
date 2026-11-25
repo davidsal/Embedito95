@@ -272,24 +272,21 @@ const checkWideningMember = () => {
 	];
 };
 
+// The implicit narrowing is an automatic cast: it still happens in codegen, but
+// it is no longer reported as a diagnostic. The hover explains it instead.
 const checkNarrowingMember = () => {
 	const errors = collectErrors(NARROWING_FIELD_SOURCE, I2C_CONTEXT.libraries);
 	const diagnostics = errorsWithCode(errors, ERROR_CODE.argumentTypeMismatch);
 	return [
 		expectEqual(
-			"narrowing an i32 member into a u8 parameter reports one diagnostic",
+			"narrowing an i32 member into a u8 parameter reports no diagnostic",
+			errors.length,
+			0,
+		),
+		expectEqual(
+			"narrowing a member does not report argumentTypeMismatch",
 			diagnostics.length,
-			1,
-		),
-		expectEqual(
-			"narrowing a member warns instead of failing",
-			diagnostics[0]?.severity,
-			SEVERITY.warning,
-		),
-		expectEqual(
-			"the narrowing warning points at the argument",
-			formatLocation(diagnostics[0]),
-			positionOf(NARROWING_FIELD_SOURCE, "wide.value"),
+			0,
 		),
 	];
 };

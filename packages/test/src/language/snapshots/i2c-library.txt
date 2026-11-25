@@ -35,9 +35,9 @@ diagnostics:
 types:
 - badCount => void
 
-// wider integer argument warns on sendByte
+// wider integer argument converts silently on sendByte
 diagnostics:
-- warning error.argumentTypeMismatch @ 5:37: Argument 'value' expects type 'u8' but 'wideValue' is 'i32'
+- none
 types:
 - widened => void
 
@@ -65,9 +65,9 @@ diagnostics:
 types:
 - missing => unresolved
 
-// wider integer argument warns on a u8 parameter
+// wider integer argument converts silently on a u8 parameter
 diagnostics:
-- warning error.argumentTypeMismatch @ 4:44: Argument 'quantity' expects type 'u8' but 'wideQuantity' is 'i32'
+- none
 types:
 - widened => u8
 

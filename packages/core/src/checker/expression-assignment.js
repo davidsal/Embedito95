@@ -8,12 +8,12 @@ import {
 	TYPE_RANGES,
 } from "./types.js";
 
-// A truncation warning is only emitted when the stored value can actually lose
-// information: a float with a fractional part narrowed into an integer, or an
-// integer whose range does not fit the target. An exact float constant (e.g.
-// `500.0`) is stored losslessly and stays warning-free here; arguments and
-// member assignments keep a separate, unconditional float -> integer warning
-// because the conversion there is implicit.
+// A truncation is only reported (for the hover note) when the stored value can
+// actually lose information: a float with a fractional part narrowed into an
+// integer, or an integer whose range does not fit the target. An exact float
+// constant (e.g. `500.0`) is stored losslessly. The checker does not emit a
+// diagnostic for these implicit numeric conversions; only the hover reports
+// them.
 export const resolveAssignmentTruncation = (
 	rhsNode,
 	rhsType,

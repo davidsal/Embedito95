@@ -34,6 +34,7 @@ export {
 	resolveBinaryOperationType,
 	resolveConstIntegerType,
 	resolveDefinitionReturnType,
+	resolveExpressionType,
 	resolveFloatType,
 	resolveFloatTypeForIntegerType,
 	resolveIntegerType,

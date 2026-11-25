@@ -70,7 +70,7 @@ export const badCount = readShift(Pin.2, Pin.3)`,
 export const missing = notExported`,
 		},
 		{
-			label: "wider integer argument warns on a u8 parameter",
+			label: "wider integer argument converts silently on a u8 parameter",
 			probes: [],
 			body: `import { Pin, BitOrder, writeShift } from '@embedito95/gpio'
 export const wideValue: i32 = 300

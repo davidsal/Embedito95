@@ -8,7 +8,10 @@ import {
 	resolveLiteralDataType,
 	resolveReceiverType,
 } from "embedito95-core";
-import { resolveLibraryReturnType } from "../shared/type-inference.js";
+import {
+	resolveLibraryCallSignature,
+	resolveLibraryReturnType,
+} from "../shared/type-inference.js";
 
 export const formatHoverValue = (value, type) => {
 	if (type === DATA_TYPE.f32 && typeof value === "number") {
@@ -45,6 +48,37 @@ export const buildParameterTypesByName = (syntaxTree, allExports) => {
 	}
 
 	return parameterTypesByName;
+};
+
+// Resolves the parameter types of a call from the argument types, so the hover
+// warnings use the same overload `check`/codegen picked instead of the first
+// declared signature. Library calls go through the shared overload inference;
+// local functions keep their single declared parameter list.
+export const buildParameterTypeResolver = (
+	syntaxTree,
+	allExports,
+	importAliases,
+	wordSize,
+) => {
+	const declaredParameterTypes = buildParameterTypesByName(
+		syntaxTree,
+		allExports,
+	);
+
+	return (calleeName, argumentTypes = []) => {
+		const signature = resolveLibraryCallSignature(
+			calleeName,
+			allExports,
+			importAliases,
+			argumentTypes,
+			wordSize,
+		);
+
+		if (signature) {
+			return signature.params.map((parameter) => parameter.type);
+		}
+		return declaredParameterTypes[calleeName] ?? null;
+	};
 };
 
 // Resolves the return type of a library call from the argument types, so hover

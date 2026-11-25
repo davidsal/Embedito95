@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	AST_NODE,
 	collectImportAliases,
 	collectNullNarrowing,
 	loadProjectEngine,
@@ -16,6 +17,7 @@ import {
 } from "../shared/libraries.js";
 import { buildProjectTypeInference } from "../shared/type-inference.js";
 import {
+	findEnclosingSelfType,
 	findIdentifierAt,
 	findLiteralAt,
 	findObjectPropertyKeyAt,
@@ -37,6 +39,7 @@ import {
 } from "./library-steps.js";
 import {
 	NOT_HANDLED,
+	resolveAwaitHover,
 	resolveFunctionHover,
 	resolveParameterHover,
 	resolveVariableHover,
@@ -47,7 +50,7 @@ import {
 } from "./member-steps.js";
 import { resolveObjectTypeNameHover } from "./type-name-hover.js";
 import {
-	buildParameterTypesByName,
+	buildParameterTypeResolver,
 	formatHoverValue,
 } from "./type-resolution.js";
 
@@ -147,14 +150,35 @@ const enrichHoverContext = (context, document) => {
 };
 
 const collectContextCastWarnings = (context) => {
-	const parameterTypesByName = buildParameterTypesByName(
+	const resolveParameterTypes = buildParameterTypeResolver(
 		context.syntaxTree,
 		context.allExports,
+		context.importAliases,
+		context.hoverWordSize,
 	);
 	context.allCastWarnings = collectCastWarnings(
 		context.syntaxTree,
 		context.variableTypes,
-		parameterTypesByName,
+		resolveParameterTypes,
+		context.hoverWordSize,
+		context.objectTypes,
+		context.resolveCallType,
+	);
+};
+
+const resolveMemberObjectType = (context, memberReceiver) => {
+	if (memberReceiver?.type === AST_NODE.thisExpression) {
+		return findEnclosingSelfType(
+			context.syntaxTree,
+			context.line,
+			context.column,
+			context.objectTypes,
+		);
+	}
+	return resolveReceiverType(
+		memberReceiver,
+		context.resolveNameType,
+		context.resolveCallType,
 		context.hoverWordSize,
 		context.objectTypes,
 	);
@@ -166,16 +190,12 @@ const resolveNamedHover = (context) => {
 		: (findTypeNameAt(context.syntaxTree, context.line, context.column) ??
 			null);
 	context.isTypeReference = !context.identifier && context.name !== null;
-	context.memberObjectName =
-		context.identifier?.memberExpression?.object?.name ?? null;
-	context.memberObjectType = context.identifier?.memberExpression
-		? resolveReceiverType(
-				context.identifier.memberExpression.object,
-				context.resolveNameType,
-				context.resolveCallType,
-				context.hoverWordSize,
-				context.objectTypes,
-			)
+	const memberExpression = context.identifier?.memberExpression ?? null;
+	const memberReceiver = memberExpression?.object ?? null;
+
+	context.memberObjectName = memberReceiver?.name ?? null;
+	context.memberObjectType = memberExpression
+		? resolveMemberObjectType(context, memberReceiver)
 		: null;
 	const enumMembers = context.allExports.enumMembers ?? {};
 	context.memberEnumName =
@@ -232,6 +252,12 @@ export const onHover = async (requestParameters, documents) => {
 	collectContextCastWarnings(context);
 
 	if (!context.identifier && !context.objectPropertyAt) {
+		const awaitHover = resolveAwaitHover(context);
+
+		if (awaitHover !== NOT_HANDLED) {
+			return awaitHover;
+		}
+
 		const anchoredHover = resolveLiteralOrMemberHover(context);
 
 		if (anchoredHover) {

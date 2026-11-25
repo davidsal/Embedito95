@@ -1,7 +1,6 @@
-import { AST_NODE, ERROR_CODE, FLOAT_TYPES, SEVERITY } from "../constants.js";
+import { AST_NODE, ERROR_CODE, FLOAT_TYPES } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { getDeclaration } from "./declaration-accessors.js";
-import { shouldWarnNumericConversion } from "./numeric-conversions.js";
 import { resolveObjectFieldType } from "./object-shapes.js";
 import { resolveEnumType } from "./type-resolution.js";
 import {
@@ -58,13 +57,7 @@ const checkIdentifierCharacterArgument = (state, argument, param) => {
 	}
 };
 
-const pushArgumentTypeMismatch = (
-	state,
-	argument,
-	param,
-	actualType,
-	severity,
-) => {
+const pushArgumentTypeMismatch = (state, argument, param, actualType) => {
 	state.errors.push(
 		makeDiagnostic({
 			code: ERROR_CODE.argumentTypeMismatch,
@@ -75,7 +68,6 @@ const pushArgumentTypeMismatch = (
 				value: argument.name,
 			},
 			location: argument.loc,
-			...(severity && { severity }),
 		}),
 	);
 };
@@ -92,29 +84,9 @@ const checkIdentifierFloatArgument = (state, argument, param) => {
 		return;
 	}
 
-	if (FLOAT_TYPES.has(argumentType)) {
-		if (shouldWarnNumericConversion(argumentType, param.type)) {
-			pushArgumentTypeMismatch(
-				state,
-				argument,
-				param,
-				argumentType,
-				SEVERITY.warning,
-			);
-		}
-		return;
-	}
-
-	if (INTEGER_TYPES.has(argumentType)) {
-		if (shouldWarnNumericConversion(argumentType, param.type)) {
-			pushArgumentTypeMismatch(
-				state,
-				argument,
-				param,
-				argumentType,
-				SEVERITY.warning,
-			);
-		}
+	if (FLOAT_TYPES.has(argumentType) || INTEGER_TYPES.has(argumentType)) {
+		// Numeric source into a numeric parameter is an implicit cast with
+		// truncation: no diagnostic. The hover reports the precision note.
 		return;
 	}
 
@@ -128,43 +100,24 @@ const checkIdentifierNumericArgument = (state, argument, param) => {
 		return;
 	}
 
-	if (FLOAT_TYPES.has(argumentType)) {
-		// A float passed to an integer parameter is truncated, not rejected.
-		// The hover warning reports the implicit conversion; the checker keeps
-		// this path error-free so the program still compiles.
+	if (FLOAT_TYPES.has(argumentType) || INTEGER_TYPES.has(argumentType)) {
+		// Numeric source into a numeric parameter is an implicit cast with
+		// truncation: no diagnostic. The hover reports the precision note.
 		return;
 	}
 
-	if (!INTEGER_TYPES.has(argumentType)) {
-		state.errors.push(
-			makeDiagnostic({
-				code: ERROR_CODE.argumentTypeMismatch,
-				params: {
-					name: param.name,
-					expected: param.type,
-					actual: argumentType,
-					value: argument.name,
-				},
-				location: argument.loc,
-			}),
-		);
-	} else {
-		if (shouldWarnNumericConversion(argumentType, param.type)) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.argumentTypeMismatch,
-					params: {
-						name: param.name,
-						expected: param.type,
-						actual: argumentType,
-						value: argument.name,
-					},
-					location: argument.loc,
-					severity: SEVERITY.warning,
-				}),
-			);
-		}
-	}
+	state.errors.push(
+		makeDiagnostic({
+			code: ERROR_CODE.argumentTypeMismatch,
+			params: {
+				name: param.name,
+				expected: param.type,
+				actual: argumentType,
+				value: argument.name,
+			},
+			location: argument.loc,
+		}),
+	);
 };
 
 const checkEnumIdentifierArgument = (state, argument, param) => {
@@ -245,7 +198,7 @@ export const checkMemberArgument = (state, argument, param) => {
 	}
 };
 
-const pushMemberMismatch = (state, argument, param, fieldType, severity) => {
+const pushMemberMismatch = (state, argument, param, fieldType) => {
 	state.errors.push(
 		makeDiagnostic({
 			code: ERROR_CODE.argumentTypeMismatch,
@@ -256,28 +209,20 @@ const pushMemberMismatch = (state, argument, param, fieldType, severity) => {
 				value: `${argument.object?.name}.${argument.property?.name}`,
 			},
 			location: argument.loc,
-			...(severity && { severity }),
 		}),
 	);
 };
 
-// Mirrors `checkIdentifierNumericArgument`: widening an integer field into a
-// wider integer parameter is allowed, narrowing only warns.
+// Mirrors `checkIdentifierNumericArgument`: a numeric field flowing into a
+// numeric parameter casts with truncation, so it emits no diagnostic.
 const checkMemberNumericArgument = (state, argument, param, fieldType) => {
-	if (FLOAT_TYPES.has(fieldType)) {
-		// A float field passed to an integer parameter is truncated, not
-		// rejected; the hover warning covers the implicit conversion.
+	if (FLOAT_TYPES.has(fieldType) || INTEGER_TYPES.has(fieldType)) {
+		// Numeric source into a numeric parameter is an implicit cast with
+		// truncation: no diagnostic. The hover reports the precision note.
 		return;
 	}
 
-	if (!INTEGER_TYPES.has(fieldType)) {
-		pushMemberMismatch(state, argument, param, fieldType);
-		return;
-	}
-
-	if (shouldWarnNumericConversion(fieldType, param.type)) {
-		pushMemberMismatch(state, argument, param, fieldType, SEVERITY.warning);
-	}
+	pushMemberMismatch(state, argument, param, fieldType);
 };
 
 const checkMemberFloatArgument = (state, argument, param, fieldType) => {
@@ -285,9 +230,8 @@ const checkMemberFloatArgument = (state, argument, param, fieldType) => {
 		return;
 	}
 	if (INTEGER_TYPES.has(fieldType) || FLOAT_TYPES.has(fieldType)) {
-		if (shouldWarnNumericConversion(fieldType, param.type)) {
-			pushMemberMismatch(state, argument, param, fieldType, SEVERITY.warning);
-		}
+		// Numeric source into a numeric parameter is an implicit cast with
+		// truncation: no diagnostic. The hover reports the precision note.
 		return;
 	}
 	pushMemberMismatch(state, argument, param, fieldType);

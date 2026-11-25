@@ -16,8 +16,9 @@ let temperature: f32 = 0.0   // explicit type
   `100` is `i8` and `200` is `u8`.
 - A variable takes the architecture word when inferred: `i16` on AVR and
   `i32` on ARM.
-- An annotation narrows or widens the value; the language server warns on
-  narrowing but does not reject it.
+- An annotation narrows or widens the value with an automatic cast. Narrowing is
+  never rejected and is not underlined; only the symbol hover notes the possible
+  loss of precision, range or sign.
 
 ## Functions
 

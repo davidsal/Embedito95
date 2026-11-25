@@ -23,8 +23,13 @@
   no optional chaining (`?.`) and no spread.
 
 A cast converts between numeric types or removes `null` from a value. Narrowing
-a value is allowed and reported as a warning, so `value as u8` documents the
-intent while `setAnalog(pin, value)` still compiles with the same warning.
+a value is always allowed: `value as u8` documents the intent, while
+`setAnalog(pin, value)` also compiles and performs the same automatic cast.
+Numeric conversions are implicit in parameters and assignments: the value is
+cast to the target type and the editor never underlines the expression. The
+symbol hover explains it when the stored value may be truncated, lose precision
+or lose range/sign. Literals and constants whose known value fits the
+destination show no note at all.
 
 ## Binary operations
 
@@ -49,7 +54,7 @@ Common C/C++ problems it avoids:
 | `1000 * 1000` on AVR | overflows 16-bit `int` | computed as `i32` |
 | `-1 < 1u` | usually false (unsigned conversion) | true (signed comparison) |
 | `0u - 1u` | large unsigned value | `-1` in a signed type |
-| wider result into `u8` | silent truncation | warning on assignment |
+| wider result into `u8` | silent truncation | auto cast with truncation, hover-only note |
 | signed overflow | undefined behavior | wraps with `-fwrapv` |
 
 `-fwrapv` is passed on AVR and STM32, so signed overflow is deterministic. There

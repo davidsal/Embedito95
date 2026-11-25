@@ -111,7 +111,7 @@ export const badBlockData = () => {
 export const missing = eraseAll`,
 		},
 		{
-			label: "wider integer argument warns on a u8 value",
+			label: "wider integer argument converts silently on a u8 value",
 			probes: [],
 			body: `import { writeEepromByte } from '@embedito95/eeprom'
 export const wideValue: i32 = 300

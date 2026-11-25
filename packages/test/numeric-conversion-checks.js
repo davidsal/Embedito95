@@ -399,24 +399,32 @@ const checkLspWarnings = () => {
 	});
 
 	return [
-		expectEqual("LSP shows exactly two numeric warnings", warnings.length, 2),
-		expectEqual("LSP numeric warnings never become errors", errors.length, 0),
 		expectEqual(
-			"LSP warns on f64 into an f32 context",
+			"LSP reports no diagnostic for implicit numeric conversions",
+			diagnostics.length,
+			0,
+		),
+		expectEqual(
+			"LSP numeric conversions never become errors",
+			errors.length,
+			0,
+		),
+		expectEqual(
+			"LSP no longer warns on f64 into an f32 context",
 			warnings.some((diagnostic) => {
 				return diagnostic.code === ERROR_CODE.assignmentTypeMismatch;
 			}),
-			true,
+			false,
 		),
 		expectEqual(
-			"LSP warns on u64 into an i32 parameter",
+			"LSP no longer warns on u64 into an i32 parameter",
 			warnings.some((diagnostic) => {
 				return diagnostic.code === ERROR_CODE.argumentTypeMismatch;
 			}),
-			true,
+			false,
 		),
 		expectEqual(
-			"LSP keeps the f32 warning for i32 input",
+			"LSP keeps the i32 into f32 conversion warning-free",
 			computeDiagnostics(
 				[
 					`import { onlyFloat } from '${PACKAGE_NAME}'`,
@@ -430,7 +438,7 @@ const checkLspWarnings = () => {
 			).filter((diagnostic) => {
 				return diagnostic.severity === LSP_WARNING_SEVERITY;
 			}).length,
-			1,
+			0,
 		),
 	];
 };
@@ -553,11 +561,9 @@ const checkConversionWarnings = () => {
 	]);
 	return [
 		expectEqual(
-			"u64 into i32 conversion is a non-blocking warning",
-			narrowToI32.warnings.every((error) => {
-				return error.severity === SEVERITY.warning;
-			}),
-			true,
+			"u64 into i32 conversion no longer emits an argument warning",
+			narrowToI32.warnings.length,
+			0,
 		),
 		expectEqual(
 			"u64 into i32 conversion never produces an error",
@@ -565,9 +571,9 @@ const checkConversionWarnings = () => {
 			0,
 		),
 		expectEqual(
-			"u64 into i64 conversion is a non-blocking warning",
+			"u64 into i64 conversion no longer emits an argument warning",
 			narrowToI64.warnings.length,
-			1,
+			0,
 		),
 		expectEqual(
 			"u64 into i64 conversion never produces an error",
@@ -577,6 +583,171 @@ const checkConversionWarnings = () => {
 		expectEqual(
 			"a u32 above the i32 range widens into i64 without a warning",
 			wideUnsigned.warnings.length,
+			0,
+		),
+	];
+};
+
+// Every implicit numeric conversion the checker used to report through
+// `argumentTypeMismatch`/`assignmentTypeMismatch` is now silent at the checker
+// level: identifier arguments (integer and float), member arguments (integer
+// and float), literals, resolved method arguments, declarations, assignments
+// and ternary branches. Only the hover explains the potential loss.
+const IMPLICIT_CONVERSION_ROUTES_SOURCE = [
+	"const takeU8 = (value: u8) => { }",
+	"const takeF32 = (value: f32) => { }",
+	"type Wide = { value: i32, ratio: f64 }",
+	"type Store = { put: (value: u8) => void, forward: (value: f64) => void }",
+	"type Narrow = { level: u8 }",
+	"type Counter = { count: u8, bump: (value: i16) => void }",
+	"const run = () => {",
+	"    const whole: i32 = 1",
+	"    const float: f64 = 1.5",
+	"    const wide: Wide = { value: 300, ratio: 1.5 }",
+	"    takeU8(whole)",
+	"    takeF32(float)",
+	"    takeU8(wide.value)",
+	"    takeF32(wide.ratio)",
+	"    takeU8(1.5)",
+	"    takeU8(1000)",
+	"    const store: Store = { put: (value: u8) => { }, forward: (value: f64) => { this.put(value) } }",
+	"    store.put(whole)",
+	"    const declared: u8 = whole",
+	"    let assigned: u8 = 0",
+	"    assigned = float",
+	"    takeU8(whole > 0 ? whole : 0)",
+	"    const wideValue: i16 = 200",
+	"    const narrowed: Narrow = { level: wideValue }",
+	"    let counter: Counter = { count: 0, bump: (value: i16) => { this.count = value } }",
+	"    counter.bump(wideValue)",
+	"}",
+].join("\n");
+
+const checkImplicitConversionRoutesHaveNoDiagnostics = () => {
+	const { ast } = parseSource(IMPLICIT_CONVERSION_ROUTES_SOURCE);
+	const numericErrors = check(ast, buildLibraries()).errors.filter((error) => {
+		return (
+			error.code === ERROR_CODE.argumentTypeMismatch ||
+			error.code === ERROR_CODE.assignmentTypeMismatch
+		);
+	});
+	return [
+		expectEqual(
+			"implicit numeric conversions on every checker route report no diagnostic",
+			numericErrors.length,
+			0,
+		),
+	];
+};
+
+// The removal of the implicit numeric diagnostics must not swallow real type
+// errors on the same routes.
+const REAL_TYPE_ERRORS_SOURCE = [
+	"const takeU8 = (value: u8) => { }",
+	"type Store = { put: (value: u8) => void }",
+	"const run = () => {",
+	'    takeU8("hello")',
+	"    takeU8('a')",
+	"    const maybe: u8 | null = null",
+	"    takeU8(maybe)",
+	'    const declared: u8 = "hello"',
+	"    const store: Store = { put: (value: u8) => { } }",
+	"    store.put(true)",
+	"}",
+].join("\n");
+
+const checkRealTypeErrorsRemain = () => {
+	const { ast } = parseSource(REAL_TYPE_ERRORS_SOURCE);
+	const errors = check(ast, buildLibraries()).errors.filter((error) => {
+		return (
+			error.code === ERROR_CODE.argumentTypeMismatch ||
+			error.code === ERROR_CODE.assignmentTypeMismatch
+		);
+	});
+	return [
+		expectEqual(
+			"non-numeric, char and nullable values still report their type error",
+			errors.length,
+			5,
+		),
+	];
+};
+
+// Object-literal fields follow the same rule as declarations and assignments:
+// a numeric conversion is silent, but a non-numeric field value keeps its
+// `objectFieldTypeMismatch`.
+const OBJECT_FIELD_CONVERSION_SOURCE = [
+	"type Level = { level: u8 }",
+	"let wideValue: i16 = 200",
+	"const numericField: Level = { level: wideValue }",
+].join("\n");
+
+const OBJECT_FIELD_STRING_SOURCE = [
+	"type Level = { level: u8 }",
+	'const stringField: Level = { level: "high" }',
+].join("\n");
+
+const checkObjectFieldConversions = () => {
+	const numeric = check(parseSource(OBJECT_FIELD_CONVERSION_SOURCE).ast, {
+		...buildLibraries(),
+		wordSize: WORD_SIZE,
+	});
+	const stringCase = check(parseSource(OBJECT_FIELD_STRING_SOURCE).ast, {
+		...buildLibraries(),
+		wordSize: WORD_SIZE,
+	});
+	const numericMismatches = numeric.errors.filter((error) => {
+		return error.code === ERROR_CODE.objectFieldTypeMismatch;
+	});
+	const stringMismatches = stringCase.errors.filter((error) => {
+		return error.code === ERROR_CODE.objectFieldTypeMismatch;
+	});
+
+	return [
+		expectEqual(
+			"an i16 field value stored in u8 produces no objectFieldTypeMismatch",
+			numericMismatches.length,
+			0,
+		),
+		expectEqual(
+			"a string field value stored in u8 still produces objectFieldTypeMismatch",
+			stringMismatches.length,
+			1,
+		),
+	];
+};
+
+const CAST_DIAGNOSTIC_SOURCE = [
+	"type Counter = { count: u8, bump: (value: i16) => void }",
+	"type Level = { level: u8 }",
+	"const takeU8 = (value: u8) => { }",
+	"const run = () => {",
+	"    let wideValue: i16 = 200",
+	"    let counter: Counter = { count: 0, bump: (value: i16) => { this.count = value } }",
+	"    const narrowed: Level = { level: wideValue }",
+	"    takeU8(1000)",
+	"    counter.bump(wideValue)",
+	"}",
+].join("\n");
+
+const checkCastRoutesHaveNoLspDiagnostics = () => {
+	const diagnostics = computeDiagnostics(
+		CAST_DIAGNOSTIC_SOURCE,
+		null,
+		{},
+		true,
+		false,
+	).filter((diagnostic) => {
+		return (
+			diagnostic.code === ERROR_CODE.argumentTypeMismatch ||
+			diagnostic.code === ERROR_CODE.assignmentTypeMismatch ||
+			diagnostic.code === ERROR_CODE.objectFieldTypeMismatch
+		);
+	});
+	return [
+		expectEqual(
+			"LSP reports no numeric conversion diagnostic for literals, object fields or `this.field` assignments",
+			diagnostics.length,
 			0,
 		),
 	];
@@ -765,9 +936,9 @@ const checkFloatNarrowingWarnings = () => {
 			false,
 		),
 		expectEqual(
-			"a declared f32 destination still warns on the f64 result",
+			"a declared f32 destination no longer warns on the f64 result",
 			declaredWarnings.length,
-			1,
+			0,
 		),
 	];
 };
@@ -1242,6 +1413,10 @@ export const runNumericConversionChecks = async () => {
 		...checkIntegerLiteralOverloadWarnings(),
 		...checkDuplicateDeclarations(),
 		...checkConversionWarnings(),
+		...checkImplicitConversionRoutesHaveNoDiagnostics(),
+		...checkRealTypeErrorsRemain(),
+		...checkObjectFieldConversions(),
+		...checkCastRoutesHaveNoLspDiagnostics(),
 		...checkWidthFamilyDesugaring(),
 		...checkIntegerPromotionSelectionMatrix(),
 		...checkFloatPromotionSelectionMatrix(),
