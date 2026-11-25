@@ -197,3 +197,9 @@ pnpm run embedito95-cli init
 
 `init` asks for the target board and creates the project with a `config.json`,
 a `.gitignore` and a `main.e95` entry point.
+
+The `embedito95-cli` scripts in the root and in `packages/test` pass `--force`,
+so inside the monorepo they always run the CLI from the working tree instead of
+delegating to the published version pinned in `config.json`. Outside the
+monorepo, pass `--force` yourself to do the same. The delegation problem under
+`pnpm run` is tracked in the orchestration backlog as T-056.

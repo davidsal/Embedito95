@@ -22,7 +22,7 @@
     "test:full": "pnpm run lint && pnpm run test && pnpm run test:run && pnpm run test:leak && pnpm run test:compile:checks && pnpm run test:runtime && pnpm run test:compile",
     "docs:sync": "node packages/cli/scripts/sync-docs.js",
     "prepare": "node packages/cli/scripts/sync-docs.js && git config core.hooksPath .githooks || true",
-    "embedito95-cli": "node packages/cli/src/cli.js",
+    "embedito95-cli": "node packages/cli/src/cli.js --force",
     "lsp:install": "node packages/cli/scripts/build-extension.js && code --install-extension packages/cli/assets/embedito95-lsp.vsix"
   },
   "packageManager": "pnpm@11.7.0",

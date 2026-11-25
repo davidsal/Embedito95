@@ -12,7 +12,7 @@
 		"test:leak": "node codegen-leak/run.js",
 		"test:bench": "node codegen-bench/run.js",
 		"test:run": "node codegen-run/run.js",
-		"embedito95-cli": "embedito95-cli"
+		"embedito95-cli": "embedito95-cli --force"
 	},
 	"devDependencies": {
 		"embedito95-cli": "workspace:*",
