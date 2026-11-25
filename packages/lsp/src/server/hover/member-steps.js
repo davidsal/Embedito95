@@ -26,7 +26,11 @@ export const resolveObjectPropertyHover = (context) => {
 		return {
 			contents: {
 				kind: "markdown",
-				value: `\`\`\`e95\n${memberSignature}\n\`\`\``,
+				value: `\`\`\`e95\n${memberSignature}\n\`\`\`${formatCastWarningsSection(
+					context.line,
+					context.column,
+					context.allCastWarnings,
+				)}`,
 			},
 		};
 	}

@@ -49,7 +49,7 @@ it selected:
   whose whole type range is exact in `f32` (`u16`/`i16` or narrower).
   Narrowing is only explicit user intent: declaring the destination `f32`
   (`const result: f32 = interpolateRangeFloat(value64, …)`) still casts the
-  `f64` result and emits a non-blocking warning.
+  `f64` result, and the symbol hover notes the possible precision loss.
 - **Integer arguments follow the binary-operator promotion.** The integer family
   uses the same width the compiler already gives to `a + b`: signed and unsigned
   operands are promoted pairwise to a common width, then widened to the target
@@ -70,11 +70,13 @@ it selected:
   10)` still emits `int32_t`.
 - **Narrowing is explicit and visible.** Passing an `f64` value where an `f32`
   parameter is selected, or a `u64` where any integer parameter is selected,
-  emits a cast in the generated C++ and a non-blocking warning; it never becomes
-  a build error.
+  emits a cast in the generated C++. The editor does not underline the call; the
+  argument hover explains the possible precision, range or sign loss, and it
+  never becomes a build error.
 - **`u64` is not overloaded.** No integer width holds a full `u64`, so it always
-  falls back to `i64`, with an explicit cast and a non-blocking warning instead
-  of silently losing range. The bit helpers (`u32`/`u8`/`boolean`) and
+  falls back to `i64`, with an explicit cast; the argument hover explains the
+  possible range loss instead of losing it silently. The bit helpers
+  (`u32`/`u8`/`boolean`) and
   `randomInteger`/`seedRandom` (`i32`/`u32`) keep their single fixed signature.
 
 | Argument types | Promoted width | Selected overload | Cost |
@@ -91,10 +93,11 @@ it selected:
 | `f32` + `f64` (any argument is `f64`) | `f64` | `f64` | One `f64` wins the whole call; every `f32` value argument is cast to `(f64)`. |
 | integer by type range: `i8`/`i16`/`u8`/`u16` next to a float | the float width of the other arguments, at least `f32` | `f32` unless an `f64` argument is present | The integer type range is exact in `f32`, so it does not force `f64`. |
 | integer by type range: `i32`/`i64`/`u32`/`u64` next to a float | `f64` | `f64` | The integer type range exceeds the exact integers of `f32`; it widens with a cast. |
-| `u64` | `i64` | `i64` | Explicit cast plus a non-blocking narrowing warning. |
+| `u64` | `i64` | `i64` | Explicit cast; the hover notes the possible narrowing. |
 
-Warnings never block the build. A `u64` into `i64`, a `u32` into `i32`, and an
-`f64` into `f32` all warn and cast; none of them is an error.
+These conversions never block the build and are never underlined. A `u64` into
+`i64`, a `u32` into `i32`, and an `f64` into `f32` all cast automatically and
+only the hover notes the possible loss; none of them is an error.
 
 Integer arguments decide by the range of their declared type, not by their
 run-time value: `const count: i32 = 5; clampFloat(count, 0.0, 1.0)` selects the

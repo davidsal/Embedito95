@@ -293,9 +293,9 @@ const checkLspFiltersTruncationWarnings = async () => {
 
 	return [
 		expectEqual(
-			"lsp diagnostics show the truncation warning",
+			"lsp diagnostics no longer show a truncation warning",
 			hasTruncationWarning,
-			true,
+			false,
 		),
 		expectEqual("lsp diagnostics keep other warnings", hasOtherWarning, true),
 	];

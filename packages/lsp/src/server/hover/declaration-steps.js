@@ -46,7 +46,12 @@ const buildFunctionVariableHover = (statement, declaration, context) => {
 				": " +
 				signature +
 				"\n```" +
-				formatDocComment(docSection),
+				formatDocComment(docSection) +
+				formatCastWarningsSection(
+					context.line,
+					context.column,
+					context.allCastWarnings,
+				),
 		},
 	};
 };

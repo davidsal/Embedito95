@@ -1,6 +1,7 @@
 // Numeric conversion rule for arguments/constants/let and overload
-// resolution by parameter types. Warnings are non-blocking; no conversion
-// produced by this rule is reported as an error.
+// resolution by parameter types. Numeric conversions are implicit (auto cast
+// with truncation); none of them is reported as a diagnostic, the hover
+// explains the possible loss.
 // an f64 argument keeps the f64 overload and emits no warning
 diagnostics:
 - none
@@ -13,9 +14,9 @@ diagnostics:
 types:
 - scaled => f32
 
-// f64 into an f32 context warns without becoming an error
+// f64 into an f32 context converts silently; the hover explains the precision loss
 diagnostics:
-- warning error.assignmentTypeMismatch @ 3:28: Cannot assign 'f64' value to 'scaled' of type 'f32'.
+- none
 types:
 - scaled => f32
 
@@ -25,19 +26,19 @@ diagnostics:
 types:
 - scaled => f64
 
-// u64 into an i32 parameter warns but keeps the declared type
+// u64 into an i32 parameter converts silently but keeps the declared type
 diagnostics:
-- warning error.argumentTypeMismatch @ 3:32: Argument 'value' expects type 'i32' but 'wide' is 'u64'
+- none
 types:
 - narrowed => i32
 
-// i32 into an f32 parameter warns because the range exceeds 2^24
+// i32 into an f32 parameter converts silently; the hover explains the range loss
 diagnostics:
-- warning error.argumentTypeMismatch @ 3:36: Argument 'value' expects type 'f32' but 'whole' is 'i32'
+- none
 types:
 - converted => f32
 
-// i8 into an f32 parameter fits exactly and does not warn
+// i8 into an f32 parameter fits exactly and stays silent
 diagnostics:
 - none
 types:

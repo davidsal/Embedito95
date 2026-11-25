@@ -74,7 +74,11 @@ export const findParameterInfo = (syntaxTree, comments, name, line, column) => {
 		const signature = `\`\`\`e95\n${name}: ${type}\n\`\`\``;
 		const docSection = parameterDoc ? formatDocComment(parameterDoc) : "";
 
-		return { contents: { kind: "markdown", value: signature + docSection } };
+		return {
+			contents: { kind: "markdown", value: signature + docSection },
+			functionExpression,
+			parameter,
+		};
 	}
 
 	return null;

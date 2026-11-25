@@ -196,12 +196,14 @@ const checkBeginWriteArity = () => {
 	);
 };
 
+// An i32 member passed to a u8 parameter is an automatic cast, not a
+// diagnostic; the hover explains the potential loss instead.
 const checkSendByteArgumentType = () => {
 	const diagnostics = parseDiagnostics(TYPE_SOURCE);
 	return expectEqual(
-		"LSP reports a sendByte argument type mismatch",
+		"LSP no longer reports a sendByte argument type mismatch for an implicit cast",
 		diagnostics.join("\n"),
-		"5:37 error.argumentTypeMismatch Argument 'value' expects type 'u8' but 'wideValue' is 'i32'",
+		"",
 	);
 };
 

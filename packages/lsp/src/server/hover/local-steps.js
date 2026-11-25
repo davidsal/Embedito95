@@ -4,11 +4,13 @@ import {
 	evaluateConstant,
 	getNonNullableType,
 	isNarrowedAt,
+	resolveExpressionType,
 	resolveVariableType,
 } from "embedito95-core";
 import { formatDocComment, getDocComment } from "../shared/doc-comments.js";
 import { findLibraryFunctionExport } from "../shared/type-inference.js";
 import {
+	findAwaitExpressionAt,
 	findFunctionDeclaration,
 	findVariableDeclaration,
 } from "./ast-finders.js";
@@ -16,6 +18,7 @@ import { findParameterInfo } from "./doc-sections.js";
 import {
 	formatCastWarningsSection,
 	formatObjectShapeType,
+	formatParameterCastWarningsSection,
 } from "./formatting.js";
 import {
 	getFunctionSignature,
@@ -38,7 +41,24 @@ export const resolveParameterHover = (context) => {
 		context.column,
 	);
 
-	return parameterHover ?? NOT_HANDLED;
+	if (!parameterHover) {
+		return NOT_HANDLED;
+	}
+
+	const castSection = formatParameterCastWarningsSection(
+		context.line,
+		context.column,
+		context.allCastWarnings,
+		parameterHover.parameter.name,
+		parameterHover.functionExpression.loc,
+	);
+
+	return {
+		contents: {
+			kind: "markdown",
+			value: parameterHover.contents.value + castSection,
+		},
+	};
 };
 
 const FUNCTION_TYPE_PATTERN = /^\(.*\)\s*=>/;
@@ -188,7 +208,52 @@ const buildFunctionHover = (context, functionExpression) => {
 	return {
 		contents: {
 			kind: "markdown",
-			value: `\`\`\`e95\n${context.name}: ${signature}\n\`\`\``,
+			value:
+				`\`\`\`e95\n${context.name}: ${signature}\n\`\`\`` +
+				formatCastWarningsSection(
+					context.line,
+					context.column,
+					context.allCastWarnings,
+				),
+		},
+	};
+};
+
+// `take(await fetch())` has no identifier on the `await` keyword, so without an
+// explicit step the conversion warning never reaches the editor. The awaited
+// value keeps its own type; the loss note is anchored at the same node.
+export const resolveAwaitHover = (context) => {
+	const awaitExpression = findAwaitExpressionAt(
+		context.syntaxTree,
+		context.line,
+		context.column,
+	);
+
+	if (!awaitExpression) {
+		return NOT_HANDLED;
+	}
+
+	const awaitedType =
+		resolveExpressionType(
+			context.resolveNameType,
+			awaitExpression,
+			null,
+			context.resolveCallType,
+			context.hoverWordSize,
+			context.objectTypes,
+			context.syntaxTree,
+		) ?? "unknown";
+
+	return {
+		contents: {
+			kind: "markdown",
+			value:
+				`\`\`\`e95\nawait: ${awaitedType}\n\`\`\`` +
+				formatCastWarningsSection(
+					context.line,
+					context.column,
+					context.allCastWarnings,
+				),
 		},
 	};
 };

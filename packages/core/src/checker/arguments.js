@@ -1,4 +1,4 @@
-import { AST_NODE, ERROR_CODE, FLOAT_TYPES, SEVERITY } from "../constants.js";
+import { AST_NODE, ERROR_CODE } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { checkAllowedArgumentValue } from "./allowed-values.js";
 import { parseArrayElementType, parseArrayType } from "./arrays.js";
@@ -7,8 +7,8 @@ import { resolveObjectFieldType } from "./object-shapes.js";
 import { inferLiteralType, resolveLiteralDataType } from "./type-resolution.js";
 import {
 	getNonNullableType,
-	INTEGER_TYPES,
 	isNullableType,
+	isNumericType,
 	splitUnionTypes,
 	TYPE_RANGES,
 } from "./types.js";
@@ -198,7 +198,6 @@ const pushResolvedArgumentMismatch = (
 	argument,
 	param,
 	argumentType,
-	severity,
 ) => {
 	errors.push(
 		makeDiagnostic({
@@ -210,24 +209,13 @@ const pushResolvedArgumentMismatch = (
 				value: describeExpression(argument),
 			},
 			location: argument.loc,
-			severity,
 		}),
 	);
 };
 
-// Widening an integer into a wider integer parameter is allowed; narrowing only
-// warns. Mirrors the identifier branch and `checkMemberNumericArgument`.
-const resolveResolvedArgumentSeverity = (argumentType, hasNumericMember) => {
-	if (hasNumericMember && INTEGER_TYPES.has(getNonNullableType(argumentType))) {
-		return SEVERITY.warning;
-	}
-	return SEVERITY.error;
-};
-
 // Validates an already-resolved argument type (member or `await` expression)
-// against the parameter using the same union matching as identifiers. A float
-// flowing into a numeric parameter truncates without an error, like the member
-// numeric path.
+// against the parameter using the same union matching as identifiers. A numeric
+// value flowing into a numeric parameter truncates without a diagnostic.
 const checkResolvedFieldArgument = (
 	argument,
 	param,
@@ -237,13 +225,7 @@ const checkResolvedFieldArgument = (
 	hasNumericMember,
 ) => {
 	if (isNullableType(argumentType) && !isNullableType(param.type)) {
-		pushResolvedArgumentMismatch(
-			errors,
-			argument,
-			param,
-			argumentType,
-			SEVERITY.error,
-		);
+		pushResolvedArgumentMismatch(errors, argument, param, argumentType);
 		return;
 	}
 
@@ -254,19 +236,13 @@ const checkResolvedFieldArgument = (
 		return;
 	}
 
-	if (hasNumericMember && FLOAT_TYPES.has(getNonNullableType(argumentType))) {
-		// A float field passed to an integer parameter is truncated, not
-		// rejected; the hover warning covers the implicit conversion.
+	if (hasNumericMember && isNumericType(getNonNullableType(argumentType))) {
+		// Numeric source into a numeric parameter is an implicit cast with
+		// truncation: no diagnostic. The hover reports the precision note.
 		return;
 	}
 
-	pushResolvedArgumentMismatch(
-		errors,
-		argument,
-		param,
-		argumentType,
-		resolveResolvedArgumentSeverity(argumentType, hasNumericMember),
-	);
+	pushResolvedArgumentMismatch(errors, argument, param, argumentType);
 };
 
 const isOutsideParameterRange = (value, param) => {
@@ -371,6 +347,11 @@ export const checkMethodArgument = (
 		);
 
 		if (!accepted) {
+			if (hasNumericMember && isNumericType(getNonNullableType(argumentType))) {
+				// Numeric source into a numeric parameter is an implicit cast
+				// with truncation: no diagnostic.
+				return;
+			}
 			errors.push(
 				makeDiagnostic({
 					code: ERROR_CODE.argumentTypeMismatch,
@@ -381,10 +362,6 @@ export const checkMethodArgument = (
 						value: argument.name,
 					},
 					location: argument.loc,
-					severity:
-						hasNumericMember && INTEGER_TYPES.has(argumentType)
-							? SEVERITY.warning
-							: SEVERITY.error,
 				}),
 			);
 		}
@@ -475,6 +452,11 @@ export const checkMethodArgument = (
 		);
 
 		if (!accepted) {
+			if (hasNumericMember && isNumericType(getNonNullableType(argumentType))) {
+				// Numeric source into a numeric parameter is an implicit cast
+				// with truncation: no diagnostic.
+				return;
+			}
 			errors.push(
 				makeDiagnostic({
 					code: ERROR_CODE.argumentTypeMismatch,
@@ -485,11 +467,6 @@ export const checkMethodArgument = (
 						value: describeExpression(argument),
 					},
 					location: argument.loc,
-					severity:
-						hasNumericMember &&
-						INTEGER_TYPES.has(getNonNullableType(argumentType))
-							? SEVERITY.warning
-							: SEVERITY.error,
 				}),
 			);
 		}

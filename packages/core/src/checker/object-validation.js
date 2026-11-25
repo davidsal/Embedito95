@@ -1,4 +1,9 @@
-import { AST_NODE, ERROR_CODE, OBJECT_TYPE } from "../constants.js";
+import {
+	AST_NODE,
+	ERROR_CODE,
+	FLOAT_TYPES,
+	OBJECT_TYPE,
+} from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { parseArrayType } from "./arrays.js";
 import { resolveExpressionType } from "./expressions.js";
@@ -13,6 +18,19 @@ const isObjectFieldType = (type, objectTypes) => {
 		Boolean(objectTypes?.[type]) ||
 		isObjectShapeType(type)
 	);
+};
+
+// A numeric field value goes through the same implicit cast as a declaration:
+// no diagnostic, the hover reports the possible loss. Any non-numeric
+// mismatch (string, enum, object, nullable, boolean) stays an error.
+const isNumericFieldConversion = (actualType, expectedType) => {
+	const isNumeric = (type) => {
+		return (
+			Boolean(type) && (FLOAT_TYPES.has(type) || Boolean(TYPE_RANGES[type]))
+		);
+	};
+
+	return isNumeric(actualType) && isNumeric(expectedType);
 };
 
 const isEnumMemberOf = (node, expectedType) => {
@@ -288,7 +306,8 @@ export const validateObjectAssignment = (
 			expectedType &&
 			actualType !== expectedType &&
 			!valueAssignable &&
-			!isAssignableTo(expectedType, actualType)
+			!isAssignableTo(expectedType, actualType) &&
+			!isNumericFieldConversion(actualType, expectedType)
 		) {
 			errors.push(
 				makeDiagnostic({

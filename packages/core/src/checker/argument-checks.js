@@ -5,7 +5,6 @@ import {
 	FLOAT_TYPES,
 	QUOTE_DOUBLE,
 	QUOTE_SINGLE,
-	SEVERITY,
 } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { checkAllowedArgumentValue } from "./allowed-values.js";
@@ -15,17 +14,8 @@ import {
 	checkIdentifierArgument,
 	checkMemberArgument,
 } from "./identifier-argument-checks.js";
-import {
-	canLoseFloatPrecision,
-	shouldWarnNumericConversion,
-} from "./numeric-conversions.js";
 import { inferLiteralType, resolveLiteralDataType } from "./type-resolution.js";
-import {
-	CHARACTER_TYPES,
-	INTEGER_TYPES,
-	isNumericType,
-	TYPE_RANGES,
-} from "./types.js";
+import { CHARACTER_TYPES, INTEGER_TYPES, TYPE_RANGES } from "./types.js";
 
 // An `AsyncTask<T>` argument only becomes its payload after `await`. Passing the
 // wrapper to a parameter that expects the payload (nominal or inferred shape)
@@ -100,39 +90,11 @@ export const checkArgumentAgainstParam = (state, argument, param) => {
 		checkCastArgument(state, argument, param);
 		return;
 	}
-
-	if (isNumericType(param.type)) {
-		checkExpressionNumericArgument(state, argument, param);
-	}
 };
 
-// Expressions that are not a plain literal/identifier/member (e.g. `u32 * i16`)
-// still follow the numeric conversion rule. Integer narrowing is only judged on
-// a declared type (identifier/member): a promoted expression (`getCapacity()-1`
-// is i32) would warn even when the value cannot truncate, so expressions only
-// warn on float precision loss, which the operand types do determine.
-const checkExpressionNumericArgument = (state, argument, param) => {
-	const argumentType = state.context?.resolveCheckExpressionType?.(argument);
-	if (!argumentType || !isNumericType(argumentType)) {
-		return;
-	}
-	if (canLoseFloatPrecision(argumentType, param.type)) {
-		state.errors.push(
-			makeDiagnostic({
-				code: ERROR_CODE.argumentTypeMismatch,
-				params: {
-					name: param.name,
-					expected: param.type,
-					actual: argumentType,
-					value: describeExpression(argument),
-				},
-				location: argument.loc,
-				severity: SEVERITY.warning,
-			}),
-		);
-	}
-};
-
+// `as` casts are explicit: only a float cast into an integer parameter is
+// accepted (truncating like the implicit paths), any other mismatching numeric
+// cast is rejected.
 const checkCastArgument = (state, argument, param) => {
 	const castType = argument.targetType.name;
 
@@ -142,7 +104,7 @@ const checkCastArgument = (state, argument, param) => {
 		(INTEGER_TYPES.has(castType) || FLOAT_TYPES.has(castType))
 	) {
 		if (FLOAT_TYPES.has(castType) && INTEGER_TYPES.has(param.type)) {
-			// `funI(500 as f32)` truncates the float argument; the hover warning
+			// `funI(500 as f32)` truncates the float argument; the hover note
 			// reports it instead of an error, matching declarations and members.
 			return;
 		}
@@ -182,22 +144,8 @@ const checkLiteralArgument = (state, argument, param) => {
 
 const checkLiteralFloatArgument = (state, argument, param) => {
 	if (typeof argument.value === "number") {
-		const literalType = resolveLiteralDataType(argument);
-		if (shouldWarnNumericConversion(literalType, param.type)) {
-			state.errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.argumentTypeMismatch,
-					params: {
-						name: param.name,
-						expected: param.type,
-						actual: literalType,
-						value: argument.value,
-					},
-					location: argument.loc,
-					severity: SEVERITY.warning,
-				}),
-			);
-		}
+		// A numeric literal into a float parameter is an implicit cast with
+		// truncation: no diagnostic. The hover reports the precision note.
 		return;
 	}
 	state.errors.push(
@@ -309,19 +257,7 @@ const checkLiteralRangeArgument = (state, argument, param) => {
 		return;
 	}
 
-	if (literalValue < range.min || literalValue > range.max) {
-		const literalType = inferLiteralType(literalValue);
-		state.errors.push(
-			makeDiagnostic({
-				code: ERROR_CODE.argumentTypeMismatch,
-				params: {
-					name: param.name,
-					expected: param.type,
-					actual: literalType,
-					value: literalValue,
-				},
-				location: argument.loc,
-			}),
-		);
-	}
+	// A numeric literal outside the parameter range is an implicit cast with
+	// truncation: the checker stays silent and the hover reports the range
+	// loss. Only non-numeric values (handled above) remain a diagnostic.
 };

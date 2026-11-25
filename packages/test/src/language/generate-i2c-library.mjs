@@ -79,7 +79,7 @@ const bus: I2CBus = getI2C(I2C.1)
 export const badCount = bus.beginWrite()`,
 		},
 		{
-			label: "wider integer argument warns on sendByte",
+			label: "wider integer argument converts silently on sendByte",
 			probes: ["widened"],
 			body: `import { I2C, I2CBus, getI2C } from '@embedito95/i2c'
 const bus: I2CBus = getI2C(I2C.1)
@@ -125,7 +125,7 @@ const bus: I2CBus = getI2C(I2C.1)
 export const missing = bus.somewhere(0)`,
 		},
 		{
-			label: "wider integer argument warns on a u8 parameter",
+			label: "wider integer argument converts silently on a u8 parameter",
 			probes: ["widened"],
 			body: `import { I2C, I2CBus, getI2C } from '@embedito95/i2c'
 const bus: I2CBus = getI2C(I2C.1)

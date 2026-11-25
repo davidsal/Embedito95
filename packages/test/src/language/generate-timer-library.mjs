@@ -209,7 +209,7 @@ export const badPin = () => {
 }`,
 		},
 		{
-			label: "tone frequency outside u16 range reported",
+			label: "tone frequency outside u16 range converts silently",
 			probes: [],
 			body: `import { Timer, startTone } from '@embedito95/timer'
 import { Pin } from '@embedito95/gpio'

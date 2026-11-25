@@ -1,17 +1,10 @@
-import {
-	AST_NODE,
-	DATA_TYPE,
-	ERROR_CODE,
-	FLOAT_TYPES,
-	SEVERITY,
-} from "../constants.js";
+import { AST_NODE, DATA_TYPE, ERROR_CODE, FLOAT_TYPES } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
 import { isAsyncTaskType } from "./async-task-type.js";
 import {
 	checkComparisonTypeMismatch,
 	resolveCheckExpressionType,
 } from "./comparisons.js";
-import { resolveAssignmentTruncation } from "./expression-assignment.js";
 import { resolveExpressionType } from "./expressions.js";
 import { createNarrowedTypeResolver } from "./narrowing.js";
 import { checkMethodOnlyObjectLiteral } from "./object-method-validation.js";
@@ -267,29 +260,6 @@ export const buildCheckContext = ({
 				}),
 			);
 			return;
-		}
-
-		if (
-			resolveAssignmentTruncation(
-				rhsNode,
-				callAwareRhsType ?? rhsType,
-				targetType,
-				floatContext,
-				ast,
-			)
-		) {
-			errors.push(
-				makeDiagnostic({
-					code: ERROR_CODE.assignmentTypeMismatch,
-					params: {
-						name: name ?? "?",
-						type: targetType,
-						rhsType: callAwareRhsType ?? rhsType,
-					},
-					location,
-					severity: SEVERITY.warning,
-				}),
-			);
 		}
 	};
 

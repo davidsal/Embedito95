@@ -1127,10 +1127,10 @@ const TRUNCATION_HOVER_SOURCE = [
 ].join("\n");
 
 const TRUNCATION_WARNING_SUFFIX =
-	"\n\n⚠ `the argument` is `f32` while the parameter expects `i32`. An automatic cast is applied, which may truncate the value.";
+	"\n\n⚠ the argument is `f32` and is truncated toward zero when stored as `i32`.";
 
 const MEMBER_TRUNCATION_WARNING_SUFFIX = (name) => {
-	return `\n\n⚠ \`${name}\` is \`i32\` while the right-hand expression is \`f32\`. An automatic cast is applied, which may truncate the value.`;
+	return `\n\n⚠ \`${name}\` is \`f32\` and is truncated toward zero when stored as \`i32\`.`;
 };
 
 const DECLARATION_TRUNCATION_SOURCE = "const x: i16 = 1.5";
@@ -1161,9 +1161,9 @@ const checkFloatArgumentTruncationHover = async () => {
 	);
 	return [
 		expectEqual(
-			"LSP hover warns when `500 as f32` is passed to an i32 parameter",
+			"LSP hover stays warning-free when exact `500 as f32` is passed to an i32 parameter",
 			castArgumentHover,
-			`\`\`\`e95\nliteral i16 = 500\n\`\`\`${TRUNCATION_WARNING_SUFFIX}`,
+			"```e95\nliteral i16 = 500\n```",
 		),
 		expectEqual(
 			"LSP hover warns when the float literal 1.5 is passed to an i32 parameter",
@@ -1191,9 +1191,9 @@ const checkFloatMemberAssignmentTruncationHover = async () => {
 	);
 	return [
 		expectEqual(
-			"LSP hover warns when `500 as f32` is stored in an i32 property",
+			"LSP hover stays warning-free when exact `500 as f32` is stored in an i32 property",
 			castMemberHover,
-			`\`\`\`e95\ncount: i32\n\`\`\`${MEMBER_TRUNCATION_WARNING_SUFFIX("box.count")}`,
+			"```e95\ncount: i32\n```",
 		),
 		expectEqual(
 			"LSP hover warns when the float literal 1.5 is stored in an i32 property",
@@ -1212,8 +1212,407 @@ const checkDeclarationTruncationHover = async () => {
 	return expectEqual(
 		"LSP hover warns when a float literal is truncated into an i16 declaration",
 		hover,
-		"```e95\nconst x: i16 = 1.5\n```\n\n⚠ `x` is `i16` while the right-hand expression is `f32`. An automatic cast is applied, which may truncate the value.",
+		"```e95\nconst x: i16 = 1.5\n```\n\n⚠ `x` is `f32` and is truncated toward zero when stored as `i16`.",
 	);
+};
+
+const CAST_LOSS_HOVER_SOURCE = [
+	"type Box = { count: i8, put: (value: i8) => void }",
+	"type Forwarder = { forward: () => void, put: (value: i8) => void }",
+	"const take = (value: u8) => { }",
+	"const takeFloat = (value: f32) => { }",
+	"const takeWide = (value: u32) => { }",
+	"const INTERVAL = 1000",
+	"const run = () => {",
+	"    let box: Box = { count: 0, put: (value: i8) => { } }",
+	"    let wide: f64 = 0",
+	"    let forwarder: Forwarder = { forward: () => { this.put(wide) }, put: (value: i8) => { } }",
+	"    let signed: i16 = 0",
+	"    let big: u16 = 0",
+	"    box.put(wide)",
+	"    take(signed)",
+	"    takeFloat(wide)",
+	"    take(big)",
+	"    takeWide(INTERVAL)",
+	"}",
+].join("\n");
+
+const countWarningLines = (hover) => {
+	return hover.split("⚠").length - 1;
+};
+
+const checkCastLossReasonHover = async () => {
+	const methodArgumentHover = await hoverTruncationAt(
+		CAST_LOSS_HOVER_SOURCE,
+		"box.put(wide)",
+		"box.put(".length,
+	);
+	const signHover = await hoverTruncationAt(
+		CAST_LOSS_HOVER_SOURCE,
+		"take(signed)",
+		"take(".length,
+	);
+	const precisionHover = await hoverTruncationAt(
+		CAST_LOSS_HOVER_SOURCE,
+		"takeFloat(wide)",
+		"takeFloat(".length,
+	);
+	const rangeHover = await hoverTruncationAt(
+		CAST_LOSS_HOVER_SOURCE,
+		"take(big)",
+		"take(".length,
+	);
+	const selfMethodHover = await hoverTruncationAt(
+		CAST_LOSS_HOVER_SOURCE,
+		"this.put(wide)",
+		"this.put(".length,
+	);
+	const constantHover = await hoverTruncationAt(
+		CAST_LOSS_HOVER_SOURCE,
+		"takeWide(INTERVAL)",
+		"takeWide(".length,
+	);
+	return [
+		expectEqual(
+			"LSP hover reports a truncation for a method argument cast from f64 to i8",
+			methodArgumentHover,
+			"```e95\nlet wide: f64 = 0\n```\n\n⚠ `wide` is `f64` and is truncated toward zero when stored as `i8`.",
+		),
+		expectEqual(
+			"a single conversion produces a single hover warning line",
+			countWarningLines(methodArgumentHover),
+			1,
+		),
+		expectEqual(
+			"LSP hover reports a lost sign when an i16 argument is stored in u8",
+			signHover,
+			"```e95\nlet signed: i16 = 0\n```\n\n⚠ `signed` is `i16` and may lose its sign when stored as `u8`.",
+		),
+		expectEqual(
+			"LSP hover reports precision loss when an f64 argument is stored in f32",
+			precisionHover,
+			"```e95\nlet wide: f64 = 0\n```\n\n⚠ `wide` is `f64` and may lose precision when stored as `f32`.",
+		),
+		expectEqual(
+			"LSP hover reports a range loss when a u16 argument is stored in u8",
+			rangeHover,
+			"```e95\nlet big: u16 = 0\n```\n\n⚠ `big` is `u16` and does not fit in `u8`; it may wrap.",
+		),
+		expectEqual(
+			"LSP hover reports a truncation for a `this.method` argument",
+			selfMethodHover,
+			"```e95\nlet wide: f64 = 0\n```\n\n⚠ `wide` is `f64` and is truncated toward zero when stored as `i8`.",
+		),
+		expectEqual(
+			"LSP hover stays warning-free when a const value fits the numeric parameter",
+			constantHover,
+			"```e95\nconst INTERVAL: i16 = 1000\n```",
+		),
+		expectEqual(
+			"the warning-free const hover has no warning line",
+			countWarningLines(constantHover),
+			0,
+		),
+	];
+};
+
+const MATH_WIDTH_ARGUMENT_SOURCE = [
+	"import { square, absolute, clamp, clampFloat } from '@embedito95/math'",
+	"const wideF64: f64 = 3.14159265358979",
+	"const wholeI32: i32 = 5",
+	"const wideU32: u32 = 3000000000",
+	"const squareWide = square(wideF64)",
+	"const squareWhole = square(wholeI32)",
+	"const absoluteWide = absolute(wideU32)",
+	"const clampWide = clamp(wideU32, 0, 10)",
+	"const clampFloatWide = clampFloat(wideF64, 0.0, 1.0)",
+].join("\n");
+
+const PARAMETER_CAST_HOVER_SOURCE = [
+	"const takeU8 = (value: u8) => { }",
+	"const takeF32 = (value: f32) => { }",
+	"const run = (wide: i32) => { takeU8(wide) }",
+	"const runFloat = (ratio: f64) => { takeF32(ratio) }",
+].join("\n");
+
+const CONSTANT_FLOAT_HOVER_SOURCE = [
+	"const exactI32: i32 = 5",
+	"const bigI32: i32 = 16777217",
+	"const fromExact: f32 = exactI32",
+	"const fromBig: f32 = bigI32",
+].join("\n");
+
+const RANGE_REASON_HOVER_SOURCE = [
+	"const takeU8 = (value: u8) => { }",
+	"takeU8(1000)",
+	"const knownI32: i32 = 1000",
+	"const narrowed: u8 = knownI32",
+	"const negativeI16: i16 = -5",
+	"takeU8(negativeI16)",
+].join("\n");
+
+const checkMathWidthArgumentHover = async () => {
+	const squareWideHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_WIDTH_ARGUMENT_SOURCE,
+		findPosition(
+			MATH_WIDTH_ARGUMENT_SOURCE,
+			"square(wideF64)",
+			"square(".length,
+		),
+	);
+	const squareWholeHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_WIDTH_ARGUMENT_SOURCE,
+		findPosition(
+			MATH_WIDTH_ARGUMENT_SOURCE,
+			"square(wholeI32)",
+			"square(".length,
+		),
+	);
+	const absoluteHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_WIDTH_ARGUMENT_SOURCE,
+		findPosition(
+			MATH_WIDTH_ARGUMENT_SOURCE,
+			"absolute(wideU32)",
+			"absolute(".length,
+		),
+	);
+	const clampHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_WIDTH_ARGUMENT_SOURCE,
+		findPosition(
+			MATH_WIDTH_ARGUMENT_SOURCE,
+			"clamp(wideU32, 0, 10)",
+			"clamp(".length,
+		),
+	);
+	const clampFloatHover = await hoverInDocument(
+		MATH_DOCUMENT_URI,
+		MATH_WIDTH_ARGUMENT_SOURCE,
+		findPosition(
+			MATH_WIDTH_ARGUMENT_SOURCE,
+			"clampFloat(wideF64, 0.0, 1.0)",
+			"clampFloat(".length,
+		),
+	);
+	return [
+		expectEqual(
+			"LSP hover stays warning-free for a f64 math argument on the selected f64 overload",
+			countWarningLines(squareWideHover),
+			0,
+		),
+		expectEqual(
+			"LSP hover stays warning-free for a whole i32 math argument",
+			countWarningLines(squareWholeHover),
+			0,
+		),
+		expectEqual(
+			"LSP hover stays warning-free for a u32 absolute argument on the selected i64 overload",
+			countWarningLines(absoluteHover),
+			0,
+		),
+		expectEqual(
+			"LSP hover stays warning-free for a u32 clamp argument on the selected i64 overload",
+			countWarningLines(clampHover),
+			0,
+		),
+		expectEqual(
+			"LSP hover stays warning-free for a f64 clampFloat argument",
+			countWarningLines(clampFloatHover),
+			0,
+		),
+	];
+};
+
+const checkParameterCastHover = async () => {
+	const integerHover = await hoverInDocument(
+		DOCUMENT_URI,
+		PARAMETER_CAST_HOVER_SOURCE,
+		findPosition(PARAMETER_CAST_HOVER_SOURCE, "(wide: i32)", "(wi".length),
+	);
+	const floatHover = await hoverInDocument(
+		DOCUMENT_URI,
+		PARAMETER_CAST_HOVER_SOURCE,
+		findPosition(PARAMETER_CAST_HOVER_SOURCE, "(ratio: f64)", "(ra".length),
+	);
+	return [
+		expectEqual(
+			"LSP hover of an i32 parameter passed to u8 reports the sign loss",
+			integerHover,
+			"```e95\nwide: i32\n```\n\n⚠ `wide` is `i32` and may lose its sign when stored as `u8`.",
+		),
+		expectEqual(
+			"LSP hover of a f64 parameter passed to f32 reports the precision loss",
+			floatHover,
+			"```e95\nratio: f64\n```\n\n⚠ `ratio` is `f64` and may lose precision when stored as `f32`.",
+		),
+	];
+};
+
+const checkConstantIntegerFloatHover = async () => {
+	const exactHover = await hoverInDocument(
+		DOCUMENT_URI,
+		CONSTANT_FLOAT_HOVER_SOURCE,
+		findPosition(CONSTANT_FLOAT_HOVER_SOURCE, "fromExact", "const ".length),
+	);
+	const inexactHover = await hoverInDocument(
+		DOCUMENT_URI,
+		CONSTANT_FLOAT_HOVER_SOURCE,
+		findPosition(CONSTANT_FLOAT_HOVER_SOURCE, "fromBig", "const ".length),
+	);
+	return [
+		expectEqual(
+			"LSP hover stays warning-free when an integer constant is exact in f32",
+			exactHover,
+			"```e95\nconst fromExact: f32 = 5\n```",
+		),
+		expectEqual(
+			"LSP hover warns when an integer constant is not exact in f32",
+			inexactHover,
+			"```e95\nconst fromBig: f32 = 16777216\n```\n\n⚠ `fromBig` is `i32` and may lose precision when stored as `f32`.",
+		),
+	];
+};
+
+const checkKnownValueRangeReasonHover = async () => {
+	const literalHover = await hoverInDocument(
+		DOCUMENT_URI,
+		RANGE_REASON_HOVER_SOURCE,
+		findPosition(RANGE_REASON_HOVER_SOURCE, "takeU8(1000)", "takeU8(".length),
+	);
+	const constHover = await hoverInDocument(
+		DOCUMENT_URI,
+		RANGE_REASON_HOVER_SOURCE,
+		findPosition(RANGE_REASON_HOVER_SOURCE, "narrowed", "const ".length),
+	);
+	const negativeConstantHover = await hoverInDocument(
+		DOCUMENT_URI,
+		RANGE_REASON_HOVER_SOURCE,
+		findPosition(
+			RANGE_REASON_HOVER_SOURCE,
+			"takeU8(negativeI16)",
+			"takeU8(".length,
+		),
+	);
+	return [
+		expectEqual(
+			"LSP hover reports a range loss for a known literal that does not fit u8",
+			literalHover,
+			"```e95\nliteral i16 = 1000\n```\n\n⚠ the argument is `i16` and does not fit in `u8`; it may wrap.",
+		),
+		expectEqual(
+			"LSP hover reports a range loss for a known const that does not fit u8",
+			constHover,
+			"```e95\nconst narrowed: u8 = 1000\n```\n\n⚠ `narrowed` is `i32` and does not fit in `u8`; it may wrap.",
+		),
+		expectEqual(
+			"LSP hover reports a sign loss for a negative constant stored in u8",
+			negativeConstantHover,
+			"```e95\nconst negativeI16: i16 = -5\n```\n\n⚠ `negativeI16` is `i16` and may lose its sign when stored as `u8`.",
+		),
+	];
+};
+
+const SELF_AND_OBJECT_FIELD_HOVER_SOURCE = [
+	"type Counter = { count: u8, bump: (value: i16) => void }",
+	"type Level = { level: u8 }",
+	"const run = () => {",
+	"    let wideValue: i16 = 200",
+	"    let counter: Counter = { count: 0, bump: (value: i16) => { this.count = value } }",
+	"    const narrowed: Level = { level: wideValue }",
+	"    counter.bump(wideValue)",
+	"}",
+].join("\n");
+
+const checkSelfAndObjectFieldCastHover = async () => {
+	const selfFieldHover = await hoverInDocument(
+		DOCUMENT_URI,
+		SELF_AND_OBJECT_FIELD_HOVER_SOURCE,
+		findPosition(
+			SELF_AND_OBJECT_FIELD_HOVER_SOURCE,
+			"this.count = value",
+			"this.".length,
+		),
+	);
+	const objectFieldHover = await hoverInDocument(
+		DOCUMENT_URI,
+		SELF_AND_OBJECT_FIELD_HOVER_SOURCE,
+		findPosition(SELF_AND_OBJECT_FIELD_HOVER_SOURCE, "level: wideValue", 0),
+	);
+	return [
+		expectEqual(
+			"LSP hover warns when `this.field` stores a wider value",
+			selfFieldHover,
+			"```e95\ncount: u8\n```\n\n⚠ `this.count` is `i16` and may lose its sign when stored as `u8`.",
+		),
+		expectEqual(
+			"LSP hover warns when an object initializer stores a wider value",
+			objectFieldHover,
+			"```e95\nlevel: u8\n```\n\n⚠ `level` is `i16` and may lose its sign when stored as `u8`.",
+		),
+	];
+};
+
+const AWAIT_ARGUMENT_HOVER_SOURCE = [
+	"const fetchNumber = async (): AsyncTask<i32> => { return 300 }",
+	"const fetchByte = async (): AsyncTask<u8> => { return 1 }",
+	"const take = (value: u8) => { }",
+	"const run = async () => {",
+	"    take(await fetchNumber())",
+	"    take(await fetchByte())",
+	"}",
+].join("\n");
+
+const AWAIT_ARGUMENT_WARNING_SUFFIX =
+	"\n\n⚠ the argument is `i32` and may lose its sign when stored as `u8`.";
+
+const checkAwaitArgumentCastHover = async () => {
+	const awaitKeywordHover = await hoverInDocument(
+		ASYNC_TASK_DOCUMENT_URI,
+		AWAIT_ARGUMENT_HOVER_SOURCE,
+		findPosition(
+			AWAIT_ARGUMENT_HOVER_SOURCE,
+			"take(await fetchNumber())",
+			"take(".length,
+		),
+	);
+	const awaitedFunctionHover = await hoverInDocument(
+		ASYNC_TASK_DOCUMENT_URI,
+		AWAIT_ARGUMENT_HOVER_SOURCE,
+		findPosition(
+			AWAIT_ARGUMENT_HOVER_SOURCE,
+			"take(await fetchNumber())",
+			"take(await ".length,
+		),
+	);
+	const fittingAwaitHover = await hoverInDocument(
+		ASYNC_TASK_DOCUMENT_URI,
+		AWAIT_ARGUMENT_HOVER_SOURCE,
+		findPosition(
+			AWAIT_ARGUMENT_HOVER_SOURCE,
+			"take(await fetchByte())",
+			"take(".length,
+		),
+	);
+	return [
+		expectEqual(
+			"LSP hover of an `await` argument reports the conversion loss",
+			awaitKeywordHover,
+			`\`\`\`e95\nawait: i32\n\`\`\`${AWAIT_ARGUMENT_WARNING_SUFFIX}`,
+		),
+		expectEqual(
+			"LSP hover of the awaited function also reports the conversion loss",
+			awaitedFunctionHover,
+			`\`\`\`e95\nconst fetchNumber: () => AsyncTask<i32>\n\`\`\`${AWAIT_ARGUMENT_WARNING_SUFFIX}`,
+		),
+		expectEqual(
+			"LSP hover of an `await` whose type fits the parameter stays warning-free",
+			fittingAwaitHover,
+			"```e95\nawait: u8\n```",
+		),
+	];
 };
 
 const hoverAsyncTaskAt = async (marker, offset = 0) => {
@@ -1838,6 +2237,13 @@ export const runLspHoverChecks = async () => {
 		...(await checkFloatArgumentTruncationHover()),
 		...(await checkFloatMemberAssignmentTruncationHover()),
 		await checkDeclarationTruncationHover(),
+		...(await checkCastLossReasonHover()),
+		...(await checkMathWidthArgumentHover()),
+		...(await checkParameterCastHover()),
+		...(await checkConstantIntegerFloatHover()),
+		...(await checkKnownValueRangeReasonHover()),
+		...(await checkSelfAndObjectFieldCastHover()),
+		...(await checkAwaitArgumentCastHover()),
 		await checkAsyncFunctionHover(),
 		await checkAsyncTaskVariableHover(),
 		await checkAsyncTaskFieldHover(),

@@ -65,9 +65,9 @@ types:
 - preciseClamp => f64
 - preciseRoot => f64
 
-// a mixed-width call narrows with a non-blocking warning
+// a mixed-width call converts silently with a hover-only note
 diagnostics:
-- warning error.assignmentTypeMismatch @ 3:30: Cannot assign 'f64' value to 'narrowed' of type 'f32'.
+- none
 types:
 - narrowed => f32
 
@@ -104,9 +104,9 @@ diagnostics:
 types:
 - missing => unresolved
 
-// wider integer argument warns on a u8 parameter
+// wider integer argument converts silently on a u8 parameter
 diagnostics:
-- warning error.argumentTypeMismatch @ 3:40: Argument 'bitIndex' expects type 'u8' but 'wideIndex' is 'i32'
+- none
 types:
 - widened => u32
 

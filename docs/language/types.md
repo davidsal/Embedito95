@@ -50,8 +50,8 @@ const compute = (getValue: () => i16): i16 => {
 Function types lower to C function pointers, so assignability is **exact**:
 parameter count, parameter types and return type must match. In particular,
 `() => i16` is not assignable to `() => void`, even though the result would be
-discarded; the emitted C would not compile. There are no implicit parameter or
-return conversions.
+discarded; the emitted C would not compile. There are no implicit conversions
+between function types.
 
 ## Null and nullable
 
@@ -80,8 +80,9 @@ const name: string | null = null
   valid. The sign belongs to the exponent, and an exponent without digits is a
   syntax error.
 - Pure integer arithmetic stays integer, including division: `5 / 2` is `2`.
-- Storing an integer result in a float variable converts it with a warning, not
-  an error.
+- Storing an integer result in a float variable converts it with an automatic
+  cast, not an error. The editor does not underline it; only the symbol hover
+  notes the possible precision loss.
 - `%` is only defined for integers.
 
 ## Value behavior

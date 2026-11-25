@@ -55,23 +55,65 @@ export const formatMethodParameterList = (parameters) => {
 		.join(", ");
 };
 
+const NO_LOCATION_KEY = "none";
+
+const describeWarningLocation = (location) => {
+	if (!location?.start || !location?.end) {
+		return NO_LOCATION_KEY;
+	}
+	const { start, end } = location;
+
+	return `${start.line}:${start.column}-${end.line}:${end.column}`;
+};
+
+const castWarningKey = (warning) => {
+	return [
+		warning.kind,
+		describeWarningLocation(warning.location),
+		describeWarningLocation(warning.targetLocation),
+		warning.rhsType,
+		warning.targetType,
+	].join("|");
+};
+
+// A single conversion can be reached by more than one collector (a declaration
+// that also reads as an assignment, a node visited twice), so identical
+// warnings collapse before formatting.
+const dedupeCastWarnings = (warnings) => {
+	const seenKeys = new Set();
+
+	return warnings.filter((warning) => {
+		const key = castWarningKey(warning);
+
+		if (seenKeys.has(key)) {
+			return false;
+		}
+		seenKeys.add(key);
+		return true;
+	});
+};
+
 export const collectCastWarnings = (
 	syntaxTree,
 	variableTypes,
 	parameterTypesByName,
 	wordSize,
 	objectTypes,
+	resolveCallType,
 ) => {
-	return [
+	const warnings = [
 		...collectAssignmentCastWarnings(syntaxTree, {
 			variableTypes,
 			objectTypes,
 			wordSize,
+			resolveCallType,
 		}),
 		...collectArgumentCastWarnings(syntaxTree, {
 			variableTypes,
 			paramTypesByName: parameterTypesByName,
 			wordSize,
+			objectTypes,
+			resolveCallType,
 		}),
 		...collectObjectCastWarnings(syntaxTree, {
 			variableTypes,
@@ -79,6 +121,42 @@ export const collectCastWarnings = (
 			wordSize,
 		}),
 	];
+
+	return dedupeCastWarnings(warnings);
+};
+
+const describeWarningSubject = (warning) => {
+	if (warning.name) {
+		return `\`${warning.name}\``;
+	}
+	return warning.kind === "argument" ? "the argument" : "the expression";
+};
+
+const formatNumericCastWarning = (warning) => {
+	const subject = describeWarningSubject(warning);
+	const source = `\`${warning.rhsType}\``;
+	const target = `\`${warning.targetType}\``;
+
+	if (warning.reason === "precision") {
+		return `⚠ ${subject} is ${source} and may lose precision when stored as ${target}.`;
+	}
+	if (warning.reason === "truncation") {
+		return `⚠ ${subject} is ${source} and is truncated toward zero when stored as ${target}.`;
+	}
+	if (warning.reason === "sign") {
+		return `⚠ ${subject} is ${source} and may lose its sign when stored as ${target}.`;
+	}
+	if (warning.reason === "range") {
+		return `⚠ ${subject} is ${source} and does not fit in ${target}; it may wrap.`;
+	}
+	return `⚠ ${subject} is ${source} while the target expects ${target}. An automatic cast is applied, which may lose information.`;
+};
+
+const formatCastWarning = (warning) => {
+	if (warning.kind === "object") {
+		return `⚠ \`${warning.name}\` is \`${warning.rhsType}\` and is stored as \`${warning.targetType}\`. The concrete type is erased; cast it back with \`as\` before use.`;
+	}
+	return formatNumericCastWarning(warning);
 };
 
 export const formatCastWarnings = (warnings) => {
@@ -87,13 +165,7 @@ export const formatCastWarnings = (warnings) => {
 	}
 
 	const lines = warnings.map((warning) => {
-		if (warning.kind === "argument") {
-			return `⚠ \`${warning.name ?? "the argument"}\` is \`${warning.rhsType}\` while the parameter expects \`${warning.targetType}\`. An automatic cast is applied, which may truncate the value.`;
-		}
-		if (warning.kind === "object") {
-			return `⚠ \`${warning.name}\` is \`${warning.rhsType}\` and is stored as \`${warning.targetType}\`. The concrete type is erased; cast it back with \`as\` before use.`;
-		}
-		return `⚠ \`${warning.name}\` is \`${warning.targetType}\` while the right-hand expression is \`${warning.rhsType}\`. An automatic cast is applied, which may truncate the value.`;
+		return formatCastWarning(warning);
 	});
 
 	return `\n\n${lines.join("\n")}`;
@@ -108,6 +180,57 @@ export const formatCastWarningsSection = (line, column, allCastWarnings) => {
 			);
 		}),
 	);
+};
+
+const warningSourceName = (warning) => {
+	if (warning.sourceName) {
+		return warning.sourceName;
+	}
+	if (warning.kind === "argument") {
+		return warning.name ?? null;
+	}
+	return null;
+};
+
+// A parameter hover is anchored at the declaration, so it cannot match a
+// warning by `targetLocation` (the argument/assignment site). It matches the
+// conversions whose source is that parameter inside the same function instead,
+// and still accepts a warning anchored at the hover position. The shared dedupe
+// keeps a parameter from repeating a conversion already shown for an
+// assignment.
+export const formatParameterCastWarningsSection = (
+	line,
+	column,
+	allCastWarnings,
+	parameterName,
+	functionLocation,
+) => {
+	const matching = allCastWarnings.filter((warning) => {
+		const anchored = Boolean(
+			warning.targetLocation &&
+				isInLocation(line, column, warning.targetLocation),
+		);
+
+		if (anchored) {
+			return true;
+		}
+		if (warningSourceName(warning) !== parameterName) {
+			return false;
+		}
+		const sourceLocation = warning.location;
+
+		return Boolean(
+			sourceLocation?.start &&
+				functionLocation &&
+				isInLocation(
+					sourceLocation.start.line,
+					sourceLocation.start.column,
+					functionLocation,
+				),
+		);
+	});
+
+	return formatCastWarnings(dedupeCastWarnings(matching));
 };
 
 export const computeEnumType = (members) => {

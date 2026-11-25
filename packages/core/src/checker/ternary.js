@@ -2,7 +2,6 @@ import {
 	AST_NODE,
 	DATA_TYPE,
 	ERROR_CODE,
-	SEVERITY,
 	UNRESOLVED_TYPE,
 } from "../constants.js";
 import { makeDiagnostic } from "../errors.js";
@@ -211,37 +210,6 @@ const checkBranchExpressionType = (
 					value: describeExpression(branchNodeUnwrapped),
 				},
 				location: branchNodeUnwrapped.loc,
-			}),
-		);
-	} else if (range && INTEGER_TYPES.has(branchType)) {
-		checkBranchRange(context, branchNodeUnwrapped, param, branchType, range);
-	}
-};
-
-const checkBranchRange = (
-	context,
-	branchNodeUnwrapped,
-	param,
-	branchType,
-	range,
-) => {
-	const branchRange = TYPE_RANGES[branchType];
-
-	if (
-		branchRange &&
-		(branchRange.min < range.min || branchRange.max > range.max)
-	) {
-		context.errors.push(
-			makeDiagnostic({
-				code: ERROR_CODE.argumentTypeMismatch,
-				params: {
-					name: param.name,
-					expected: param.type,
-					actual: branchType,
-					value: describeExpression(branchNodeUnwrapped),
-				},
-				location: branchNodeUnwrapped.loc,
-				severity: SEVERITY.warning,
 			}),
 		);
 	}
