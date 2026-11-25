@@ -166,6 +166,24 @@ The extension version is tied to the CLI version. `pnpm changeset version`
 syncs `packages/lsp` and `packages/lsp-vscode`, and the CLI `prepack` builds
 the VSIX from the same commit and embeds it in the published tarball.
 
+## Releasing
+
+Only the CLI is published. `packages/cli` declares
+`bundledDependencies: ["embedito95-core", "embedito95-registry"]`, so the
+published tarball already contains both packages under `node_modules/`; they are
+never installed separately by users. `@embedito95/lsp` is private and ships
+inside the VSIX that the CLI `prepack` embeds.
+
+```sh
+pnpm run version   # consumes changesets, syncs the extension version
+pnpm run release   # publishes embedito95-cli only
+```
+
+Do not publish `embedito95-core` or `embedito95-registry` on their own: a
+standalone version whose number does not match the bundled copy only adds
+confusion. Their versions still move with `changeset version` because the
+bundled manifests record them.
+
 ## Try the CLI
 
 Create a scratch directory inside `packages/test` and run the initializer from
